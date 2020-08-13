@@ -1,0 +1,308 @@
+{
+    "name": "CTRI Custom Call Log",
+    "namespace": "UWM\\CustomCallLog",
+    "description": "A configurable, searchable, call list dashboard for Reminders, Follow ups, Missed Vists and more.",
+    "authors": [
+        {
+            "name": "Adam nunez",
+            "email": "adam.Nunez@ctri.wisc.edu",
+            "institution": "UW Madison - Center for Tobacco Research and Intervention"
+        }
+    ],
+    "compatibility": {
+        "redcap-version-min": "10.0.0"
+    },
+    "permissions": [
+        "redcap_data_entry_form",
+        "redcap_every_page_top",
+        "redcap_save_record"
+    ],
+    "links": {
+        "project": [
+            {
+                "name": "Call List",
+                "icon": "phone",
+                "url": "index.php",
+                "show-header-and-footer": true
+            },
+            {
+                "name": "Load New Entry Calls",
+                "icon": "gear",
+                "url": "newEntryLoad.php?NOAUTH",
+                "show-header-and-footer": true
+            },
+            {
+                "name": "Load Reminder Calls",
+                "icon": "gear",
+                "url": "reminderLoad.php?NOAUTH",
+                "show-header-and-footer": true
+            }
+        ]
+    },
+    "no-auth-pages": [
+        "newEntryLoad",
+        "reminderLoad"
+    ],
+    "project-settings": [
+        {
+            "key": "call_log_event",
+            "name": "<b>Call Log Instrument's Event</b><br>There should be only one",
+            "required": true,
+            "type": "event-list"
+        },
+        {
+            "key": "metadata_event",
+            "name": "<b>Metadata Instrument's Event</b>",
+            "required": true,
+            "type": "event-list"
+        },
+        {
+            "key": "withdraw_event",
+            "name": "<b>Withdraw Condition</b>",
+            "type": "event-list"
+        },
+        {
+            "key": "withdraw_var",
+            "name": "<b>Withdraw Field</b>",
+            "type": "field-list"
+        },
+        {
+            "key": "withdraw_tmp_event",
+            "name": "<b>Temporary Withdraw Date</b>",
+            "type": "event-list"
+        },
+        {
+            "key": "withdraw_tmp_var",
+            "name": "<b>Withdraw Field</b>",
+            "type": "field-list"
+        },
+        {
+            "key": "bad_phone_collection",
+            "name": "<b>Bad Phone Reporting</b>",
+            "type": "sub_settings",
+            "sub_settings": [
+                {
+                    "key": "bad_phone_event",
+                    "name": "<b>Event</b>",
+                    "type": "event-list"
+                },
+                {
+                    "key": "bad_phone_flag",
+                    "name": "<b>Flag</b><br>Text field set when their is an issue. Hidden.",
+                    "type": "field-list"
+                },
+                {
+                    "key": "bad_phone_notes",
+                    "name": "<b>Notes</b><br>Textarea with call notes copied into it",
+                    "type": "field-list"
+                },
+                {
+                    "key": "bad_phone_resolved",
+                    "name": "<b>Resolved</b><br>Checkbox ticked by used when issue is resolved",
+                    "type": "field-list"
+                }
+            ]
+        },
+        {
+            "key": "call_collection",
+            "name": "<b>Unique Call Type</b>",
+            "type": "sub_settings",
+            "repeatable": true,
+            "sub_settings": [
+                {
+                    "key": "call_id",
+                    "name": "<b>Unique ID</b>",
+                    "required": true,
+                    "type": "textbox"
+                },
+                {
+                    "key": "call_name",
+                    "name": "<b>Call Name</b>",
+                    "required": true,
+                    "type": "textbox"
+                },
+                {
+                    "key": "max_voice_mails",
+                    "name": "<b>Maximum Messages to Leave</b><br>Leave blank if no max",
+                    "type": "textbox"
+                },
+                {
+                    "key": "hide_after_attempts",
+                    "name": "<b>Hide after N attempts</b><br>Remove from call list for remainder of day",
+                    "type": "textbox"
+                },
+                {
+                    "key": "call_template",
+                    "name": "<b>Template</b>",
+                    "type": "radio",
+                    "choices": [
+                        {
+                            "value": "new",
+                            "name" : "New Entry"
+                        },
+                        {
+                            "value": "reminder",
+                            "name": "Reminder"
+                        },
+                        {
+                            "value": "followup",
+                            "name": "Follow Up"
+                        },
+                        {
+                            "value": "mcv",
+                            "name": "Missed / Cancelled Visit"
+                        }
+                    ]
+                },
+                {
+                    "key": "new_settings",
+                    "name": "<b>New Entry Settings</b>",
+                    "type": "sub_settings",
+                    "sub_settings": [
+                        {
+                            "key": "new_placeholder",
+                            "name": "New Entry calls are added when a record is created. No settings are currently available.",
+                            "type": "descriptive"
+                        }
+                    ]
+                },
+                {
+                    "key": "reminder_settings",
+                    "name": "<b>Reminder Settings</b>",
+                    "type": "sub_settings",
+                    "sub_settings": [
+                        {
+                            "key": "reminder_variable",
+                            "name": "<b>Reminder Date</b><br>Date of appointment the reminder is for",
+                            "type": "field-list"
+                        },
+                        {
+                            "key": "reminder_days",
+                            "name": "<b>Days before</b><br>Work day lead time to add to call list",
+                            "type": "textbox"
+                        },
+                        {
+                            "key": "reminder_skip_events",
+                            "name": "<b>No Reminders For Event(s)</b><br>Comma seperated list of unique event names",
+                            "type": "textbox"
+                        },
+                        {
+                            "key": "reminder_remove_event",
+                            "name": "<b>Alt Record Remove (event)</b><br>Skip the whole record if value is truthy. Used for Text and Email reminder consent",
+                            "type": "event-list"
+                        },
+                        {
+                            "key": "reminder_remove_var",
+                            "name": "<b>Alt Record Remove (field)</b>",
+                            "type": "field-list"
+                        }
+                    ]
+                },
+                {
+                    "key": "followup_settings",
+                    "name": "<b>Followup Settings</b>",
+                    "type": "sub_settings",
+                    "sub_settings": [
+                        {
+                            "key": "followup_event",
+                            "name": "<b>Follow Up Anchor (event)</b>",
+                            "type": "event-list"
+                        },
+                        {
+                            "key": "followup_date",
+                            "name": "<b>Follow Up Anchor (field)</b>",
+                            "type": "field-list"
+                        },
+                        {
+                            "key": "followup_days",
+                            "name": "<b>Days After</b><br>Days after the above date to show the follow up call",
+                            "type": "textbox"
+                        },
+                        {
+                            "key": "followup_length",
+                            "name": "<b>Window Size</b><br>Number of days the call has to be completed",
+                            "type": "textbox"
+                        }
+                    ]
+                },
+                {
+                    "key": "mcv_settings",
+                    "name": "<b>Missed/Cancelled Visit Settings</b>",
+                    "type": "sub_settings",
+                    "sub_settings": [
+                        {
+                            "key": "mcv_indicator",
+                            "name": "<b>Indicator</b><br>Any truthy value indicates that the visit was missed or cancelled",
+                            "type": "field-list"
+                        },
+                        {
+                            "key": "mcv_date",
+                            "name": "<b>Schedualed Date</b><br>Date of missed/canceld appointment",
+                            "type": "field-list"
+                        },
+                        {
+                            "key": "mcv_skip_events",
+                            "name": "<b>No Missed/Cancelled calls for:</b><br>Comma seperated list of unique event names",
+                            "type": "textbox"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "call_tab",
+            "name": "<b>Unique Call Tab</b>",
+            "type": "sub_settings",
+            "repeatable": true,
+            "sub_settings": [
+                {
+                    "key": "tab_name",
+                    "name": "<b>Tab name</b>",
+                    "type": "textbox"
+                },
+                {
+                    "key": "tab_calls_included",
+                    "name": "<b>Calls to include</b><br>Comma sperated list of unique call IDs",
+                    "type": "textbox"
+                },
+                {
+                    "key": "tab_headers",
+                    "name": "<b>Element</b>",
+                    "type": "sub_settings",
+                    "repeatable": true,
+                    "sub_settings": [
+                        {
+                            "key": "tab_field",
+                            "name": "<b>Field</b>",
+                            "type": "field-list"
+                        },
+                        {
+                            "key": "tab_field_name",
+                            "name": "<b>Field Name</b><br>Defaults to field label",
+                            "type": "textbox"
+                        },
+                        {
+                            "key": "tab_field_link",
+                            "name": "<b>Link</b>",
+                            "type": "radio",
+                            "choices": [
+                                {
+                                    "value": "",
+                                    "name" : "None"
+                                },
+                                {
+                                    "value": "home",
+                                    "name" : "Record Home Page"
+                                },
+                                {
+                                    "value": "call",
+                                    "name": "New Call Log"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
