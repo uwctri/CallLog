@@ -1,6 +1,6 @@
 {
     "name": "CTRI Custom Call Log",
-    "namespace": "UWM\\CustomCallLog",
+    "namespace": "UWMadison\\CustomCallLog",
     "description": "A configurable, searchable, call list dashboard for Reminders, Follow ups, Missed Vists and more.",
     "authors": [
         {
@@ -28,22 +28,31 @@
             {
                 "name": "Load New Entry Calls",
                 "icon": "gear",
-                "url": "newEntryLoad.php?NOAUTH",
-                "show-header-and-footer": true
+                "url": "newEntryLoad.php?NOAUTH"
             },
             {
                 "name": "Load Reminder Calls",
                 "icon": "gear",
-                "url": "reminderLoad.php?NOAUTH",
-                "show-header-and-footer": true
+                "url": "scheduleLoad.php?NOAUTH"
+            },
+            {
+                "name": "Resolve Ad-hoc Calls",
+                "icon": "gear",
+                "url": "adhocResolve.php?NOAUTH"
             }
         ]
     },
     "no-auth-pages": [
         "newEntryLoad",
-        "reminderLoad"
+        "scheduleLoad",
+        "adhocResolve"
     ],
     "project-settings": [
+        {
+            "key": "dd_text",
+            "name": "Settings such as 'call scripts' (for reminder calls) and 'tasks remaining' much be edited directly in the data dictionary. Further customization of the call log should be kept minimal with mostly additions. Reporting disconnected phone numbers can be hidden if not used, as can call backs, and remaining tasks.",
+            "type": "descriptive"
+        },
         {
             "key": "call_log_event",
             "name": "<b>Call Log Instrument's Event</b><br>There should be only one",
@@ -111,19 +120,24 @@
             "sub_settings": [
                 {
                     "key": "call_id",
-                    "name": "<b>Unique ID</b>",
+                    "name": "<b>Unique ID</b><br>Short with no spaces, used in metadata and backend",
                     "required": true,
                     "type": "textbox"
                 },
                 {
                     "key": "call_name",
-                    "name": "<b>Call Name</b>",
+                    "name": "<b>Call Name</b><br>Used for display to user",
                     "required": true,
                     "type": "textbox"
                 },
                 {
                     "key": "max_voice_mails",
                     "name": "<b>Maximum Messages to Leave</b><br>Leave blank if no max",
+                    "type": "textbox"
+                },
+                {
+                    "key": "max_voice_mails_per_week",
+                    "name": "<b>Maximum Messages per Week</b><br>Leave blank if no max",
                     "type": "textbox"
                 },
                 {
@@ -151,6 +165,18 @@
                         {
                             "value": "mcv",
                             "name": "Missed / Cancelled Visit"
+                        },
+                        {
+                            "value": "nts",
+                            "name": "Need to Schedule Visit"
+                        },
+                        {
+                            "value": "adhoc",
+                            "name": "Ad-hoc"
+                        },
+                        {
+                            "value": "visit",
+                            "name": "Schedualed Phone Visit"
                         }
                     ]
                 },
@@ -160,8 +186,8 @@
                     "type": "sub_settings",
                     "sub_settings": [
                         {
-                            "key": "new_placeholder",
-                            "name": "New Entry calls are added when a record is created. No settings are currently available.",
+                            "key": "new_text",
+                            "name": "New Entry calls are added when a record is created. No settings are currently available. If loading records from an outside source you'll need to configure your import scripts to POST to the newEntryLoad URL.",
                             "type": "descriptive"
                         }
                     ]
@@ -171,6 +197,11 @@
                     "name": "<b>Reminder Settings</b>",
                     "type": "sub_settings",
                     "sub_settings": [
+                        {
+                            "key": "reminder_text",
+                            "name": "You will want to configure a custom DET to POST to the scheduleLoad URL to add new reminders to the call list immediately.",
+                            "type": "descriptive"
+                        },
                         {
                             "key": "reminder_variable",
                             "name": "<b>Reminder Date</b><br>Date of appointment the reminder is for",
@@ -182,8 +213,8 @@
                             "type": "textbox"
                         },
                         {
-                            "key": "reminder_skip_events",
-                            "name": "<b>No Reminders For Event(s)</b><br>Comma seperated list of unique event names",
+                            "key": "reminder_include_events",
+                            "name": "<b>Reminders For Event(s)</b><br>Comma seperated list of unique event names",
                             "type": "textbox"
                         },
                         {
@@ -204,14 +235,24 @@
                     "type": "sub_settings",
                     "sub_settings": [
                         {
+                            "key": "followup_text",
+                            "name": "Any tab with a follow up call in it will show the Lower and Upper windows of the call as the last two columns",
+                            "type": "descriptive"
+                        },
+                        {
                             "key": "followup_event",
-                            "name": "<b>Follow Up Anchor (event)</b>",
+                            "name": "<b>Follow Up Anchor</b>",
                             "type": "event-list"
                         },
                         {
                             "key": "followup_date",
-                            "name": "<b>Follow Up Anchor (field)</b>",
+                            "name": "<b>Follow Up Anchor</b>",
                             "type": "field-list"
+                        },
+                        {
+                            "key": "followup_include_events",
+                            "name": "<b>Follow up For Events</b><br>If no event is specified above then list which events should be used here. Comma seperated list of unique event names",
+                            "type": "textbox"
                         },
                         {
                             "key": "followup_days",
@@ -231,8 +272,13 @@
                     "type": "sub_settings",
                     "sub_settings": [
                         {
+                            "key": "mcv_text",
+                            "name": "You will want to configure a custom DET to POST to the scheduleLoad URL to add new reminders to the call list immediately. Any tab with a Missed/Cancelled visit call will have theMissed Appt Date/Time added as the last column. The missed event can be displayed with 'call_event_name'",
+                            "type": "descriptive"
+                        },
+                        {
                             "key": "mcv_indicator",
-                            "name": "<b>Indicator</b><br>Any truthy value indicates that the visit was missed or cancelled",
+                            "name": "<b>Indicator</b><br>Any truthy value indicates that the visit was missed or cancelled. Should be set false when the appt is rescheduled.",
                             "type": "field-list"
                         },
                         {
@@ -241,8 +287,74 @@
                             "type": "field-list"
                         },
                         {
-                            "key": "mcv_skip_events",
-                            "name": "<b>No Missed/Cancelled calls for:</b><br>Comma seperated list of unique event names",
+                            "key": "mcv_include_events",
+                            "name": "<b>Missed/Cancelled calls for:</b><br>Comma seperated list of unique event names",
+                            "type": "textbox"
+                        }
+                    ]
+                },
+                {
+                    "key": "nts_settings",
+                    "name": "<b>Need to Schedule Visit Settings</b>",
+                    "type": "sub_settings",
+                    "sub_settings": [
+                        {
+                            "key": "nts_text",
+                            "name": "Need to Schedule calls are generated for an event when the previous event is has a truthy indicator, but the current event has no schedulaed date.",
+                            "type": "descriptive"
+                        },
+                        {
+                            "key": "nts_indicator",
+                            "name": "<b>Visit Complete Indicator</b><br>Any truthy value indicates that the visit was completed",
+                            "type": "field-list"
+                        },
+                        {
+                            "key": "nts_date",
+                            "name": "<b>Schedualed Date</b><br>Date of appointments",
+                            "type": "field-list"
+                        },
+                        {
+                            "key": "nts_include_events",
+                            "name": "<b>Need to Schedule for:</b><br>Comma seperated list of unique event names",
+                            "type": "textbox"
+                        }
+                    ]
+                },
+                {
+                    "key": "adhoc_settings",
+                    "name": "<b>Ah-hoc Settings</b>",
+                    "type": "sub_settings",
+                    "sub_settings": [
+                        {
+                            "key": "adhoc_text",
+                            "name": "Ad-hoc calls are added by an end user on the call log screen. Any tab with an adhoc call in it will show the Reason and Preferred call back date as the last two columns.",
+                            "type": "descriptive"
+                        },
+                        {
+                            "key": "adhoc_reason",
+                            "name": "<b>Reason for call</b><br>Format as a redcap coded value list",
+                            "type": "textarea"
+                        }
+                    ]
+                },
+                {
+                    "key": "visit_settings",
+                    "name": "<b>Schedualed Phone Visit Settings</b>",
+                    "type": "sub_settings",
+                    "sub_settings": [
+                        {
+                            "key": "visit_text",
+                            "name": "Schedualed Phone Visits are for phone-based encounters that just need a way to record a call log at checkout time. They are not typically used on the call log. ",
+                            "type": "descriptive"
+                        },
+                        {
+                            "key": "visit_indicator",
+                            "name": "<b>Visit Started Indicator</b><br>Any truthy value indicates that the visit was started",
+                            "type": "field-list"
+                        },
+                        {
+                            "key": "visit_include_events",
+                            "name": "<b>Schedualed Phone Visits for:</b><br>Comma seperated list of unique event names",
                             "type": "textbox"
                         }
                     ]
@@ -266,6 +378,21 @@
                     "type": "textbox"
                 },
                 {
+                    "key": "tab_includes_followup",
+                    "name": "<b>Flag set</b><br>Hidden via JS",
+                    "type": "textbox"
+                },
+                {
+                    "key": "tab_includes_mcv",
+                    "name": "<b>Flag set</b><br>Hidden via JS",
+                    "type": "textbox"
+                },
+                {
+                    "key": "tab_includes_adhoc",
+                    "name": "<b>Flag set</b><br>Hidden via JS",
+                    "type": "textbox"
+                },
+                {
                     "key": "tab_headers",
                     "name": "<b>Element</b>",
                     "type": "sub_settings",
@@ -282,12 +409,22 @@
                             "type": "textbox"
                         },
                         {
+                            "key": "tab_field_default",
+                            "name": "<b>Default</b><br>Ignores all formatting rules",
+                            "type": "textbox"
+                        },
+                        {
+                            "key": "tab_field_expanded",
+                            "name": "<b>Expanded Info</b><br>Display the feild in the expanded info",
+                            "type": "checkbox"
+                        },
+                        {
                             "key": "tab_field_link",
-                            "name": "<b>Link</b>",
+                            "name": "<b>Link</b><br>Linking to an instrument isn't possbile on New Entry calls",
                             "type": "radio",
                             "choices": [
                                 {
-                                    "value": "",
+                                    "value": "none",
                                     "name" : "None"
                                 },
                                 {
@@ -297,8 +434,22 @@
                                 {
                                     "value": "call",
                                     "name": "New Call Log"
+                                },
+                                {
+                                    "value": "instrument",
+                                    "name": "Instrument"
                                 }
                             ]
+                        },
+                        {
+                            "key": "tab_field_link_event",
+                            "name": "<b>Linked Instrument</b>",
+                            "type": "event-list"
+                        },
+                        {
+                            "key": "tab_field_link_instrument",
+                            "name": "<b>Linked Instrument</b>",
+                            "type": "form-list"
                         }
                     ]
                 }

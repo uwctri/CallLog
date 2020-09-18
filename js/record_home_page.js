@@ -41,4 +41,6 @@ $(document).ready(function () {
     
     // Hide the Call Log repeating instrument table table
     $(`th.header:contains(${CTRICallLog.static.instrument})`).closest('table').parent().remove();
+    
+    $("#center").show();
 });
