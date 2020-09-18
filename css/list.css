@@ -1,0 +1,75 @@
+/* Redcap Corrections */
+#south{
+    position: absolute;
+}
+
+#west {
+    height: min-content!important;
+}
+
+/* Boot strap corrections */
+
+.nav-link.call-link.active {
+    background-color: #f7f7f7!important;
+}
+
+.call-tab {
+    background-color: transparent;
+    margin-bottom: 10px!important;
+}
+
+.card {
+    margin-right: 20px;
+}
+
+.card input[type=search] {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Call Table CSS */
+
+#hiddenToggle {
+    margin-right: 1em;
+}
+
+.tab-header {
+    background-color: white;
+    padding-bottom: 0;
+}
+
+.toggleHiddenCalls {
+    border: 1px solid #aaa;
+    float: right;
+    margin-top: 0.25rem !important;
+}
+
+.callTable th {
+    border-left: none!important;
+    border-right: none!important;
+}
+
+.callTable tr.even {
+    background: #eeeeee !important;
+}
+
+.callTable tr.odd {
+    background: white!important;
+}
+
+.dataTableChild {
+    padding-top: 0;
+    padding-bottom: 1.5em;
+}
+
+.dataTableChild .container {
+    max-width: 95%;
+}
+
+.dtChildData .row {
+    padding: 0.5em;
+}
+
+.callbackCol {
+    border-left: 1px solid #dee2e6;
+}
