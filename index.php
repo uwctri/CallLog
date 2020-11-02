@@ -57,9 +57,10 @@ function loadParsePackCallData() {
     foreach( REDCap::getData($project_id,'array') as $record => $recordData ) {
         $meta = json_decode($recordData[$metaEvent][$module->metadataField],true);
         
-        // Check if withdrawn
-        if ( $recordData[$withdraw['event']][$withdraw['var']] || 
-            ($recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']] && $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']]<$today) )
+        // Check if withdrawn or tmp withdrawn
+        if ( $recordData[$withdraw['event']][$withdraw['var']] )
+            continue; 
+        if ( $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']] && $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']]<$today )
             continue;
         
         foreach( $meta as $callID => $call ) {
@@ -82,16 +83,25 @@ function loadParsePackCallData() {
             $instanceEventData = $recordData[$call['event_id']];
             $instanceData = array_merge( array_filter( empty($instanceEventData) ? [] : $instanceEventData, 'isNotBlank' ), array_filter($recordData[$callEvent],'isNotBlank'), array_filter( empty($instanceData) ? [] : $instanceData, 'isNotBlank' ));
             
+            // Check if the call was recently opened
+            if ( strtotime($call['callStarted']) > strtotime('-'.$module->startedCallGrace.' minutes') )
+                $instanceData['_callStarted'] = true;
+            
+            // Check if No Calls Today flag is set
+            if ( $call['noCallsToday'] == $today )
+                $instanceData['_noCallsToday'] = true;
+            
             // Check if we are at max call attempts for the day
             // While we are at it, assemble all of the note data too
             $attempts = $recordData[$callEvent]['call_open_date'] == $today ? 1 : 0;
             $instanceData['_callNotes'] = "";
             foreach( array_reverse($call['instances']) as $instance ) {
                 $itterData = $recordData['repeat_instances'][$callEvent][$module->instrumentLower][$instance];
-                //Todo - Maybe add call outcome (what even is that?) to the below.
-                $leftMsg = $itterData['call_left_message'][1] == "1" ? 'Left Message' : '&nbsp;';
+                $leftMsg = $itterData['call_left_message'][1] == "1" ? '<b>Left Message</b>' : '';
+                $setCB = $itterData['call_requested_callback'][1] == "1" ? 'Set Callback' : '';
+                $text = $leftMsg && $setCB ? $leftMsg." & ".$setCB : $leftMsg.$setCB.'&nbsp;';
                 $notes = $itterData['call_notes'] ? $itterData['call_notes'] : 'none';
-                $instanceData['_callNotes'] .= $itterData['call_open_datetime'].'||'.$itterData['call_open_user_full_name'].'||'.$leftMsg.'||'.$notes.'|||';
+                $instanceData['_callNotes'] .= $itterData['call_open_datetime'].'||'.$itterData['call_open_user_full_name'].'||'.$text.'||'.$notes.'|||';
                 if ( $itterData['call_open_date'] == $today )
                     $attempts++;
             }
@@ -164,7 +174,7 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
         <ul class="nav nav-tabs card-header-tabs">
             <?php foreach( $tabs['config'] as $tab) {?>
             <li class="nav-item call-tab">
-                <a class="nav-link call-link" data-toggle="tab" href="#<?php echo $tab['tab_id'] ?>"><?php echo $tab['tab_name'] ?></a>
+                <a class="nav-link call-link" data-toggle="tab" data-tabid="<?php echo $tab['tab_id'] ?>" href="#<?php echo $tab['tab_id'] ?>"><?php echo $tab['tab_name'] ?></a>
             </li>
             <?php } ?>
         </ul>
@@ -215,7 +225,7 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
     CTRICallLog.childRows = {};
     CTRICallLog.colConfig = {};
     
-    function childRowFormat( childData, notesData, tab ) {
+    function childRowFormat( record, call_id, callStarted, childData, notesData, tab ) {
         notesData = notesData.split('|||').map(x=>x.split('||')).filter(x=>x.length>2);
         return '<div class="container">'+
             '<div class="row">'+
@@ -226,6 +236,15 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
                         '</div>'+
                         '<div class="col">'+
                             childData.map(x=>'<div class="row">'+(x||"________")+'</div>').join('')+
+                        '</div>'+
+                    '</div>'+
+                    '<div class="row">'+
+                        '<div class="col">'+
+                            '<div class="row">'+
+                                '<a class="noCallsButton" onclick="noCallsToday('+record+',\''+call_id+'\')">No Calls Today</a>'+
+                                ( !callStarted ? '' :
+                                '&emsp;<a class="endCallButton" onclick="endCall('+record+',\''+call_id+'\')">End Current Call</a>')+
+                            '</div>'+
                         '</div>'+
                     '</div>'+
                 '</div>'+
@@ -250,28 +269,19 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
         '</div>';
     }
     
-    function callEarlyWarning( url, callbackDateTime ) {
-        if (callbackDateTime && (new Date(now) - new Date(callbackDateTime) > (-5*1000*60))) {
-            Swal.fire({
-                title: 'Calling Early?',
-                text: "This subject has a callback scheduled, you may not want to call them now.",
-                icon: 'info',
-                showCancelButton: true,
-                confirmButtonColor: '#337ab7',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Continue'
-            }).then((result) => {
-              if (result.isConfirmed)
-                  window.location = url;
-            })
-        } else {
-            window.location = url;
-        }
-    }
-    
     function createColConfig(index, tab_id) {
         
-        let cols = [];
+        let cols = [{
+            title: '',
+            data: '_callStarted',
+            bSortable: false,
+            className: 'callStarted',
+            render: (data,type,row,meta) => data ? 
+                '<span style="font-size:2em;color:#dc3545;">'+
+                '<i class="fas fa-phone-square-alt" data-toggle="tooltip" data-placement="left" '+
+                'title="This subject may already be in a call."></i></span>' : ''
+        }];
+        
         $.each( CTRICallLog.tabs['config'][index]['fields'], function(colIndex,fConfig) {
             
             // Standard Config for all fields
@@ -280,7 +290,10 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
                 title: fConfig.displayName,
                 render: (data,type,row,meta) => data || fConfig.default 
             }
-
+            
+            if ( colIndex == 0 )
+                colConfig['className'] = 'firstDataCol';
+            
             // Check for Validation on the feild
             const dateFormats = ['MM-dd-y','y-MM-dd','dd-MM-y'];
             let fdate = dateFormats[['_mdy','_ymd','_dmy'].map(x=>fConfig.validation.includes(x)).indexOf(true)];
@@ -312,7 +325,9 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
             } else if ( fConfig.isFormStatus ) {
                 colConfig.render = (data,type,row,meta) => ['Incomplete','Unverified','Complete'][data];
             } else if ( colConfig.data == "call_event_name" ) {
-                colConfig.render = (data,type,row,meta) => CTRICallLog.eventNameMap[data];
+                colConfig.render = (data,type,row,meta) => CTRICallLog.eventNameMap[data] || "";
+            } else if ( fConfig.validation == 'phone' ) {
+                colConfig.render = (data,type,row,meta) => (data && (type === 'filter')) ? data.replace(/[\\(\\)\\-\s]/g,'') : data || "";
             }
             
             // Build out any links
@@ -321,7 +336,7 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
                 if (fConfig.link == "home")
                     url = '../DataEntry/record_home.php?pid='+pid+'&id=RECORD';
                 else if (fConfig.link == "call")
-                    url = '../DataEntry/index.php?pid='+pid+'&id=RECORD&event_id='+CTRICallLog.events.callLog.id+'&page='+CTRICallLog.static.instrumentLower+'&instance=INSTANCE&call_id=CALLID';
+                    url = '../DataEntry/index.php?pid='+pid+'&id=RECORD&event_id='+CTRICallLog.events.callLog.id+'&page='+CTRICallLog.static.instrumentLower+'&instance=INSTANCE&call_id=CALLID&showReturn=1';
                 else if (fConfig.link == "instrument")
                     url = '../DataEntry/index.php?pid='+pid+'&id=RECORD&event_id='+fConfig.linkedEvent+'&page='+fConfig.linkedInstrument;
                 colConfig.createdCell = function (td, cellData, rowData, row, col) {
@@ -336,7 +351,9 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
                     } else if ( rowData['call_callback_time'] ) {
                         dt = today+" "+rowData['call_callback_time'];
                     }
-                    $(td).html("<a onclick=\"callEarlyWarning('"+thisURL+"','"+dt+"')\">"+cellData+"</a>");
+                    let record = rowData[CTRICallLog.static.record_id];
+                    let id = rowData['_call_id'];
+                    $(td).html("<a onclick=\"callURLclick("+record+",'"+id+"','"+thisURL+"','"+dt+"')\">"+cellData+"</a>");
                 }
             }
             
@@ -382,24 +399,38 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
         cols.push({
             title: 'Call Note HTML',
             data: '_callNotes',
-            visible: false,
-            className: 'callnotesCol'
+            visible: false
         })
         
         // Tack on the Call Back and Info Col
+        // Note: THIS MUST BE THE LAST COL
         cols.push({
             title: 'Call Back & Info',
             visible: CTRICallLog.alwaysShowCallbackCol,
             name: 'callbackCol',
             className: 'callbackCol',
             render: function (data, type, row, meta) {
-                if ( type === 'display' || type === 'filter' ) {
-                    if ( row['call_requested_callback'] && row['call_requested_callback'][1] == '1' )
-                        return '<i class="fas fa-stopwatch mr-1" data-toggle="tooltip" data-placement="left" title="Subject\'s requested callback time"></i> '+formatDate(new Date(row['call_callback_date']+'T00:00:00'), CTRICallLog.defaultDateFormat)+" "+conv24to12(row['call_callback_time']);
+                let displayDate = '';
+                if ( row['call_requested_callback'] && row['call_requested_callback'][1] == '1' )
+                    displayDate = formatDate(new Date(row['call_callback_date']+'T00:00:00'), CTRICallLog.defaultDateFormat)+" "+conv24to12(row['call_callback_time']);
+                let requestedBy = row['call_callback_requested_by'] ? row['call_callback_requested_by'] == '1' ? 'Participant' : 'Staff' : ' ';
+                if ( type === 'display'  ) {
+                    let display = '';
+                    if ( row['_noCallsToday'] )
+                        display += '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="A provider requested that this subject not be contacted today."></i>';
                     if ( row['_atMaxAttempts'] )
-                        return '<i class="fas fa-info-circle float-left" data-toggle="tooltip" data-placement="left" title="This subject has been called the maximum number of times today."></i>';
-                } else {
-                    if ( row['call_requested_callback'] && row['call_requested_callback'][1] == '1' )
+                        display += '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="This subject has been called the maximum number of times today."></i>';
+                    if ( displayDate )
+                        display += '<i class="fas fa-stopwatch mr-1" data-toggle="tooltip" data-placement="left" title="Subject\'s requested callback time"></i> '+displayDate+
+                            ' <span class="callbackRequestor" data-toggle="tooltip" data-placement="left" title="Callback set by '+requestedBy+'">'+requestedBy[0]+'</span>';
+                    return display;
+                } 
+                else if ( type === 'filter' ) {
+                    if ( displayDate )
+                        return displayDate;
+                }
+                else {
+                    if ( displayDate )
                         return row['call_callback_date']+" "+row['call_callback_time'];
                 }
                 return '';
@@ -407,6 +438,53 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
         });
         
         return cols;
+    }
+    
+    function callURLclick( record, call_id, url, callbackDateTime ) {
+        event.stopPropagation();
+        if (callbackDateTime && ((new Date(now) - new Date(callbackDateTime)) < (-5*1000*60))) {
+            Swal.fire({
+                title: 'Calling Early?',
+                text: "This subject has a callback scheduled, you may not want to call them now.",
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#337ab7',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Continue'
+            }).then((result) => {
+              if (result.isConfirmed)
+                  startCall(record, call_id, url);
+            })
+        } else {
+            startCall(record, call_id, url);
+        }
+    }
+    
+    function startCall(record, call_id, url) {
+        $.ajax({
+            method: 'POST',
+            url: CTRICallLog.callStartedPOST,
+            data: {
+                record: record,
+                id: call_id,
+                user: $("#username-reference").text()
+            },
+            error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+            success: (data) => window.location = url
+        });
+    }
+    
+    function endCall(record, call_id) {
+        $.ajax({
+            method: 'POST',
+            url: CTRICallLog.callEndedPOST,
+            data: {
+                record: record,
+                id: call_id
+            },
+            error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+            success: (data) => refreshTableData()
+        });
     }
     
     function toggleHiddenCalls() {
@@ -442,12 +520,42 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
         });
     }
     
+    function noCallsToday(record, call_id) {
+        $.ajax({
+            method: 'POST',
+            url: CTRICallLog.noCallsTodayPOST,
+            data: {
+                record: record,
+                id: call_id
+            },
+            error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+            success: (data) => refreshTableData()
+        });
+    }
+    
     $(document).ready(function() {
         
-        // Control display of Calls that have hit max contacts for day
+        // Custom search options
+        $('.card-body').on('input propertychange paste','.customSearch', function() {
+            console.log('new search hit');
+            let $table = $('.callTable:visible').DataTable();
+            let query = $('.card-body:visible input').val();
+            if ( query.split(' ')[0] == 'regex' )
+                $table.search(query.replace('regex ',''),true,false).draw();
+            else if ( query[0] == '!' )
+                $table.search('^(?!.*'+query.slice(1)+')',true,false).draw();
+            else
+                $table.search(query,false,true).draw();
+        });
+        
+        // Control display of Calls
         $.fn.dataTable.ext.search.push(
             function(settings, searchData, index, rowData, counter) {
-                return !(CTRICallLog.hideCalls && ((rowData['_atMaxAttempts'] && !rowData['_callbackToday']) || rowData['_callbackNotToday']));
+                return !(
+                    CTRICallLog.hideCalls && (
+                        (rowData['_atMaxAttempts'] && !rowData['_callbackToday']) || rowData['_callbackNotToday'] || rowData['_noCallsToday']
+                    )
+                );
             }
         );
         $(".toggleHiddenCalls").on('click', toggleHiddenCalls); // Control all toggles at once
@@ -459,28 +567,49 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
             CTRICallLog.colConfig[tab_id] = createColConfig(index, tab_id);
             
             // Init the table
+            let defaultOrder = CTRICallLog.alwaysShowCallbackCol ? [[ CTRICallLog.colConfig[tab_id].length-1, "desc" ]] : [[ 1, "asc" ]];
             $(el).DataTable({
                 lengthMenu: [ [25,50,100,-1], [25,50,100, "All"] ],
                 columns: CTRICallLog.colConfig[tab_id],
+                order: defaultOrder,
                 createdRow: (row,data,index) => $(row).addClass('dataTablesRow'),
-                data: CTRICallLog.packagedCallData[tab_id]
+                data: CTRICallLog.packagedCallData[tab_id],
+                sDom: 'ltpi'
             });
         });
         
+        // Insert custom search box 
+        $('.dataTables_length').after(
+                "<div class='dataTables_filter customSearch'><label>Search:<input type='search'></label></div>");
+        
         // Select the first tab on the call list
-        $(".nav-link.call-link").first().addClass("active");
-        $(".tab-pane").first().addClass("active");
+        let savedTab = Cookies.get('CTRICallLog'+pid);
+        if ( savedTab )
+            $(".call-link[data-tabid="+savedTab+"]").click();
+        else
+            $(".call-link").first().click();
+        
+        // Setup cookie for remembering call tab
+        $(".call-link").on('click', function() {
+            Cookies.set('CTRICallLog'+pid,$(this).data('tabid'),{sameSite: 'lax'});
+        });
         
         // Enable click to expand
         $('.callTable').on('click', '.dataTablesRow', function () {
-            let row = $(this).closest('table').DataTable().row( this );
+            let table = $(this).closest('table').DataTable();
+            let row = table.row( this );
             if ( row.child.isShown() ) {
                 row.child.hide();
                 $(this).removeClass('shown');
             } else {
-                let cells = $(this).closest('table').DataTable().cells(row,'.expandedInfo').render('display');
-                let notes = $(this).closest('table').DataTable().cells(row,'.callnotesCol').data()[0];
-                row.child( childRowFormat(cells, notes, $(this).closest('.tab-pane').prop('id')), 'dataTableChild' ).show();
+                let data = row.data()
+                let record = data[CTRICallLog.static.record_id];
+                let call = data['_call_id'];
+                let tab_id = $(this).closest('.tab-pane').prop('id');
+                let notes = data['_callNotes'];
+                let inCall = data['_callStarted'];
+                let cells = table.cells(row,'.expandedInfo').render('display');
+                row.child( childRowFormat(record, call, inCall, cells, notes, tab_id), 'dataTableChild' ).show();
                 $(this).next().addClass( $(this).hasClass('even') ? 'even' : 'odd' );
                 $(this).addClass('shown');
             }

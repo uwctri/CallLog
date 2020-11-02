@@ -9,13 +9,7 @@ use REDCap;
 use User;
 
 function printToScreen($string) {
-?>
-    <script type='text/javascript'>
-       $(function() {
-          console.log(<?=json_encode($string); ?>);
-       });
-    </script>
-<?php
+    ?><script>console.log(<?=json_encode($string); ?>);</script><?php
 }
 
 class CustomCallLog extends AbstractExternalModule  {
@@ -35,11 +29,15 @@ class CustomCallLog extends AbstractExternalModule  {
     private $_callTemplateConfig = [];
     private $_callData = [];
     
+    // Hard Coded Config
+    public $startedCallGrace = '30';
+    
     // CDN Links
     private $datatablesCSS = "https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css";
     private $datatablesJS = "https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js";
     private $flatpickrCSS = "https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css";
     private $flatpickrJS  = "https://cdn.jsdelivr.net/npm/flatpickr";
+    private $cookieJS = "https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js";
     
     public function __construct() {
         parent::__construct();
@@ -68,6 +66,8 @@ class CustomCallLog extends AbstractExternalModule  {
             $this->metadataNeedToSchedule($project_id, $record);
             // Check if we need to make a Schedueld Phone Visit call log (Check in was started)
             $this->metadataPhoneVisit($project_id, $record);
+            // Check if we need to extend the duration of the call flag
+            $this->metadataCallStartedUpdate($project_id, $record);
         }
     }
     
@@ -87,11 +87,16 @@ class CustomCallLog extends AbstractExternalModule  {
 
         // Index of Call List
         if (strpos(PAGE, 'ExternalModules/index.php') !== false && $project_id != NULL) {
+            $this->includeCookies();
             $this->passArgument('eventNameMap', $this->getEventNameMap());
+            $this->passArgument('noCallsTodayPOST', $this->getURL('setNoCallsToday.php'));
+            $this->passArgument('callStartedPOST', $this->getURL('setCallStarted.php'));
+            $this->passArgument('callEndedPOST', $this->getURL('setCallEnded.php'));
         }
     }
     
     public function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id, $repeat_instance) {
+        $summary = $this->getProjectSetting('call_summary');
         if ( $instrument == $this->instrumentLower ) {
             $this->passArgument('metadata', $this->getCallMetadata($project_id, $record));
             $this->passArgument('metadataPOST', $this->getURL('metadataSave.php'));
@@ -99,13 +104,20 @@ class CustomCallLog extends AbstractExternalModule  {
             $this->passArgument('calldeletePOST', $this->getURL('callDelete.php'));
             $this->passArgument('data', $this->getAllCallData($project_id, $record));
             $this->passArgument('eventNameMap', $this->getEventNameMap());
-            $this->passArgument('userNameMap', $this->getUserNameMap());
             $this->passArgument('adhoc', $this->loadAdhocTemplateConfig());
             $this->includeDataTables();
             $this->includeFlatpickr();
             $this->includeCss('css/log.css');
+            $this->includeJs('js/summary_table.js');
             $this->includeJs('js/call_log.js');
-        } 
+        } elseif ( in_array($instrument, $summary) ) {
+            $this->passArgument('metadata', $this->getCallMetadata($project_id, $record));
+            $this->passArgument('data', $this->getAllCallData($project_id, $record));
+            $this->includeDataTables();
+            $this->includeCss('css/log.css');
+            $this->includeJs('js/summary_table.js');
+        }
+        $this->passArgument('recentCaller', $this->recentCallStarted($project_id, $record));
     }
     
     public function redcap_module_link_check_display($project_id, $link) {
@@ -231,7 +243,7 @@ class CustomCallLog extends AbstractExternalModule  {
                 // Scheduled appt exists and the meta doesn't have the call id in it yet
                 $meta[$callConfig['id']] = [
                     "start" => $this->dateMath($data[$callConfig['event']][$callConfig['field']], '-', $callConfig['days']),
-                    "end" => $this->dateMath($data[$callConfig['event']][$callConfig['field']], '+', 0),
+                    "end" => $this->dateMath($data[$callConfig['event']][$callConfig['field']], '+', $callConfig['days'] == 0 ? 365 : 0),
                     "template" => 'reminder',
                     "event_id" => $callConfig['event'],
                     "event" => $eventMap[$callConfig['event']],
@@ -327,15 +339,16 @@ class CustomCallLog extends AbstractExternalModule  {
     
     public function metadataAdhoc($project_id, $record, $payload) {
         $config = $this->loadCallTemplateConfig()["adhoc"];
-        array_filter($config, function($x) {$x['id']==$payload['id'];});
+        $config = array_filter($config, function($x) use ($payload) {return $x['id']==$payload['id'];});
         $config = end($config);
         $meta = $this->getCallMetadata($project_id, $record);
         if ( empty($payload['date']) )
             $payload['date'] = Date('Y-m-d');
-        $meta[$config['id'].'||'.Date('Y-m-d')] = [
+        $reported = Date('Y-m-d H:i:s');
+        $meta[$config['id'].'||'.$reported] = [
             "start" => $payload['date'],
             "contactOn" => trim($payload['date']." ".$payload['time']),
-            "reported" => Date('Y-m-d H:i'),
+            "reported" => $reported,
             "reporter" => $payload['reporter'],
             "reason" => $payload['reason'],
             "initNotes" => $payload['notes'],
@@ -404,7 +417,47 @@ class CustomCallLog extends AbstractExternalModule  {
             $meta[$id]["voiceMails"]++;
         if ( $data['call_outcome'] == '1' )
             $meta[$id]['complete'] = true;
+        $meta[$id]['callStarted'] = '';
         $this->saveCallMetadata($project_id, $record, $meta);
+    }
+    
+    public function metadataNoCallsToday($project_id, $record, $call_id) {
+        $meta = $this->getCallMetadata($project_id, $record);
+        if ( !empty($meta) && !empty($meta[$call_id]) ) {
+            $meta[$call_id]['noCallsToday'] = date('Y-m-d');
+            $this->saveCallMetadata($project_id, $record, $meta);
+        }
+    }
+    
+    public function metadataCallStarted($project_id, $record, $call_id, $user) {
+        $meta = $this->getCallMetadata($project_id, $record);
+        if ( !empty($meta) && !empty($meta[$call_id]) ) {
+            $meta[$call_id]['callStarted'] = date("Y-m-d H:i");
+            $meta[$call_id]['callStartedBy'] = $user;
+            $this->saveCallMetadata($project_id, $record, $meta);
+        }
+    }
+    
+    public function metadataCallStartedUpdate($project_id, $record) {
+        $meta = $this->getCallMetadata($project_id, $record);
+        if ( empty($meta) )
+            return;
+        $grace = strtotime('-'.$module->startedCallGrace.' minutes');
+        $now = date("Y-m-d H:i");
+        $user = $this->framework->getUser()->getUsername();
+        foreach( $meta as $id=>$call ) {
+            if ( !$call['complete'] && ($call['callStartedBy'] == $user) && (strtotime($call['callStarted']) > $grace) )
+                $meta[$id]['callStarted'] = $now;
+        }
+        $this->saveCallMetadata($project_id, $record, $meta);
+    }
+    
+    public function metadataCallEnded($project_id, $record, $call_id) {
+        $meta = $this->getCallMetadata($project_id, $record);
+        if ( !empty($meta) && !empty($meta[$call_id]) ) {
+            $meta[$call_id]['callStarted'] = '';
+            $this->saveCallMetadata($project_id, $record, $meta);
+        }
     }
     
     /////////////////////////////////////////////////
@@ -457,6 +510,19 @@ class CustomCallLog extends AbstractExternalModule  {
     /////////////////////////////////////////////////
     // Utlties and Config Loading
     /////////////////////////////////////////////////
+    
+    public function recentCallStarted($project_id, $record) {
+        $meta = $this->getCallMetadata($project_id, $record);
+        if ( empty($meta) )
+            return '';
+        $grace = strtotime('-'.$module->startedCallGrace.' minutes');
+        $user = $this->framework->getUser()->getUsername();
+        foreach( $meta as $call ) {
+            if ( !$call['complete'] && ($call['callStartedBy'] != $user) && (strtotime($call['callStarted']) > $grace) )
+                return $call['callStartedBy'];
+        }
+        return '';
+    }
     
     public function getUserNameMap() {
         return array_map(function($x){return substr(explode('(',$x)[1],0,-1);},User::getUsernames(null,true));
@@ -839,6 +905,7 @@ class CustomCallLog extends AbstractExternalModule  {
                     "id" => $meta_event
                 ],
             ],
+            "userNameMap" => $this->getUserNameMap(),
             "static" => [
                 "instrument" => $this->instrumentName,
                 "instrumentLower" => $this->instrumentLower,
@@ -852,6 +919,10 @@ class CustomCallLog extends AbstractExternalModule  {
     private function includeFlatpickr() {
         echo '<link rel="stylesheet" href="'.$this->flatpickrCSS.'">';
         echo '<script src="'.$this->flatpickrJS.'"></script>';
+    }
+    
+    private function includeCookies() {
+        echo '<script type="text/javascript" src="'.$this->cookieJS.'"></script>';
     }
     
     public function includeDataTables() {
