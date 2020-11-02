@@ -21,7 +21,7 @@ call_text_disconnect,call_log,,descriptive,"
 <div class=""alert alert-warning"" style=""border-color:#856404!important;""><div class=""container text-center"">Please explain the issue in the call notes below, be sure to include which number(s) has the issue.</div></div>",,,,,,,"[call_disconnected(1)] = ""1""",,,,,,
 call_left_message,call_log,,checkbox,"Left a Message","1,",,,,,,"[call_answered(1)]<>""1""",,,,,,
 call_requested_callback,call_log,,checkbox,"Set Callback","1,",,,,,,,,,,,,
-call_callback_requested_by,call_log,,radio,"Callback Requested by","1, Subject | 2, Provider",,,,,,"[call_requested_callback(1)]=""1""",,,,,,
+call_callback_requested_by,call_log,,radio,"Callback Requested by","1, Participant | 2, Staff",,,,,,"[call_requested_callback(1)]=""1""",,,,,,
 call_callback_date,call_log,,text,"Callback Date",,,date_mdy,,,,"[call_requested_callback(1)]=""1""",,,,,," @TOMORROWBUTTON"
 call_callback_time,call_log,,text,"Callback Time",,,time,,,,"[call_requested_callback(1)]=""1""",,,,,," @HIDEBUTTON"
 call_outcome,call_log,,radio,Outcome,"1, All Call Tasks Completed | 0, Call Incomplete",,,,,,,y,,,,,

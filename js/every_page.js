@@ -20,18 +20,44 @@ function conv12to24(ts) {
     return H + ':' + ts.split(' ')[0].split(':')[1] ;
 }
 
-function addGoToCallLogButton() {
-    let $isCallLogNext = $(".form_menu_selected").parent().nextAll().filter( function() {
+function isCallLogNext() {
+    return $(".form_menu_selected").parent().nextAll().filter( function() {
         return $(this).find('a').css('pointer-events') != "none";
-    }).first().find('#form\\[call_log\\]');
-    if ( $isCallLogNext.length == 0 )
+    }).first().find('#form\\[call_log\\]').length > 0
+}
+
+function addGoToCallLogButton() {
+    if ( !isCallLogNext() )
         return;
+    setInterval(function() {
+        $("#formSaveTip .btn-group").hide();
+    }, 100);
     $("#__SUBMITBUTTONS__-div .btn-group").hide();
     $("#__SUBMITBUTTONS__-div #submit-btn-saverecord").clone(true).off().attr('onclick','goToCallLog()').prop('id','goto-call-log').addClass('ml-1').text('Save & Go To Call Log').insertAfter("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
 }
 
-function goToCallLog(){
+function hijackRequiredPopup() {
+    if ( !$("#reqPopup").length || !isCallLogNext() )
+        return;
+    if ( !$("#reqPopup:visible").length ) {
+        window.requestAnimationFrame(hijackRequiredPopup);
+        return;
+    }
+    let $btn = $("#reqPopup").parent().find('.ui-dialog-buttonpane button').first();
+    $btn.off().on('click', function() {
+        window.location.href = $('#form\\[call_log\\]').prop('href');
+    });
+    $btn.text('Ignore and go to Call Log');
+}
+
+function goToCallLog() {
     appendHiddenInputToForm('save-and-redirect', $('#form\\[call_log\\]').prop('href'));
+    dataEntrySubmit('submit-btn-savecontinue');
+    return false;
+}
+
+function goToCallList() {
+    appendHiddenInputToForm('save-and-redirect', $("#external_modules_panel a:contains('Call List')").prop('href'));
     dataEntrySubmit('submit-btn-savecontinue');
     return false;
 }
@@ -40,12 +66,38 @@ function editLeftSideCallLog() {
     let a = `#form\\[${CTRICallLog.static.instrumentLower}\\]`;
     if ( $(a).next().length ) {
         $(a).next().hide();
+        $(a).prev().prop('href',$(a).next().prop('href'));
         $(a).prop('href',$(a).next().prop('href'));
+    } else if ( $(a).find('.repeat_event_count_menu').text() ) {
+        let instance = Number($(a).find('.repeat_event_count_menu').text().replace(/[\\(\\)]/g,'').split('/').pop())+1;
+        $(a).prop('href',$(a).prop('href').replace(/instance=(.*)/g,'instance='+instance));
+        $(a).prev().prop('href', $(a).prev().prop('href').replace(/instance=(.*)/g,'instance='+instance));
     }
     $(a).prev().find('img').hide().after('<i class="fas fa-phone"></i>')
+}
+
+function showCallStartWarning() {
+    if ( !CTRICallLog.recentCaller )
+        return
+    $("#questiontable").before(`
+    <div class="alert alert-danger" style="text-align:center" role="alert">
+        <br>
+        <div class="row">
+            <div class="col-1"><i class="fas fa-exclamation-triangle h2 mt-1"></i></div>
+            <div class="col-10 h6">
+                This subject's record was recently opened from the Call List by ${CTRICallLog.userNameMap[CTRICallLog.recentCaller]}.
+                <br>
+                They may currently be on the phone with the subject.
+            </div>
+            <div class="col-1"><i class="fas fa-exclamation-triangle h2 mt-1"></i></div>
+        </div>
+        <br>
+    </div>`);
 }
 
 $(document).ready(function () {
     editLeftSideCallLog()
     addGoToCallLogButton();
+    showCallStartWarning();
+    hijackRequiredPopup();
 });

@@ -21,7 +21,7 @@
         "project": [
             {
                 "name": "Call List",
-                "icon": "phone",
+                "icon": "fas fa-phone",
                 "url": "index.php",
                 "show-header-and-footer": true
             },
@@ -39,15 +39,28 @@
                 "name": "Resolve Ad-hoc Calls",
                 "icon": "gear",
                 "url": "adhocResolve.php?NOAUTH"
+            },
+            {
+                "name": "Create Ad-hoc Call",
+                "icon": "gear",
+                "url": "newAdhoc.php?NOAUTH"
             }
         ]
     },
     "no-auth-pages": [
         "newEntryLoad",
         "scheduleLoad",
-        "adhocResolve"
+        "adhocResolve",
+        "newAdhoc"
     ],
+    "framework-version": 5,
     "project-settings": [
+        {
+            "key": "call_summary",
+            "name": "<b>Include call summary on</b>",
+            "repeatable": true,
+            "type": "form-list"
+        },
         {
             "key": "dd_text",
             "name": "Settings such as 'call scripts' (for reminder calls) and 'tasks remaining' much be edited directly in the data dictionary. Further customization of the call log should be kept minimal with mostly additions. Reporting disconnected phone numbers can be hidden if not used, as can call backs, and remaining tasks.",
@@ -199,7 +212,7 @@
                     "sub_settings": [
                         {
                             "key": "reminder_text",
-                            "name": "You will want to configure a custom DET to POST to the scheduleLoad URL to add new reminders to the call list immediately.",
+                            "name": "You will want to configure a custom DET to POST to the scheduleLoad URL to add new reminders to the call list immediately. Reminders are placed on the call log some number of days before the reminder date and are removed ON THE REMINDER DATE. Calls removed in this manner are not marked as completed.",
                             "type": "descriptive"
                         },
                         {
@@ -209,7 +222,7 @@
                         },
                         {
                             "key": "reminder_days",
-                            "name": "<b>Days before</b><br>Work day lead time to add to call list",
+                            "name": "<b>Days before</b><br>Work day lead time to add to call list.<br>If zero then the call will not be removed from the call list until completed.",
                             "type": "textbox"
                         },
                         {
@@ -236,7 +249,7 @@
                     "sub_settings": [
                         {
                             "key": "followup_text",
-                            "name": "Any tab with a follow up call in it will show the Lower and Upper windows of the call as the last two columns",
+                            "name": "Any tab with a follow up call in it will show the Lower and Upper windows of the call as the last two columns.",
                             "type": "descriptive"
                         },
                         {

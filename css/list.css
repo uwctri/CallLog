@@ -20,6 +20,7 @@
 
 .card {
     margin-right: 20px;
+    max-width: 1600px;
 }
 
 .card input[type=search] {
@@ -57,6 +58,18 @@
     background: white!important;
 }
 
+.callTable tbody td {
+  padding-left: 15px!important;
+}
+
+.callTable tbody td a {
+  cursor: pointer;
+}
+
+.callTable thead th {
+  padding-left: 15px!important;
+}
+
 .dataTableChild {
     padding-top: 0;
     padding-bottom: 1.5em;
@@ -70,6 +83,47 @@
     padding: 0.5em;
 }
 
-.callbackCol {
+.callTable tbody td.callbackCol {
     border-left: 1px solid #dee2e6;
+    padding-left: 10px!important;
+}
+
+.callTable thead th.callbackCol {
+    padding-left: 10px!important;
+}
+
+.callTable tbody td.callStarted {
+    padding-left: 5px!important;
+    padding-right: 5px!important;
+}
+
+.callTable thead th.callStarted {
+    padding-left: 5px!important;
+    padding-right: 5px!important;
+}
+
+.noCallsButton, .endCallButton {
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+}
+
+.callTable tbody td.firstDataCol {
+    padding-left: 7px!important;
+}
+
+.callTable thead th.firstDataCol {
+    padding-left: 5px!important;
+}
+
+.infocircle {
+    margin-right: 0.25rem;
+    margin-top: 0.225rem;
+}
+
+.callbackRequestor {
+    font-weight: bold;
+    margin-left: 0.25rem;
+    cursor: default; 
 }

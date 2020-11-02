@@ -129,7 +129,7 @@ CTRICallLog.functions.saveMetadata = function () {
         method: 'POST',
         url: CTRICallLog.metadataPOST,
         data: {
-            record: (new URL(location.href)).searchParams.get('id'),
+            record: getParameterByName('id'),
             metadata: JSON.stringify(CTRICallLog.metadata)
         },
         error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
@@ -145,7 +145,7 @@ CTRICallLog.functions.saveCalldata = function (instance, dataVar, dataVal, isChe
         method: 'POST',
         url: CTRICallLog.calldataPOST,
         data: {
-            record: (new URL(location.href)).searchParams.get('id'),
+            record: getParameterByName('id'),
             instance: instance,
             dataVar: dataVar,
             dataVal: dataVal,
@@ -157,8 +157,7 @@ CTRICallLog.functions.saveCalldata = function (instance, dataVar, dataVal, isChe
 }
 
 function sendToCallList() {
-    let pid = (new URL(location.href)).searchParams.get('pid');
-    location.href = location.href.split('DataEntry')[0]+'ExternalModules/?prefix='+CTRICallLog.modulePrefix+'&page=index&pid='+pid;
+    location.href = $("#external_modules_panel a:contains('Call List')").prop('href');
 }
 
 function getPreviousCalldatetime( callID ) {
@@ -226,71 +225,6 @@ function getLeaveMessage(callID) {
         ) == thisWeek ).filter(x=>x).length >= meta.maxVMperWeek ? 'No' : 'Yes';
 }
 
-function buildCallSummaryTable() {
-    if ( !(CTRICallLog.data.length > 1 || CTRICallLog.data[1]['call_id']) )
-        return;
-    $("#center").append(`<div class="callHistoryContainer"><table class="callSummaryTable compact" style="width:100%"></table></div>`);
-    $('.callHistoryContainer').css('top',$("#record_id-tr").offset().top);
-    $('.callSummaryTable').DataTable({
-        pageLength: 50,
-        dom: 'rt',
-        order: [[ 0, "desc" ]],
-        columns: [
-            {title:'#',data:'instance'},
-            {title:'Call',data:'name'},
-            {title:'Msg',data:'leftMessage', className: 'dt-body-right'},
-            {title:'Call time',data:'datetime', render: (data,type,row,meta) =>
-                ( type === 'display' || type === 'filter' ) ? formatDate(new Date(data),CTRICallLog.defaultDateTimeFormat).toLowerCase(): data },
-            {title:'',data:'deleteInstance',bSortable: false}
-        ],
-        data: $.map(CTRICallLog.data, function(data, index) { 
-            let m = CTRICallLog.metadata[data['call_id']];
-            let allowDelete = (Object.keys(CTRICallLog.data)[Object.keys(CTRICallLog.data).length-1] == index) && (data['call_outcome'] != '1');
-            return {
-                instance: index,
-                name: m ? m['name'] : (data['call_id'] || "Unknown"),
-                datetime: data['call_open_datetime'],
-                leftMessage: data['call_left_message'][1] == "1" ? 'Yes' : 'No',
-                deleteInstance: allowDelete ? '<a class="deleteInstance"><i class="fas fa-times"></i></a>' : ''
-            };
-        })
-    });
-    
-    // Allow deleting the most recent version of the call log
-    $('.deleteInstance').on('click', function () {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Are you sure?',
-            text: "Are you sure you want to delete the previous instance of Call Log",
-            showCancelButton: true,
-            showConfirmButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#337ab7',
-            cancelButtonText: 'Close',
-            confirmButtonText: 'Delete Call Log'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                let url = new URL(location.href)
-                let instance = url.searchParams.get('instance')-1 > 0 ? url.searchParams.get('instance')-1 : 1;
-                // Post to delete, removes metadata too
-                $.ajax({
-                    method: 'POST',
-                    url: CTRICallLog.calldeletePOST,
-                    data: {record: url.searchParams.get('id')},
-                    error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
-                    success: (data) => {
-                        console.log(data);
-                        url.searchParams.set('instance',url.searchParams.get('instance')-1);
-                        window.onbeforeunload = function() { };
-                        window.location = url;
-                    }
-                });
-            }
-        })
-        $('.swal2-cancel').focus();
-    });
-}
-
 function buildNotesArea() {
     $("#call_notes-tr td").hide();
     $("#call_notes-tr").append(CTRICallLog.html.notes);
@@ -312,9 +246,6 @@ $(document).ready(function () {
             setTimeout( () => $("#call_hdr_details-tr").nextAll('tr').addBack().hide(), 100 ); // dodge branching logic
     }
     
-    // Used in a few places
-    const url = (new URL(location.href)).searchParams
-    
     // Load some Default CSS if none exists 
     if ( $('.formHeader').css('text-align') != 'center' )
         $('head').append(CTRICallLog.optionalCSS);
@@ -333,8 +264,8 @@ $(document).ready(function () {
         $(".formtbody").prepend(CTRICallLog.html.historic);
         $("#__SUBMITBUTTONS__-tr").hide();
         // Fill out call details
-        let id = CTRICallLog.data[url.get('instance')]['call_id'];
-        let data = CTRICallLog.data[url.get('instance')];
+        let id = CTRICallLog.data[getParameterByName('instance')]['call_id'];
+        let data = CTRICallLog.data[getParameterByName('instance')];
         $("#CallLogCurrentCall").text(CTRICallLog.metadata[id]['name']);
         $("td:contains(Current Caller)").next().text(data['call_open_user_full_name']);
         $("#CallLogCurrentTime").text(formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +conv24to12(data['call_open_time']));
@@ -364,9 +295,6 @@ $(document).ready(function () {
     if ( CTRICallLog.data[1] == null )
         return
     
-   // If we have calls then build out the call summary table
-    buildCallSummaryTable()
-    
     //Build out ad-hoc buttons 
     $.each( CTRICallLog.adhoc.config, function(index, adhoc) {
         $("div.card-header").after(CTRICallLog.html.adhoc.replace('TEXT','New '+adhoc.name).replace('MODALID',adhoc.id));
@@ -388,7 +316,7 @@ $(document).ready(function () {
                 method: 'POST',
                 url: CTRICallLog.adhoc.post,
                 data: {
-                    record: url.get('id'),
+                    record: getParameterByName('id'),
                     id: adhoc.id,
                     date: date, 
                     time: conv12to24($(`#${adhoc.id} input[name=callTime]`).val()),
@@ -398,13 +326,17 @@ $(document).ready(function () {
                 },
                 error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
                 success: function(data){
-                    window.onbeforeunload = function() { };
-                    window.location = (window.location+"").replace('index','record_home'); 
+                    console.log(data);
+                    //window.onbeforeunload = function() { };
+                    //window.location = (window.location+"").replace('index','record_home'); 
                 }
             });
             $(`#${adhoc.id}`).modal('hide');
         });
     });
+    
+   // If we have calls then build out the call summary table
+    buildCallSummaryTable()
     
     // Fill in Call Details on Tab Change
     $("#CallLogCurrentTime").text( $("input[name=call_open_date]").val() + " " + conv24to12($("input[name=call_open_time]").val()) );
@@ -433,9 +365,17 @@ $(document).ready(function () {
         }
     });
     
+    if ( getParameterByName('showReturn') ) {
+        setInterval(function() {
+            $("#formSaveTip .btn-group").hide();
+        }, 100);
+        $("#__SUBMITBUTTONS__-div .btn-group").hide();
+        $("#__SUBMITBUTTONS__-div #submit-btn-saverecord").clone(true).off().attr('onclick','goToCallList()').prop('id','goto-call-list').addClass('ml-1').text('Save & Go To Call List').insertAfter("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
+    }
+    
     // Select the correct tab based on URL or default
-    if ( url.get('call_id') )
-        $(`.nav-link[data-call-id=${url.get('call_id').replace(/\|/g,"\\|").replace(/\:/g,"\\:").replace(/\s/g,"\\ ")}]`).click();
+    if ( getParameterByName('call_id') )
+        $(`.nav-link[data-call-id=${decodeURI(getParameterByName('call_id')).replace(/\|/g,"\\|").replace(/\:/g,"\\:").replace(/\s/g,"\\ ")}]`).click();
     else
         $(".nav-link").first().click();
     
@@ -448,9 +388,11 @@ $(document).ready(function () {
     $("#call_outcome-tr").find('input,a').on('click', function() {
         if ( $("input[name=call_outcome]").val() == "" ) {
             $("#submit-btn-saverecord").prop('disabled',true).css('pointer-events','none');
+            $("#goto-call-list").prop('disabled',true).css('pointer-events','none');
             $("#submit-btn-dropdown").parent().find('button').prop('disabled',true).css('pointer-events','none');
         } else {
             $("#submit-btn-saverecord").prop('disabled',false).css('pointer-events','inherit');
+            $("#goto-call-list").prop('disabled',false).css('pointer-events','inherit');
             $("#submit-btn-dropdown").parent().find('button').prop('disabled',false).css('pointer-events','inherit');
         }
     });
