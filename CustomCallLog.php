@@ -88,6 +88,7 @@ class CustomCallLog extends AbstractExternalModule  {
         // Index of Call List
         if (strpos(PAGE, 'ExternalModules/index.php') !== false && $project_id != NULL) {
             $this->includeCookies();
+            $this->passArgument('usernameLists', $this->getUserNameListConfig());
             $this->passArgument('eventNameMap', $this->getEventNameMap());
             $this->passArgument('noCallsTodayPOST', $this->getURL('setNoCallsToday.php'));
             $this->passArgument('callStartedPOST', $this->getURL('setCallStarted.php'));
@@ -518,7 +519,7 @@ class CustomCallLog extends AbstractExternalModule  {
         $grace = strtotime('-'.$module->startedCallGrace.' minutes');
         $user = $this->framework->getUser()->getUsername();
         foreach( $meta as $call ) {
-            if ( !$call['complete'] && ($call['callStartedBy'] != $user) && (strtotime($call['callStarted']) > $grace) )
+            if ( !$call['complete'] && ($call['callStartedBy'] != $user) && ((time() - strtotime($call['callStarted'])/60) < $grace) )
                 return $call['callStartedBy'];
         }
         return '';
@@ -914,6 +915,19 @@ class CustomCallLog extends AbstractExternalModule  {
             ]
         );
         echo "<script>var ".$this->module_global." = ".json_encode($data).";</script>";
+    }
+    
+    private function getUserNameListConfig() {
+        $config = [];
+        $include = $this->getProjectSetting('username_include');
+        $exclude = $this->getProjectSetting('username_exclude');
+        foreach( $this->getProjectSetting('username_field') as $index => $field ) {
+            $config[$field] = [
+                'include' => $include[$index],
+                'exclude' => $exclude[$index]
+            ];
+        }
+        return $config;
     }
     
     private function includeFlatpickr() {

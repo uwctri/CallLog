@@ -126,6 +126,34 @@
             ]
         },
         {
+            "key": "username_list_collection",
+            "name": "<b>Username Lists</b>",
+            "type": "sub_settings",
+            "repeatable": true,
+            "sub_settings": [
+                {
+                    "key": "username_text",
+                    "name": "A field listed here can be included on a call tab as a static value depending on if the user is included or excluded from the list.",
+                    "type": "descriptive"
+                },
+                {
+                    "key": "username_field",
+                    "name": "<b>Field</b><br>Field that contains a username list",
+                    "type": "field-list"
+                },
+                {
+                    "key": "username_include",
+                    "name": "<b>Include Value</b><br>Value to display if the current user is in the list",
+                    "type": "textbox"
+                },
+                {
+                    "key": "username_exclude",
+                    "name": "<b>Exclude Value</b><br>Value to dispplay if the current user is not in the list",
+                    "type": "textbox"
+                }
+            ]
+        },
+        {
             "key": "call_collection",
             "name": "<b>Unique Call Type</b>",
             "type": "sub_settings",
