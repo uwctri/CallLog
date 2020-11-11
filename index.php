@@ -25,6 +25,9 @@ function loadParsePackCallData() {
     $startTime = microtime(true);
     global $project_id,$module;
     
+    // Issue reporting array
+    $issues = [];
+    
     // Event IDs
     $callEvent = $module->getProjectSetting("call_log_event");
     $metaEvent = $module->getProjectSetting("metadata_event");
@@ -146,11 +149,16 @@ function loadParsePackCallData() {
             // Make sure we 100% have a call ID (first attempt at a call won't get it from the normal data)
             $instanceData['_call_id'] = $fullCallID;
             
+            if ( !$instanceData['record_id'] ) {
+                $issues[] = $record . ' - ' . $callID . ' has a call without a record id. Poor save from call log.';
+                continue;
+            }
+            
             // Pack data - done
             $packagedCallData[$tabs['call2tabMap'][$callID]][] = $instanceData;
         }
     }
-    return array($packagedCallData, $tabs, $alwaysShowCallbackCol, round(((microtime(true)-$startTime)),5));
+    return array($packagedCallData, $tabs, $alwaysShowCallbackCol, round(((microtime(true)-$startTime)),5), $issues);
 }
 
 /////////////////////////////////////////////////
@@ -162,8 +170,9 @@ $module->includeDataTables();
 $module->includeCss('css/list.css');
 
 // Load, parse, and pack the Call Data for display
-list($packagedCallData, $tabs, $alwaysShowCallbackCol, $timeTaken) = loadParsePackCallData();
+list($packagedCallData, $tabs, $alwaysShowCallbackCol, $timeTaken, $issues) = loadParsePackCallData();
 printToScreen('Data Transformed in '.$timeTaken.' seconds');
+printToScreen('Issues encountered: ' . json_encode($issues));
 ?>
 
 <div class="projhdr"><i class="fas fa-phone"></i> Call List</div>
@@ -328,6 +337,8 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
                 colConfig.render = (data,type,row,meta) => CTRICallLog.eventNameMap[data] || "";
             } else if ( fConfig.validation == 'phone' ) {
                 colConfig.render = (data,type,row,meta) => (data && (type === 'filter')) ? data.replace(/[\\(\\)\\-\s]/g,'') : data || "";
+            } else if ( Object.keys(CTRICallLog.usernameLists).includes(fConfig.field) ) {
+                colConfig.render = (data,type,row,meta) => data ? data.includes($("#username-reference").text()) ? CTRICallLog.usernameLists[fConfig.field]['include'] : CTRICallLog.usernameLists[fConfig.field]['exclude'] : "";
             }
             
             // Build out any links
@@ -483,7 +494,10 @@ printToScreen('Data Transformed in '.$timeTaken.' seconds');
                 id: call_id
             },
             error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
-            success: (data) => refreshTableData()
+            success: (data) => { 
+                console.log('Call ended. Refreshing table data.');
+                refreshTableData()
+            }
         });
     }
     
