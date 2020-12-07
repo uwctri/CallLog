@@ -288,6 +288,7 @@ $(document).ready(function () {
         setTimeout( function(){ 
             $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
             $(".formtbody").append(CTRICallLog.html.noCalls);
+            $("#formSaveTip").remove();
         },100 ); // dodge branching logic
     }
     
