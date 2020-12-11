@@ -287,10 +287,8 @@ class CustomCallLog extends AbstractExternalModule  {
                 ];
             } elseif ( !empty($meta[$idExact]) && !empty($data[$callConfig['apptDate']]) && empty($data[$callConfig['indicator']]) ) {
                 // The visit has been reschedueld for the exact previous time, or maybe user error
-                if ( count($meta[$idExact]["instances"]) == 0 )
-                    unset($meta[$idExact]);
-                else
-                    $meta[$idExact]['complete'] = true;
+                // Previously we would usent those calls with 0 instances, but this leads to an issue if a mcv is reschedueld on the first try
+                $meta[$idExact]['complete'] = true;
             }
             
             // Search for similar IDs and complete/remove them. We should only have 1 MCV call per event active on the call log
