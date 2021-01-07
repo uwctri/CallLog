@@ -375,10 +375,27 @@ $(document).ready(function () {
     }
     
     // Select the correct tab based on URL or default
-    if ( getParameterByName('call_id') )
-        $(`.nav-link[data-call-id=${decodeURI(getParameterByName('call_id')).replace(/\|/g,"\\|").replace(/\:/g,"\\:").replace(/\s/g,"\\ ")}]`).click();
-    else
-        $(".nav-link").first().click();
+    function selectTab() { 
+        if ( getParameterByName('call_id') )
+            $(`.nav-link[data-call-id=${decodeURI(getParameterByName('call_id')).replace(/\|/g,"\\|").replace(/\:/g,"\\:").replace(/\s/g,"\\ ")}]`).click();
+        else
+            $(".nav-link").first().click();
+    }
+    selectTab();
+    setInterval(function(){ //Watchdog, some call logs were being saved without a call id
+        if ( $("input[name=call_id]").val() == "" )
+            selectTab();
+    }, 1000);
+    
+    // Call ID missing failsafe.
+    setTimeout(function() {
+        if ( $("input[name=call_id]").val() == "" )
+            Swal.fire({
+                icon: 'warning',
+                title: 'Issue Configuring Call Log',
+                text: "There was an issue determining what call this log is for. Please refresh the page. If this issue persists contact the REDCap administrator.",
+            });
+    }, 5000);
     
     // Force Call Incomplete when call back is requested
     $("input[name$=call_requested_callback]").on('click', function() {
