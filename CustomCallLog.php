@@ -470,7 +470,12 @@ class CustomCallLog extends AbstractExternalModule  {
         $instance = end(array_keys($data[$record]['repeat_instances'][$event][$this->instrumentLower]));
         $instance = $instance ? $instance : '1';
         foreach( $meta as $index => $call ) {
+            $tmp = $meta[$index]['instances'];
             $meta[$index]['instances'] = array_values(array_diff($call['instances'], array($instance)));
+            // If we did remove a call then make sure we mark the call as incomplete.
+            // We currently don't allow completed calls to actually be deleted though as there could be unforeseen issues.
+            if ( (count($tmp) > 0) && (count($tmp) != count($meta[$index]['instances'])) )
+                $meta[$index]['complete'] = false;
         }
         if ( $instance == '1' ) {
             $fields = array_values(array_intersect( REDCap::getFieldNames($this->instrumentLower), array_keys($data[$record][$event]) ));
