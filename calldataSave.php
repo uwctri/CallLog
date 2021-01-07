@@ -16,7 +16,7 @@ $val = $_POST['dataVal'];
 if (json_decode($_POST['isCheckbox']))
     $val = json_decode($val,true);
 
-if( !empty($pid) && !empty($record) && !empty($instance) && !empty($var) && !empty($val) ) {
+if( !empty($pid) && !empty($record) && !empty($instance) && !empty($var) && !is_null($val) ) {
     $module->saveCallData($pid, $record, $instance, $var, $val);
     echo "Done";
 } else {
