@@ -28,22 +28,22 @@
             {
                 "name": "Load New Entry Calls",
                 "icon": "gear",
-                "url": "newEntryLoad.php?NOAUTH"
+                "url": "POST/newEntryLoad.php?NOAUTH"
             },
             {
                 "name": "Load Reminder Calls",
                 "icon": "gear",
-                "url": "scheduleLoad.php?NOAUTH"
+                "url": "POST/scheduleLoad.php?NOAUTH"
             },
             {
                 "name": "Resolve Ad-hoc Calls",
                 "icon": "gear",
-                "url": "adhocResolve.php?NOAUTH"
+                "url": "POST/adhocResolve.php?NOAUTH"
             },
             {
                 "name": "Create Ad-hoc Call",
                 "icon": "gear",
-                "url": "newAdhoc.php?NOAUTH"
+                "url": "POST/newAdhoc.php?NOAUTH"
             }
         ]
     },

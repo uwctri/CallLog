@@ -389,7 +389,7 @@ $(document).ready(function () {
     
     // Call ID missing failsafe.
     setTimeout(function() {
-        if ( $("input[name=call_id]").val() == "" )
+        if ( ($(".nav-link").length > 0) && ($("input[name=call_id]").val() == "") )
             Swal.fire({
                 icon: 'warning',
                 title: 'Issue Configuring Call Log',
