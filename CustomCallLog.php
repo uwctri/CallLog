@@ -72,6 +72,9 @@ class CustomCallLog extends AbstractExternalModule  {
     }
     
     public function redcap_every_page_top($project_id) {
+        if ( !defined("USERID") ) //Skip if user isn't logged in.
+            return;
+
         $this->initCTRIglobal();
         $this->includeJs('js/every_page.js');
         
