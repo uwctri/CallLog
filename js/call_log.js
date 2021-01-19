@@ -277,7 +277,7 @@ $(document).ready(function () {
     // Build out the tabs
     $("#questiontable tr[id]").first().before(CTRICallLog.html.wrapper);
     $.each( CTRICallLog.metadata, function(callID, callData) {
-        if( this.complete || callID[0] == "_" || callID == "" )
+        if( this.complete || (callID[0] == "_") || (callID == "") || (callData.start && (callData.start > today)) )
             return;
         $(".card-header-tabs").append(CTRICallLog.html.tab.
             replace('CALLID',callID).replace('TABNAME',callData.name));
