@@ -128,3 +128,140 @@
     margin-left: 0.25rem;
     cursor: default; 
 }
+
+/* Redcap Corrections */
+#south{
+    position: absolute;
+}
+
+#west {
+    height: min-content!important;
+}
+
+/* Boot strap corrections */
+
+.nav-link.call-link.active {
+    background-color: #f7f7f7!important;
+}
+
+.call-tab {
+    background-color: transparent;
+    margin-bottom: 10px!important;
+}
+
+.card {
+    margin-right: 20px;
+    max-width: 1600px;
+}
+
+.card input[type=search] {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Call Table CSS */
+
+#hiddenToggle {
+    margin-right: 1em;
+}
+
+.tab-header {
+    background-color: white;
+    padding-bottom: 0;
+}
+
+.toggleHiddenCalls {
+    border: 1px solid #aaa;
+    float: right;
+    margin-top: 0.25rem !important;
+}
+
+.callTable th {
+    border-left: none!important;
+    border-right: none!important;
+}
+
+.callTable tr.even {
+    background: #eeeeee !important;
+}
+
+.callTable tr.odd {
+    background: white!important;
+}
+
+.callTable tbody td {
+  padding-left: 15px!important;
+}
+
+.callTable tbody td a {
+  cursor: pointer;
+}
+
+.callTable thead th {
+  padding-left: 15px!important;
+}
+
+.dataTableChild {
+    padding-top: 0;
+    padding-bottom: 1.5em;
+}
+
+.dataTableChild .container {
+    max-width: 95%;
+}
+
+.dtChildData .row {
+    padding: 0.5em;
+}
+
+.callTable tbody td.callbackCol {
+    border-left: 1px solid #dee2e6;
+    padding-left: 10px!important;
+}
+
+.callTable thead th.callbackCol {
+    padding-left: 10px!important;
+}
+
+.callTable tbody td.callStarted {
+    padding-left: 5px!important;
+    padding-right: 5px!important;
+}
+
+.callTable thead th.callStarted {
+    padding-left: 5px!important;
+    padding-right: 5px!important;
+}
+
+.noCallsButton, .endCallButton {
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+    color: black;
+}
+
+.callTable tbody td.firstDataCol {
+    padding-left: 7px!important;
+}
+
+.callTable thead th.firstDataCol {
+    padding-left: 5px!important;
+}
+
+.infocircle {
+    margin-right: 0.25rem;
+    margin-top: 0.225rem;
+}
+
+.callbackRequestor {
+    font-weight: bold;
+    margin-left: 0.25rem;
+    cursor: default; 
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover{
+    color: #333!important;
+    background: white!important;
+}
+
