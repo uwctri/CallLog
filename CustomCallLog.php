@@ -486,7 +486,6 @@ class CustomCallLog extends AbstractExternalModule  {
         } else 
             db_query( 'DELETE FROM redcap_data WHERE project_id='. $project_id . ' AND record=' . $record . ' AND instance=' . $instance . ';' );
         $this->saveCallMetadata($project_id, $record, $meta);
-        echo json_encode('DELETE FROM redcap_data WHERE project_id='. $project_id . ' AND record=' . $record . ' AND (field_name=' . implode(' OR field_name=', $fields) . ');');
     }
     
     public function saveCallData($project_id, $record, $instance, $var, $val) {
