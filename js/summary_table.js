@@ -21,7 +21,7 @@ function buildCallSummaryTable() {
             let allowDelete = (Object.keys(CTRICallLog.data)[Object.keys(CTRICallLog.data).length-1] == index) && (data['call_outcome'] != '1');
             return {
                 instance: index,
-                name: m ? m['name'] : (data['call_id'] || "Unknown"),
+                name: m && m['name'] ? m['name'] : (data['call_id'] || "Unknown"),
                 datetime: data['call_open_datetime'],
                 leftMessage: data['call_left_message'][1] == "1" ? 'Yes' : 'No',
                 deleteInstance: allowDelete ? '<a class="deleteInstance"><i class="fas fa-times"></i></a>' : ''
