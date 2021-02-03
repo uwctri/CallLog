@@ -156,6 +156,14 @@ CTRICallLog.functions.saveCalldata = function (instance, dataVar, dataVal, isChe
     });
 }
 
+CTRICallLog.functions.UpdateCallTypeEndDates = function (call_type, days) {
+    $.each(CTRICallLog.metadata, function(callid, data) {
+        if ( !callid.includes(call_type) ) 
+            return;
+        CTRICallLog.metadata[callid]['end'] = formatDate( ( new Date(CTRICallLog.metadata[callid]['start']+"T00:00" ).addDays(days) ), 'y-MM-dd');
+    });
+}
+
 function sendToCallList() {
     location.href = $("#external_modules_panel a:contains('Call List')").prop('href');
 }
