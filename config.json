@@ -48,10 +48,10 @@
         ]
     },
     "no-auth-pages": [
-        "newEntryLoad",
-        "scheduleLoad",
-        "adhocResolve",
-        "newAdhoc"
+        "POST/newEntryLoad",
+        "POST/scheduleLoad",
+        "POST/adhocResolve",
+        "POST/newAdhoc"
     ],
     "framework-version": 5,
     "project-settings": [
