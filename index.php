@@ -78,13 +78,23 @@ function loadParsePackCallData() {
             if ( ($call['template'] == 'reminder' || $call['template'] == 'followup' || $call['template'] == 'adhoc') && ($call['start'] > $today) )
                 continue;
             
-            // Skip reminder calls day of or future
+            // Skip reminder calls day-of or future
             if ( ($call['template'] == 'reminder') && ($call['end'] <= $today) )
+                continue;
+            
+            // Skip followups that are flagged for auto remove and are out of window (after the last day)
+            if ( ($call['template'] == 'followup') && $call['autoRemove'] && ($call['end'] < $today) )
                 continue;
             
             $instanceData = $recordData['repeat_instances'][$callEvent][$module->instrumentLower][end($call['instances'])]; // This could be empty for New Entry calls, but it won't matter.
             $instanceEventData = $recordData[$call['event_id']];
             $instanceData = array_merge( array_filter( empty($instanceEventData) ? [] : $instanceEventData, 'isNotBlank' ), array_filter($recordData[$callEvent],'isNotBlank'), array_filter( empty($instanceData) ? [] : $instanceData, 'isNotBlank' ));
+            
+            // Skip MCV calls if past the autoremove date. Need Instance data
+            if ( ($call['template'] == 'mcv') && $call['autoRemoveField'] && $instanceData[$call['autoRemoveField']] &&( $instanceData[$call['autoRemoveField']] < $today) ) {
+                printToScreen($record);
+                continue;
+            }
             
             // Check if the call was recently opened
             if ( strtotime($call['callStarted']) > strtotime('-'.$module->startedCallGrace.' minutes') )

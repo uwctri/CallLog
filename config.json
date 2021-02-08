@@ -133,7 +133,7 @@
             "sub_settings": [
                 {
                     "key": "username_text",
-                    "name": "A field listed here can be included on a call tab as a static value depending on if the user is included or excluded from the list.",
+                    "name": "A field listed here can be included on a call tab as a static value depending on if the user is included or excluded from the list. This is useful for suggesting callers for a particular subject. The list of usernames can be constructed via shazam or DET.",
                     "type": "descriptive"
                 },
                 {
@@ -277,7 +277,7 @@
                     "sub_settings": [
                         {
                             "key": "followup_text",
-                            "name": "Any tab with a follow up call in it will show the Lower and Upper windows of the call as the last two columns.",
+                            "name": "Any tab with a follow up call in it will show the Lower and Upper windows of the call as the last two columns titled 'Start Calling' and 'Complete by'. ",
                             "type": "descriptive"
                         },
                         {
@@ -304,6 +304,11 @@
                             "key": "followup_length",
                             "name": "<b>Window Size</b><br>Number of days the call has to be completed",
                             "type": "textbox"
+                        },
+                        {
+                            "key": "followup_auto_remove",
+                            "name": "<b>Auto Remove</b><br>Remove the call from the call list and call log once out-of-window. If not checked the 'complete by' date is more of a suggestion or soft-stop",
+                            "type": "checkbox"
                         }
                     ]
                 },
@@ -314,7 +319,7 @@
                     "sub_settings": [
                         {
                             "key": "mcv_text",
-                            "name": "You will want to configure a custom DET to POST to the scheduleLoad URL to add new reminders to the call list immediately. Any tab with a Missed/Cancelled visit call will have theMissed Appt Date/Time added as the last column. The missed event can be displayed with 'call_event_name'",
+                            "name": "You will want to configure a custom DET to POST to the scheduleLoad URL to add new reminders to the call list immediately. Any tab with a Missed/Cancelled visit call will have the Missed Appt Date/Time added as the last column. The missed event can be displayed with 'call_event_name'",
                             "type": "descriptive"
                         },
                         {
@@ -329,8 +334,13 @@
                         },
                         {
                             "key": "mcv_include_events",
-                            "name": "<b>Missed/Cancelled calls for:</b><br>Comma seperated list of unique event names",
+                            "name": "<b>Missed/Cancelled calls for</b><br>Comma seperated list of unique event names",
                             "type": "textbox"
+                        },
+                        {
+                            "key": "mcv_auto_remove",
+                            "name": "<b>Auto Remove</b><br>Remove the call from the call list and call log once past this date. This date field should be the end window for the visit. This field is not automatically displayed on the call list",
+                            "type": "field-list"
                         }
                     ]
                 },

@@ -216,6 +216,7 @@ class CustomCallLog extends AbstractExternalModule  {
                     "maxVoiceMails" => $callConfig['maxVoiceMails'],
                     "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
+                    "autoRemove" => $callConfig['autoRemove'],
                     "complete" => false
                 ];
             }
@@ -283,6 +284,7 @@ class CustomCallLog extends AbstractExternalModule  {
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
+                    "autoRemoveField" => $callConfig['autoRemove'],
                     "maxVoiceMails" => $callConfig['maxVoiceMails'],
                     "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
@@ -296,7 +298,7 @@ class CustomCallLog extends AbstractExternalModule  {
             
             // Search for similar IDs and complete/remove them. We should only have 1 MCV call per event active on the call log
             foreach( $meta as $callID => $callData ) {
-                if ( $callID == $idExact || $callData['complete'] || $callData['template']!="mcv" || $callData['event_id'] != $callConfig['event'] )
+                if ( $callID == $idExact || $callData['complete'] || $callData['template']!="mcv" || $callData['event'] != $callConfig['event'] )
                     continue;
                 if ( count($callData["instances"]) == 0 )
                     unset($meta[$callID]);
@@ -618,13 +620,16 @@ class CustomCallLog extends AbstractExternalModule  {
             elseif ( $template == "followup" ) {
                 $event = $this->getProjectSetting("followup_event")[$i][0];
                 $field = $this->getProjectSetting("followup_date")[$i][0];
-                $days = $this->getProjectSetting("followup_days")[$i][0];
+                $days = (int)$this->getProjectSetting("followup_days")[$i][0];
+                $auto = $this->getProjectSetting("followup_auto_remove")[$i][0];
+                $length = (int)$this->getProjectSetting("followup_length")[$i][0];
                 if ( !empty($field) && !empty($event) && !empty($days) ) {
                     $followupConfig[] = array_merge([
                         "event" => $event,
                         "field" => $field,
-                        "days" => (int)$this->getProjectSetting("followup_days")[$i][0],
-                        "length" => (int)$this->getProjectSetting("followup_length")[$i][0]
+                        "days" => $days,
+                        "length" => $length,
+                        "autoRemove" => $auto
                     ], $commonConfig);
                 } elseif ( !empty($field) && !empty(days) ) {
                     $includeEvents = array_map('trim', explode(',',$this->getProjectSetting("followup_include_events")[$i][0])); 
@@ -632,8 +637,9 @@ class CustomCallLog extends AbstractExternalModule  {
                         $arr = array_merge([
                             "event" => REDCap::getEventIdFromUniqueEvent($eventName),
                             "field" => $field,
-                            "days" => (int)$this->getProjectSetting("followup_days")[$i][0],
-                            "length" => (int)$this->getProjectSetting("followup_length")[$i][0]
+                            "days" => $days,
+                            "length" => $length,
+                            "autoRemove" => $auto
                         ], $commonConfig);
                         $arr['id'] = $arr['id'].'|'.$eventName;
                         $arr['name'] = $arr['name'].' - '.$eventNameMap[$eventName];
@@ -646,13 +652,15 @@ class CustomCallLog extends AbstractExternalModule  {
             elseif ( $template == "mcv" ) {
                 $indicator = $this->getProjectSetting("mcv_indicator")[$i][0];
                 $dateField = $this->getProjectSetting("mcv_date")[$i][0];
+                $autoField = $this->getProjectSetting("mcv_auto_remove")[$i][0];
                 if ( !empty($indicator) && !empty($dateField) ) {
                     $includeEvents = array_map('trim', explode(',',$this->getProjectSetting("mcv_include_events")[$i][0])); 
                     foreach( $includeEvents as $eventName ) {
                         $arr = array_merge([
                             "event" => REDCap::getEventIdFromUniqueEvent($eventName),
                             "indicator" => $indicator,
-                            "apptDate" => $dateField
+                            "apptDate" => $dateField,
+                            "autoRemove" => $autoField
                         ], $commonConfig);
                         $arr['id'] = $arr['id'].'|'.$eventName;
                         $arr['name'] = $arr['name'].' - '.$eventNameMap[$eventName];
