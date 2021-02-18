@@ -526,7 +526,6 @@ printToScreen('Issues encountered: ' . json_encode($issues));
             data: {reloadData: true},
             error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
             success: (data) => {
-                eee = data;
                 data = JSON.parse(data);
                 CTRICallLog.packagedCallData = data[0];
                 $('.callTable').each( function(index,el) {
