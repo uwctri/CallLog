@@ -91,10 +91,8 @@ function loadParsePackCallData() {
             $instanceData = array_merge( array_filter( empty($instanceEventData) ? [] : $instanceEventData, 'isNotBlank' ), array_filter($recordData[$callEvent],'isNotBlank'), array_filter( empty($instanceData) ? [] : $instanceData, 'isNotBlank' ));
             
             // Skip MCV calls if past the autoremove date. Need Instance data
-            if ( ($call['template'] == 'mcv') && $call['autoRemoveField'] && $instanceData[$call['autoRemoveField']] &&( $instanceData[$call['autoRemoveField']] < $today) ) {
-                printToScreen($record);
+            if ( ($call['template'] == 'mcv') && $call['autoRemoveField'] && $instanceData[$call['autoRemoveField']] &&( $instanceData[$call['autoRemoveField']] < $today) )
                 continue;
-            }
             
             // Check if the call was recently opened
             if ( strtotime($call['callStarted']) > strtotime('-'.$module->startedCallGrace.' minutes') )
@@ -528,6 +526,7 @@ printToScreen('Issues encountered: ' . json_encode($issues));
             data: {reloadData: true},
             error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
             success: (data) => {
+                eee = data;
                 data = JSON.parse(data);
                 CTRICallLog.packagedCallData = data[0];
                 $('.callTable').each( function(index,el) {

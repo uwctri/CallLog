@@ -291,7 +291,7 @@ $(document).ready(function () {
             (callData.autoRemove && callData.end && (callData.end < today)) )
             return;
         $(".card-header-tabs").append(CTRICallLog.html.tab.
-            replace('CALLID',callID).replace('TABNAME',callData.name));
+            replace('CALLID',callID).replace('TABNAME',callData.name||"Unknown"));
     });
     
     // If no tabs then we have no calls. 

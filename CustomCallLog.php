@@ -234,6 +234,12 @@ class CustomCallLog extends AbstractExternalModule  {
         $today = date('Y-m-d');
         foreach( $config as $callConfig ) {
             $data = REDCap::getData($project_id,'array',$record,[$callConfig['field'],$callConfig['removeVar']])[$record];
+            if ( !empty($meta[$callConfig['id']]) && count($callConfig['instances'] == 0) && 
+                 $data[$callConfig['removeEvent']][$callConfig['removeVar']] ) {
+                // Alt flag was set and we haven't recorded calls. Delete the metadata
+                unset($meta[$callConfig['id']]);
+                continue;
+            }
             if ( $data[$callConfig['removeEvent']][$callConfig['removeVar']] )
                 continue;
             if ( !empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == "" ) {
@@ -261,6 +267,7 @@ class CustomCallLog extends AbstractExternalModule  {
                     "complete" => false
                 ];
             }
+            
         }
         $this->saveCallMetadata($project_id, $record, $meta);
     }
