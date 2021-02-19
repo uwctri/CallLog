@@ -242,6 +242,12 @@ printToScreen('Issues encountered: ' . json_encode($issues));
     CTRICallLog.childRows = {};
     CTRICallLog.colConfig = {};
     
+    function projectLog( action, call_id, record ) {
+        if (typeof ez !== "undefined") {
+            ez.loge(action, "Call ID = "+call_id, record, "", pid);
+        }
+    }
+    
     function childRowFormat( record, call_id, callStarted, childData, notesData, tab ) {
         notesData = notesData.split('|||').map(x=>x.split('||')).filter(x=>x.length>2);
         return '<div class="container">'+
@@ -480,6 +486,7 @@ printToScreen('Issues encountered: ' . json_encode($issues));
     }
     
     function startCall(record, call_id, url) {
+        projectLog("Started Call", call_id, record);
         $.ajax({
             method: 'POST',
             url: CTRICallLog.callStartedPOST,
@@ -503,6 +510,7 @@ printToScreen('Issues encountered: ' . json_encode($issues));
             },
             error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
             success: (data) => { 
+                projectLog("Manually Ended Call", call_id, record);
                 console.log('Call ended. Refreshing table data.');
                 refreshTableData()
             }
