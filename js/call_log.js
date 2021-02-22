@@ -390,7 +390,7 @@ $(document).ready(function () {
         if ( getParameterByName('call_id') )
             $(`.nav-link[data-call-id=${decodeURI(getParameterByName('call_id')).replace(/\|/g,"\\|").replace(/\:/g,"\\:").replace(/\s/g,"\\ ")}]`).click();
         else
-            $(".nav-link").first().click();
+            $(".nav-link:visible").first().click();
     }
     selectTab();
     setInterval(function(){ //Watchdog, some call logs were being saved without a call id
