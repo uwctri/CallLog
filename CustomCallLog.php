@@ -489,11 +489,8 @@ class CustomCallLog extends AbstractExternalModule  {
             if ( (count($tmp) > 0) && (count($tmp) != count($meta[$index]['instances'])) )
                 $meta[$index]['complete'] = false;
         }
-        if ( $instance == '1' ) {
-            $fields = array_values(array_intersect( REDCap::getFieldNames($this->instrumentLower), array_keys($data[$record][$event]) ));
-            db_query( 'DELETE FROM redcap_data WHERE project_id='. $project_id . ' AND record=' . $record . ' AND (field_name="' . implode('" OR field_name="', $fields) . '");' );
-        } else 
-            db_query( 'DELETE FROM redcap_data WHERE project_id='. $project_id . ' AND record=' . $record . ' AND instance=' . $instance . ';' );
+        $fields = array_values(array_intersect( REDCap::getFieldNames($this->instrumentLower), array_keys($data[$record][$event]) ));
+        db_query( 'DELETE FROM redcap_data WHERE project_id='. $project_id . ' AND record=' . $record . ' AND (field_name="' . implode('" OR field_name="', $fields) . '");' );
         $this->saveCallMetadata($project_id, $record, $meta);
     }
     
@@ -525,6 +522,24 @@ class CustomCallLog extends AbstractExternalModule  {
     /////////////////////////////////////////////////
     // Utlties and Config Loading
     /////////////////////////////////////////////////
+    
+    public function isInDAG( $record ) {
+        $user_id = defined('USERID') ? USERID : false;
+        if (!$user_id)
+            return false;
+        $user = REDCap::getUserRights($user_id)[$user_id];
+        $super = $user['user_rights'] && $user['data_access_groups'];
+        if ( $super )
+            return true;
+        $user_group = $user['group_id'] ? $user['group_id'] : "";
+        $record_group_name = reset(REDCap::getData($user['project_id'],'array',$record, 'redcap_data_access_group', NULL, NULL, FALSE, TRUE)[$record])['redcap_data_access_group'];
+        $all_group_names = REDCap::getGroupNames(true);
+        if ( $all_group_names[$user_group] == $record_group_name )
+            return true;
+        if ( $user_group == "" )
+            return true; # allow users without DAG restrictions access to all data
+        return false;
+    }
     
     public function recentCallStarted($project_id, $record) {
         $meta = $this->getCallMetadata($project_id, $record);

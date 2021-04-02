@@ -24,7 +24,7 @@ function isNotBlank($string) {
 function loadParsePackCallData() {
     $startTime = microtime(true);
     global $project_id,$module;
-    
+
     // Issue reporting array
     $issues = [];
     
@@ -58,6 +58,11 @@ function loadParsePackCallData() {
     foreach( $tabs['config'] as $tab )
         $packagedCallData[$tab["tab_id"]] = [];
     foreach( REDCap::getData($project_id,'array') as $record => $recordData ) {
+        
+        // Check if the dag is empty or if it matches the User's DAG
+        if ( !$module->isInDAG($record) )
+            continue;
+        
         $meta = json_decode($recordData[$metaEvent][$module->metadataField],true);
         
         // Check if withdrawn or tmp withdrawn
@@ -151,7 +156,10 @@ function loadParsePackCallData() {
             if ( $call['template'] == 'adhoc' ) {
                 $instanceData['_adhocReason'] = $adhoc['config'][$callID]['reasons'][$call['reason']];
                 $instanceData['_adhocContactOn'] = $call['contactOn'];
-                $instanceData['_callNotes'] .= $call['reported'].'||'.$call['reporter'].'||'.'&nbsp;'.'||'.$call['initNotes'].'|||';
+                $notes = $call['initNotes'] ?  $call['initNotes'] : "No Notes Taken";
+                $instanceData['_callNotes'] = "";
+                if ( $call['reporter'] != "" ) 
+                    $instanceData['_callNotes'] .= $call['reported'].'||'.$call['reporter'].'||'.'&nbsp;'.'||'.$notes.'|||';
             }
             
             // Make sure we 100% have a call ID (first attempt at a call won't get it from the normal data)
@@ -436,8 +444,13 @@ printToScreen('Issues encountered: ' . json_encode($issues));
             className: 'callbackCol',
             render: function (data, type, row, meta) {
                 let displayDate = '';
-                if ( row['call_requested_callback'] && row['call_requested_callback'][1] == '1' )
-                    displayDate = formatDate(new Date(row['call_callback_date']+'T00:00:00'), CTRICallLog.defaultDateFormat)+" "+conv24to12(row['call_callback_time']);
+                if ( row['call_requested_callback'] && row['call_requested_callback'][1] == '1' ) {
+                    if ( row['call_callback_date'] )
+                        displayDate += formatDate(new Date(row['call_callback_date']+'T00:00:00'), CTRICallLog.defaultDateFormat)+" ";
+                    displayDate += conv24to12(row['call_callback_time']);
+                    if (!displayDate)
+                        displayDate = "Not specified";
+                }
                 let requestedBy = row['call_callback_requested_by'] ? row['call_callback_requested_by'] == '1' ? 'Participant' : 'Staff' : ' ';
                 if ( type === 'display'  ) {
                     let display = '';
