@@ -172,6 +172,8 @@ function getPreviousCalldatetime( callID ) {
     if ( !CTRICallLog.metadata[callID] || isEmpty(CTRICallLog.metadata[callID].instances) )
         return "";
     let data = CTRICallLog.data[ CTRICallLog.metadata[callID].instances.slice(-1)[0]  ];
+    if ( !data ) 
+        return "";
     return formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +conv24to12(data['call_open_time']);
 }
 
@@ -179,6 +181,8 @@ function getPreviousCallTasks( callID ) {
     if ( !CTRICallLog.metadata[callID] || isEmpty(CTRICallLog.metadata[callID].instances) )
         return [];
     let data = CTRICallLog.data[ CTRICallLog.metadata[callID].instances.slice(-1)[0]  ];
+    if ( !data )
+        return [];
     let arr = [];
     for (const [key, value] of Object.entries(data['call_task_remaining'])) {
         if ( value == "1" ) 
@@ -193,6 +197,8 @@ function getPreviousCallNotes( callID ) {
     let notes = [];
     $.each( CTRICallLog.metadata[callID].instances, function(_,instance) {
         let data = CTRICallLog.data[instance];
+        if ( !data ) 
+            return;
         notes.push( {
             'dt': formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +conv24to12(data['call_open_time']),
             'text': data['call_notes'],
@@ -304,7 +310,7 @@ $(document).ready(function () {
     }
     
     // Check if their is any data at all. We need the record to exist to continue
-    if ( CTRICallLog.data[1] == null )
+    if ( Object.keys(CTRICallLog.data).length == 0 )
         return
     
     //Build out ad-hoc buttons 
@@ -338,9 +344,9 @@ $(document).ready(function () {
                 },
                 error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
                 success: function(data){
-                    console.log(data);
-                    //window.onbeforeunload = function() { };
-                    //window.location = (window.location+"").replace('index','record_home'); 
+                    // Data is thrown out
+                    window.onbeforeunload = function() { };
+                    window.location = (window.location+"").replace('index','record_home'); 
                 }
             });
             $(`#${adhoc.id}`).modal('hide');

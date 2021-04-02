@@ -1,5 +1,5 @@
 function buildCallSummaryTable() {
-    if ( isEmpty(CTRICallLog.metadata) || !(Object.keys(CTRICallLog.data).length > 1 || CTRICallLog.data[1]['call_id']) )
+    if ( isEmpty(CTRICallLog.metadata) || !(Object.keys(CTRICallLog.data).length > 1 || !CTRICallLog.data[1] ||CTRICallLog.data[1]['call_id']) )
         return;
     $("#center").append(`<div class="callHistoryContainer"><table class="callSummaryTable compact" style="width:100%"></table></div>`);
     $('.callHistoryContainer').css('top',$("#record_id-tr").offset().top);
