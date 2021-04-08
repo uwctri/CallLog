@@ -179,6 +179,7 @@ class CustomCallLog extends AbstractExternalModule  {
                 "load" => date("Y-m-d H:i"),
                 "instances" => [],
                 "voiceMails" => 0,
+                "expire" => $callConfig['expire'],
                 "maxVoiceMails" => $callConfig['maxVoiceMails'],
                 "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                 "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
@@ -199,7 +200,8 @@ class CustomCallLog extends AbstractExternalModule  {
             if ( !empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == "" ) {
                 //Anchor appt was removed, get rid of followup call too.
                 unset($meta[$callConfig['id']]);
-            } elseif (empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != ""  ) {
+            } elseif (empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "" 
+                        && ( empty($callConfig['skip']) || !$data[$callConfig['event']][$callConfig['skip']] ) ) {
                 // Anchor is set and the meta doesn't have the call id in it yet
                 $start = date('Y-m-d', strtotime( $data[$callConfig['event']][$callConfig['field']].' +'.$callConfig['days'].' days'));
                 $end = $callConfig['days'] + $callConfig['length'];
@@ -615,7 +617,11 @@ class CustomCallLog extends AbstractExternalModule  {
 
             // Load New Entry Config
             if ( $template == "new" ) {
-                $newEntryConfig[] = $commonConfig;
+                $days = intval($this->getProjectSetting("new_expire_days")[$i][0]);
+                $arr = array_merge([
+                    "expire" => $days
+                ], $commonConfig);
+                $newEntryConfig[] = $arr;
             }
             
             // Load Reminder Config
@@ -695,13 +701,15 @@ class CustomCallLog extends AbstractExternalModule  {
             elseif ( $template == "nts" ) {
                 $indicator = $this->getProjectSetting("nts_indicator")[$i][0];
                 $dateField = $this->getProjectSetting("nts_date")[$i][0];
+                $skipField = $this->getProjectSetting("nts_skip")[$i][0];
                 if ( !empty($indicator) && !empty($dateField) ) {
                     $includeEvents = array_map('trim', explode(',',$this->getProjectSetting("nts_include_events")[$i][0]));
                     foreach( $includeEvents as $eventName ) {
                         $arr = array_merge([
                             "event" => REDCap::getEventIdFromUniqueEvent($eventName),
                             "indicator" => $indicator,
-                            "apptDate" => $dateField
+                            "apptDate" => $dateField,
+                            "skip" => $skipField
                         ], $commonConfig);
                         $arr['id'] = $arr['id'].'|'.$eventName;
                         $arr['name'] = $arr['name'].' - '.$eventNameMap[$eventName];

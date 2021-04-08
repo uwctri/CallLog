@@ -228,8 +228,13 @@
                     "sub_settings": [
                         {
                             "key": "new_text",
-                            "name": "New Entry calls are added when a record is created. No settings are currently available. If loading records from an outside source you'll need to configure your import scripts to POST to the newEntryLoad URL.",
+                            "name": "New Entry calls are added when a record is created. If loading records from an outside source you'll need to configure your import scripts to POST to the newEntryLoad URL.",
                             "type": "descriptive"
+                        },
+                        {
+                            "key": "new_expire_days",
+                            "name": "<b>Expire after N days:</b><br>Remove from call log after this many days",
+                            "type": "textbox"
                         }
                     ]
                 },
@@ -368,6 +373,11 @@
                             "key": "nts_include_events",
                             "name": "<b>Need to Schedule for:</b><br>Comma seperated list of unique event names",
                             "type": "textbox"
+                        },
+                        {
+                            "key": "nts_skip",
+                            "name": "<b>Skip NTS if:</b><br>Skip if value is truthy",
+                            "type": "field-list"
                         }
                     ]
                 },

@@ -91,6 +91,10 @@ function loadParsePackCallData() {
             if ( ($call['template'] == 'followup') && $call['autoRemove'] && ($call['end'] < $today) )
                 continue;
             
+            // Skip New (onload) calls that have expire days
+            if ( ($call['template'] == 'new') && $call['expire'] && (date('Y-m-d', strtotime($call['load']."+".$call['expire']." days")) < $today) )
+                continue;
+            
             $instanceData = $recordData['repeat_instances'][$callEvent][$module->instrumentLower][end($call['instances'])]; // This could be empty for New Entry calls, but it won't matter.
             $instanceEventData = $recordData[$call['event_id']];
             $instanceData = array_merge( array_filter( empty($instanceEventData) ? [] : $instanceEventData, 'isNotBlank' ), array_filter($recordData[$callEvent],'isNotBlank'), array_filter( empty($instanceData) ? [] : $instanceData, 'isNotBlank' ));
