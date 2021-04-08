@@ -37,7 +37,8 @@ function addGoToCallLogButton() {
         $("#formSaveTip .btn-group").hide();
     }, 100);
     $("#__SUBMITBUTTONS__-div .btn-group").hide();
-    $("#__SUBMITBUTTONS__-div #submit-btn-saverecord").clone(true).off().attr('onclick','goToCallLog()').prop('id','goto-call-log').addClass('ml-1').text('Save & Go To Call Log').insertAfter("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
+    $("#__SUBMITBUTTONS__-div #submit-btn-saverecord").clone(true).off().attr('onclick','goToCallLog()').prop('id','goto-call-log').text('Save & Go To Call Log').insertAfter("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
+    $("#goto-call-log").before('<br>');
 }
 
 function hijackRequiredPopup() {
