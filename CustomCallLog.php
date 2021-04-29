@@ -290,9 +290,11 @@ class CustomCallLog extends AbstractExternalModule  {
                     "template" => 'mcv',
                     "event_id" => $callConfig['event'],
                     "event" => $eventMap[$callConfig['event']],
+                    "end" => $data[$callConfig['event']][$callConfig['autoRemove']],
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
+                    "autoRemove" => !empty($autoRemoveField),
                     "autoRemoveField" => $callConfig['autoRemove'],
                     "maxVoiceMails" => $callConfig['maxVoiceMails'],
                     "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
@@ -402,6 +404,9 @@ class CustomCallLog extends AbstractExternalModule  {
                     "template" => 'visit',
                     "event_id" => $callConfig['event'],
                     "event" => $eventMap[$callConfig['event']],
+                    "end" => $data[$callConfig['event']][$callConfig['autoRemove']],
+                    "autoRemove" => !empty($autoRemoveField),
+                    "autoRemoveField" => $callConfig['autoRemove'],
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
@@ -483,6 +488,7 @@ class CustomCallLog extends AbstractExternalModule  {
         $event = $this->getProjectSetting('call_log_event');
         $instance = end(array_keys($data[$record]['repeat_instances'][$event][$this->instrumentLower]));
         $instance = $instance ? $instance : '1';
+        $instanceText = $instance != '1' ? ' AND instance= ' . $instance : ' AND isnull(instance)';
         foreach( $meta as $index => $call ) {
             $tmp = $meta[$index]['instances'];
             $meta[$index]['instances'] = array_values(array_diff($call['instances'], array($instance)));
@@ -492,7 +498,7 @@ class CustomCallLog extends AbstractExternalModule  {
                 $meta[$index]['complete'] = false;
         }
         $fields = array_values(array_intersect( REDCap::getFieldNames($this->instrumentLower), array_keys($data[$record][$event]) ));
-        db_query( 'DELETE FROM redcap_data WHERE project_id='. $project_id . ' AND record=' . $record . ' AND (field_name="' . implode('" OR field_name="', $fields) . '");' );
+        db_query( 'DELETE FROM redcap_data WHERE project_id='. $project_id . ' AND record=' . $record . $instanceText . ' AND (field_name="' . implode('" OR field_name="', $fields) . '");' );
         $this->saveCallMetadata($project_id, $record, $meta);
     }
     
@@ -732,12 +738,14 @@ class CustomCallLog extends AbstractExternalModule  {
             // Load Scheduled Phone Visit Config
             elseif ( $template == "visit" ) {
                 $indicator = $this->getProjectSetting("visit_indicator")[$i][0];
+                $autoField = $this->getProjectSetting("mcv_auto_remove")[$i][0];
                 if ( !empty($indicator) ) {
                     $includeEvents = array_map('trim', explode(',',$this->getProjectSetting("visit_include_events")[$i][0]));
                     foreach( $includeEvents as $eventName ) {
                         $arr = array_merge([
                             "event" => REDCap::getEventIdFromUniqueEvent($eventName),
-                            "indicator" => $indicator
+                            "indicator" => $indicator,
+                            "autoRemove" => $autoField
                         ], $commonConfig);
                         $arr['id'] = $arr['id'].'|'.$eventName;
                         $arr['name'] = $arr['name'].' - '.$eventNameMap[$eventName];

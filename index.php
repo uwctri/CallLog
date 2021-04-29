@@ -102,6 +102,10 @@ function loadParsePackCallData() {
             // Skip MCV calls if past the autoremove date. Need Instance data
             if ( ($call['template'] == 'mcv') && $call['autoRemoveField'] && $instanceData[$call['autoRemoveField']] &&( $instanceData[$call['autoRemoveField']] < $today) )
                 continue;
+                
+            // Skip Scheduled Visit calls if past the autoremove date. Need Instance data
+            if ( ($call['template'] == 'visit') && $call['autoRemoveField'] && $instanceData[$call['autoRemoveField']] &&( $instanceData[$call['autoRemoveField']] < $today) )
+                continue;
             
             // Check if the call was recently opened
             if ( strtotime($call['callStarted']) > strtotime('-'.$module->startedCallGrace.' minutes') )
@@ -131,7 +135,7 @@ function loadParsePackCallData() {
             // Add what the next instance should be for possible links
             $instanceData['_nextInstance'] = 1;
             if ( !empty($recordData['repeat_instances'][$callEvent][$module->instrumentLower]) )
-                $instanceData['_nextInstance'] = count($recordData['repeat_instances'][$callEvent][$module->instrumentLower])+1;
+                $instanceData['_nextInstance'] = end(array_keys($recordData['repeat_instances'][$callEvent][$module->instrumentLower]))+1;
             else if ( !empty($recordData[$callEvent]['call_template']) )
                 $instanceData['_nextInstance'] = 2;
             

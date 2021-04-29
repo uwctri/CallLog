@@ -417,6 +417,11 @@
                             "key": "visit_include_events",
                             "name": "<b>Schedualed Phone Visits for:</b><br>Comma seperated list of unique event names",
                             "type": "textbox"
+                        },
+                        {
+                            "key": "visit_auto_remove",
+                            "name": "<b>Auto Remove</b><br>Remove the call from the call list and call log once past this date. This date field should be the end window for the visit. This field is not automatically displayed on the call list",
+                            "type": "field-list"
                         }
                     ]
                 }
