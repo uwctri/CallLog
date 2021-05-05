@@ -290,7 +290,6 @@ class CustomCallLog extends AbstractExternalModule  {
                     "template" => 'mcv',
                     "event_id" => $callConfig['event'],
                     "event" => $eventMap[$callConfig['event']],
-                    "end" => $data[$callConfig['event']][$callConfig['autoRemove']],
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
@@ -738,7 +737,7 @@ class CustomCallLog extends AbstractExternalModule  {
             // Load Scheduled Phone Visit Config
             elseif ( $template == "visit" ) {
                 $indicator = $this->getProjectSetting("visit_indicator")[$i][0];
-                $autoField = $this->getProjectSetting("mcv_auto_remove")[$i][0];
+                $autoField = $this->getProjectSetting("visit_auto_remove")[$i][0];
                 if ( !empty($indicator) ) {
                     $includeEvents = array_map('trim', explode(',',$this->getProjectSetting("visit_include_events")[$i][0]));
                     foreach( $includeEvents as $eventName ) {
