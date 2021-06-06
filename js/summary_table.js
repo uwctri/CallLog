@@ -1,3 +1,26 @@
+CTRICallLog.html = CTRICallLog.html || {};
+CTRICallLog.html.callHistorySettings = `
+<div class="row">
+    <div class="col">
+        You can toggle the complete flag for all calls on this subject below.
+    </div>
+</div>
+<br>
+<div class="row">
+    <label class="col-9" for="callToggle">Call Name</label>
+    <div class="col-3">Complete</div>
+</div>`;
+CTRICallLog.html.callHistoryRow = `
+<div class="row">
+    <label class="col-9 text-left" for="callToggle">CALLNAME</label>
+    <div class="col-3">
+        <label class="switch">
+          <input type="checkbox" data-call="CALLID" class="callMetadataEdit" checked>
+          <span class="slider round"></span>
+        </label>
+    </div>
+</div>`;
+
 function buildCallSummaryTable() {
     if ( isEmpty(CTRICallLog.metadata) || !(Object.keys(CTRICallLog.data).length > 1 || !CTRICallLog.data[1] ||CTRICallLog.data[1]['call_id']) )
         return;
@@ -26,6 +49,44 @@ function buildCallSummaryTable() {
                 leftMessage: data['call_left_message'][1] == "1" ? 'Yes' : 'No',
                 deleteInstance: allowDelete ? '<a class="deleteInstance"><i class="fas fa-times"></i></a>' : ''
             };
+        })
+    });
+    
+    // Setup the settings menu, used for un-completing any calls
+    $(".callHistoryContainer .sorting_disabled").html('<i class="fas fa-ellipsis-v callSummarySettings"></i>');
+    let callHistroyRows = "";
+    $.each( CTRICallLog.metadata, function(k,v) {
+        callHistroyRows += CTRICallLog.html.callHistoryRow.replace('CALLID',k).replace('CALLNAME',v.name).replace('checked',v.complete ? 'checked' : '');
+    });
+    CTRICallLog.html.callHistorySettings+=callHistroyRows;
+    $(".callSummarySettings").on('click', function() {
+        Swal.fire({
+            title: 'Call Metadata Settings',
+            html: CTRICallLog.html.callHistorySettings,
+            showCancelButton: true,
+            focusCancel: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Edit the CTRICallLog.metadata
+                $(".callMetadataEdit").each(function() {
+                    CTRICallLog.metadata[ $(this).data('call') ].complete = $(this).is(':checked');
+                });
+                // Write back the metadata
+                $.ajax({
+                    method: 'POST',
+                    url: CTRICallLog.metadataPOST,
+                    data: {
+                        record: getParameterByName('id'),
+                        metadata: JSON.stringify(CTRICallLog.metadata)
+                    },
+                    error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+                    success: (data) => {
+                        // Force page reload
+                        window.onbeforeunload = function() { };
+                        window.location = window.location;
+                    }
+                });
+            }
         })
     });
     

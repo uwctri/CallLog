@@ -244,10 +244,15 @@ class CustomCallLog extends AbstractExternalModule  {
             }
             if ( $data[$callConfig['removeEvent']][$callConfig['removeVar']] )
                 continue;
-            if ( !empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == "" ) {
-                // Scheduled appt was removed, get rid of reminder call too.
+            if ( !empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == ""
+                  && count($meta[$callConfig['id']]['instances'] == 0) ) {
+                // Scheduled appt was removed and no call was made, get rid of reminder call too.
                 unset($meta[$callConfig['id']]);
             } 
+            elseif ( !empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == "" ) {
+                // Scheduled appt was removed, but a call was made, mark the reminder as complete
+                $meta[$callConfig['id']]["complete"] = true;
+            }
             elseif ( !empty($meta[$callConfig['id']]) && ($data[$callConfig['event']][$callConfig['field']] <= $today) ) {
                 // Appt is today, autocomplete the call so it stops showing up places, we might double set but it doesn't matter
                 $meta[$callConfig['id']]['complete'] = true;
