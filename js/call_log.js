@@ -1,4 +1,4 @@
-CTRICallLog.html = {};
+CTRICallLog.html = CTRICallLog.html || {};
 
 CTRICallLog.html.wrapper = `
 <tr style="border: 1px solid #ddd"><td colspan="2">
