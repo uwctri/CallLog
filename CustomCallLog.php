@@ -142,7 +142,7 @@ class CustomCallLog extends AbstractExternalModule  {
         $callData = end($this->getAllCallData($project_id, $record));
         if ( $callData['call_disconnected'][1] == "1" ) {
             $write[$record][$config['event']][$config['flag']] = "1";
-            $write[$record][$config['event']][$config['notes']] = $callData['call_open_date'].' '.$callData['call_open_time'].$callData['call_open_user_full_name'].': '.$callData['call_notes'].'\n\n'.$data[$record][$config['event']][$config['notes']];
+            $write[$record][$config['event']][$config['notes']] = $callData['call_open_date'].' '.$callData['call_open_time'].' '.$callData['call_open_user_full_name'].': '.$callData['call_notes'].'\\n\\n'.$data[$record][$config['event']][$config['notes']];
             REDCap::saveData($project_id,'array',$write,'overwrite');
         }
     }
@@ -571,9 +571,9 @@ class CustomCallLog extends AbstractExternalModule  {
     }
     
     public function loadBadPhoneConfig() {
-        $config = [$this->getProjectSetting('bad_phone_event'),$this->getProjectSetting('bad_phone_flag'),
-                   $this->getProjectSetting('bad_phone_notes'),$this->getProjectSetting('bad_phone_resolved')];
-        $missing = count(array_filter($config)) == count($config);
+        $config = [$this->getProjectSetting('bad_phone_event')[0],$this->getProjectSetting('bad_phone_flag')[0],
+                   $this->getProjectSetting('bad_phone_notes')[0],$this->getProjectSetting('bad_phone_resolved')[0]];
+        $missing = count(array_filter($config)) != count($config);
         return [
             'event' => $config[0],
             'flag' => $config[1],
