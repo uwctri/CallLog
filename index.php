@@ -80,7 +80,7 @@ function loadParsePackCallData() {
                 continue;
             
             // Skip when reminders, followups, adhocs aren't in window
-            if ( ($call['template'] == 'reminder' || $call['template'] == 'followup' || $call['template'] == 'adhoc') && ($call['start'] > $today) )
+            if ( ($call['template'] == 'reminder' || $call['template'] == 'followup' ) && ($call['start'] > $today) )
                 continue;
             
             // Skip reminder calls day-of or future
