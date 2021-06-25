@@ -416,7 +416,8 @@ $(document).ready(function () {
     
     // Force Call Incomplete when call back is requested
     $("input[name$=call_requested_callback]").on('click', function() {
-        $("input[name^=call_outcome][value=1]").prop('checked',false).prop('disabled',$(this).is(":checked")).click();
+        $("input[name^=call_outcome][value=1]").prop('checked',false).prop('disabled',$(this).is(":checked"));
+        $("input[name^=call_outcome][value=0]").click();
     });
     
     // Prevent save without call outcome
