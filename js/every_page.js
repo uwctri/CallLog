@@ -9,6 +9,13 @@ Object.filter = (obj, predicate) =>
     Object.keys(obj)
           .filter( key => predicate(obj[key]) )
           .reduce( (res, key) => (res[key] = obj[key], res), {} );
+          
+Object.filterKeys = (obj, allowedKeys) =>
+    Object.keys(obj)
+        .filter(key => (Array.isArray(allowedKeys) ? allowedKeys : [allowedKeys]).includes(key))
+        .reduce((res, key) => {
+                res[key] = obj[key];
+                return res; }, {});
 
 function conv24to12(ts) {
     if (!ts) return "";

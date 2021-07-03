@@ -108,8 +108,7 @@ function loadParsePackCallData() {
                 continue;
             
             // Check if the call was recently opened
-            if ( strtotime($call['callStarted']) > strtotime('-'.$module->startedCallGrace.' minutes') )
-                $instanceData['_callStarted'] = true;
+            $instanceData['_callStarted'] = strtotime($call['callStarted']) > strtotime('-'.$module->startedCallGrace.' minutes');
             
             // Check if No Calls Today flag is set
             if ( $call['noCallsToday'] == $today )
@@ -257,6 +256,7 @@ printToScreen('Issues encountered: ' . json_encode($issues));
     CTRICallLog.hideCalls = true;
     CTRICallLog.childRows = {};
     CTRICallLog.colConfig = {};
+    CTRICallLog.displayedData = {};
     
     function projectLog( action, call_id, record ) {
         if (typeof ez !== "undefined") {
@@ -327,7 +327,8 @@ printToScreen('Issues encountered: ' . json_encode($issues));
             let colConfig = {
                 data: fConfig.field,
                 title: fConfig.displayName,
-                render: (data,type,row,meta) => data || fConfig.default 
+                render: (data,type,row,meta) => data || fConfig.default,
+                defaultContent: ""
             }
             
             if ( colIndex == 0 )
@@ -627,6 +628,17 @@ printToScreen('Issues encountered: ' . json_encode($issues));
                 data: CTRICallLog.packagedCallData[tab_id],
                 sDom: 'ltpi'
             });
+            
+            // Create a data object for reports to access and for below
+            let visibleCols = CTRICallLog.colConfig[tab_id].map(x=>x['visible']!=false ? x['data']: null).filter(x=>x&&!x.startsWith('_'));
+            CTRICallLog.displayedData[tab_id] = $(el).DataTable().rows().data().toArray().map( x=> Object.filterKeys(x, visibleCols));
+            
+            // Create tab badges
+            let badge = 0;
+            let user = $("#impersonate-user-select").val() || CTRICallLog.user;
+            CTRICallLog.displayedData[tab_id].forEach( x=>Object.values(x).includes(CTRICallLog.userNameMap[user]) && badge++ );
+            if ( badge > 0 && CTRICallLog.tabs.showBadges)
+                $(".call-link[data-tabid="+tab_id+"]").append('<span class="badge badge-secondary">'+badge+'</span>');
         });
         
         // Insert custom search box 
