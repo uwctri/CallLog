@@ -816,7 +816,8 @@ class CustomCallLog extends AbstractExternalModule  {
         }
         return [
             'config' => $tabConfig,
-            'call2tabMap' => $call2TabMap
+            'call2tabMap' => $call2TabMap,
+            'showBadges' => $this->getProjectSetting("show_badges")
         ];
     }
     
@@ -961,6 +962,7 @@ class CustomCallLog extends AbstractExternalModule  {
                     "id" => $meta_event
                 ],
             ],
+            "user" => USERID,
             "userNameMap" => $this->getUserNameMap(),
             "static" => [
                 "instrument" => $this->instrumentName,

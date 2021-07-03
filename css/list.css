@@ -28,6 +28,13 @@
     border-radius: 4px;
 }
 
+/* Call Badges */
+
+.nav-tabs .badge{
+    position: absolute;
+    top: 10px;
+}
+
 /* Call Table CSS */
 
 #hiddenToggle {
