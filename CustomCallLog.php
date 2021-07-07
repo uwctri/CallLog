@@ -785,6 +785,7 @@ class CustomCallLog extends AbstractExternalModule  {
                "showMissedDateTime" => $this->getProjectSetting("tab_includes_mcv")[$i] == '1',
                "showAdhocDates" => $this->getProjectSetting("tab_includes_adhoc")[$i] == '1'
             ];
+            $tabNameMap[$tab_id] = $tab_name;
             $calls = array_map('trim',explode(',',$calls));
             foreach( $calls as $call ) {
                 $call2TabMap[$call] = $tab_id;
@@ -817,6 +818,7 @@ class CustomCallLog extends AbstractExternalModule  {
         return [
             'config' => $tabConfig,
             'call2tabMap' => $call2TabMap,
+            'tabNameMap' => $tabNameMap,
             'showBadges' => $this->getProjectSetting("show_badges")
         ];
     }
