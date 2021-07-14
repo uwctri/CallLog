@@ -236,7 +236,7 @@ class CustomCallLog extends AbstractExternalModule  {
         $today = date('Y-m-d');
         foreach( $config as $callConfig ) {
             $data = REDCap::getData($project_id,'array',$record,[$callConfig['field'],$callConfig['removeVar']])[$record];
-            if ( !empty($meta[$callConfig['id']]) && count($meta[$callConfig['id']]['instances'] == 0) && 
+            if ( !empty($meta[$callConfig['id']]) && count($meta[$callConfig['id']]['instances']) == 0 && 
                  $data[$callConfig['removeEvent']][$callConfig['removeVar']] ) {
                 // Alt flag was set and we haven't recorded calls. Delete the metadata
                 unset($meta[$callConfig['id']]);
@@ -245,7 +245,7 @@ class CustomCallLog extends AbstractExternalModule  {
             if ( $data[$callConfig['removeEvent']][$callConfig['removeVar']] )
                 continue;
             if ( !empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == ""
-                  && count($meta[$callConfig['id']]['instances'] == 0) ) {
+                  && count($meta[$callConfig['id']]['instances']) == 0 ) {
                 // Scheduled appt was removed and no call was made, get rid of reminder call too.
                 unset($meta[$callConfig['id']]);
             } 
