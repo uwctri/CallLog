@@ -37,7 +37,7 @@ class CustomCallLog extends AbstractExternalModule  {
     private $datatablesJS = "https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js";
     private $flatpickrCSS = "https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css";
     private $flatpickrJS  = "https://cdn.jsdelivr.net/npm/flatpickr";
-    private $cookieJS = "https://cdn.jsdelivr.net/npm/js-cookie@rc/dist/js.cookie.min.js";
+    private $cookieJS = "https://cdn.jsdelivr.net/npm/js-cookie@2.2.1/src/js.cookie.min.js";
     
     public function __construct() {
         parent::__construct();
