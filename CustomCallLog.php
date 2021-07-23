@@ -200,8 +200,7 @@ class CustomCallLog extends AbstractExternalModule  {
             if ( !empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == "" ) {
                 //Anchor appt was removed, get rid of followup call too.
                 unset($meta[$callConfig['id']]);
-            } elseif (empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "" 
-                        && ( empty($callConfig['skip']) || !$data[$callConfig['event']][$callConfig['skip']] ) ) {
+            } elseif (empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "" ) {
                 // Anchor is set and the meta doesn't have the call id in it yet
                 $start = date('Y-m-d', strtotime( $data[$callConfig['event']][$callConfig['field']].' +'.$callConfig['days'].' days'));
                 $end = $callConfig['days'] + $callConfig['length'];
@@ -221,6 +220,17 @@ class CustomCallLog extends AbstractExternalModule  {
                     "autoRemove" => $callConfig['autoRemove'],
                     "complete" => false
                 ];
+            } elseif (!empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "" ) {
+                // Update the start/end dates if the call exists and the anchor isn't blank 
+                $start = date('Y-m-d', strtotime( $data[$callConfig['event']][$callConfig['field']].' +'.$callConfig['days'].' days'));
+                $start = $this->roundDate($start, 'down');
+                $end = $callConfig['days'] + $callConfig['length'];
+                $end = date('Y-m-d', strtotime( $data[$callConfig['event']][$callConfig['field']].' +'.$end.' days'));
+                $end = $this->roundDate($end, 'up');
+                if ( ($meta[$callConfig['id']]['start'] != $start) || ($meta[$callConfig['id']]['end'] != $end) ) {
+                    $meta[$callConfig['id']]['start'] = $start;
+                    $meta[$callConfig['id']]['end'] = $end;
+                }
             }
         }
         $this->saveCallMetadata($project_id, $record, $meta);
