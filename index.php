@@ -686,7 +686,6 @@ printToScreen('Issues encountered: ' . json_encode($issues));
         setInterval( refreshTableData, 2*60*1000);
         
     });
-    
 </script>
 <?php
 printToScreen('Page First Loaded in '.round(((microtime(true)-$startTime)),5).' seconds');
