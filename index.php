@@ -630,6 +630,15 @@ printToScreen('Issues encountered: ' . json_encode($issues));
             });
             
             // Create a data object for reports to access and for below
+            //let visibleCols = CTRICallLog.colConfig[tab_id].map(x=>x['visible']!=false || (x['data'] && x['data'].includes('callback')) ? x['title']: null).filter(x=>x&&!x.startsWith('_'));
+            //let visibleColsIndex = CTRICallLog.colConfig[tab_id].map((e,i)=>e['visible']!=false || (e['data'] && e['data'].includes('callback')) ? i: null).filter(x=>x);
+            //CTRICallLog.displayedData[tab_id] = [];
+            //$(el).DataTable().rows().every( function() {
+            //    let values = this.cells().render('display').toArray().filter((e,i)=>visibleColsIndex.includes(i));
+            //    console.log(this.cells().render('display').toArray())
+            //    let merger = visibleCols.reduce((obj, keys, index) => ({ ...obj, [keys]: values[index] }), {})
+            //    CTRICallLog.displayedData[tab_id].push( merger );
+            //});
             let visibleCols = CTRICallLog.colConfig[tab_id].map(x=>x['visible']!=false ? x['data']: null).filter(x=>x&&!x.startsWith('_'));
             visibleCols = visibleCols.concat( CTRICallLog.packagedCallData[tab_id].length > 0 ? Object.keys(CTRICallLog.packagedCallData[tab_id][0]).filter(x=>x.includes('callback')&&!x.startsWith('_')) : [])
             CTRICallLog.displayedData[tab_id] = $(el).DataTable().rows().data().toArray().map( x=> Object.filterKeys(x, visibleCols));
