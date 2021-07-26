@@ -10,6 +10,7 @@ https://ctri-redcap.dom.wisc.edu/redcap/redcap_v10.2.1/ExternalModules/?prefix=C
 foreach ( explode(',',$_GET['recordList']) as $record ) {
     $module->metadataReminder($_GET['pid'],trim($record));
     $module->metadataMissedCancelled($_GET['pid'],trim($record));
+    $module->metadataNeedToSchedule($_GET['pid'],trim($record));
 }
 ?>
 
