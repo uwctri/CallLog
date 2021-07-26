@@ -1,5 +1,14 @@
 $(document).ready(function() {
     console.log("Loaded CTRI Call Log config")
+    
+    if ( CTRICallLog.configError ) {
+        Swal.fire({
+          icon: 'error',
+          title: 'CTRI Call Log Config Issue',
+          text: 'The Call Log instrument used by CTRI Custom Call Log is either missing or not marked as a repeatable instrument. Please invesitage and resovle.',
+        })
+    }
+    
     var $modal = $('#external-modules-configure-modal');
     $modal.on('show.bs.modal', function() {
         // Making sure we are overriding this modules's modal only.

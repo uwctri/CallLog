@@ -960,8 +960,25 @@ class CustomCallLog extends AbstractExternalModule  {
     }
     
     private function initCTRIglobal() {
+        //instruments exist, repeating/not repeating
+
+        $project_error = false;
         $call_event = $this->getProjectSetting('call_log_event');
         $meta_event = $this->getProjectSetting('metadata_event');
+        if ($call_event) {
+            $tmp = $this->instrumentLower;
+            $sql = "SELECT * FROM redcap_events_repeat WHERE event_id = $call_event AND form_name = '$tmp';";
+            $results = db_query($sql);
+            if($results && $results !== false && db_num_rows($results)) {
+                $table = [];
+                while ($row = db_fetch_assoc($results)) {
+                    $table[] = $row;
+                }
+                if (count($table) != 1) {
+                    $project_error = true; 
+                }
+            }
+        }
         $data = array(
             "modulePrefix" => $this->module_prefix,
             "events" => [
@@ -981,7 +998,8 @@ class CustomCallLog extends AbstractExternalModule  {
                 "instrumentLower" => $this->instrumentLower,
                 "instrumentMetadata" => $this->instrumentMeta,
                 "record_id" => REDCap::getRecordIdField()
-            ]
+            ],
+            "configError" => $project_error
         );
         echo "<script>var ".$this->module_global." = ".json_encode($data).";</script>";
     }
