@@ -164,7 +164,6 @@ function loadParsePackCallData() {
                 $instanceData['_adhocReason'] = $adhoc['config'][$callID]['reasons'][$call['reason']];
                 $instanceData['_adhocContactOn'] = $call['contactOn'];
                 $notes = $call['initNotes'] ?  $call['initNotes'] : "No Notes Taken";
-                $instanceData['_callNotes'] = "";
                 if ( $call['reporter'] != "" ) 
                     $instanceData['_callNotes'] .= $call['reported'].'||'.$call['reporter'].'||'.'&nbsp;'.'||'.$notes.'|||';
             }
