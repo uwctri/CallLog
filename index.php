@@ -75,9 +75,6 @@ function loadParsePackCallData() {
             $fullCallID = $callID;
             $callID = explode('|',$callID)[0]; // We only need the simple ID here
             
-            if ( ($call['template'] == 'nts' ) )
-                printToScreen($record);
-            
             // Skip if call complete, debug call, or if call ID isn't assigned to a tab
             if ( $call['complete'] || substr($callID,0,1) == '_' || empty($tabs['call2tabMap'][$callID]) )
                 continue;
