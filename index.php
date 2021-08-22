@@ -42,6 +42,9 @@ function loadParsePackCallData() {
         ]
     ];
     
+    // MCV and Scheduled Vists Config for Live Data
+    $autoRemoveConfig = $module->loadAutoRemoveConfig();
+    
     // Large Configs
     $tabs = $module->loadTabConfig();
     $adhoc = $module->loadAdhocTemplateConfig();
@@ -57,7 +60,18 @@ function loadParsePackCallData() {
     $today = Date('Y-m-d');
     foreach( $tabs['config'] as $tab )
         $packagedCallData[$tab["tab_id"]] = [];
-    foreach( REDCap::getData($project_id,'array') as $record => $recordData ) {
+    
+    // Construct the needed feilds
+    $fields = array_merge([REDCap::getRecordIdField(), $module->metadataField, $withdraw['var'], $withdraw['tmp']['var'], 
+    'call_open_date', 'call_left_message', 'call_requested_callback', 'call_notes', 'call_open_datetime', 'call_open_user_full_name', 'call_attempt', 'call_template', 'call_event_name', 'call_callback_date'], 
+    array_values($autoRemoveConfig[$callID]), $tabs['allFields']); 
+    
+    // Main Loop
+    $dataLoad = REDCap::getData($project_id,'array', null, $fields);
+    if( !$_POST['reloadData'] ) { 
+        printToScreen('Data Loaded in '. round((microtime(true)-$startTime),5) .' seconds');
+    }
+    foreach( $dataLoad as $record => $recordData ) {
         
         // Check if the dag is empty or if it matches the User's DAG
         if ( !$module->isInDAG($record) )
@@ -100,11 +114,11 @@ function loadParsePackCallData() {
             $instanceData = array_merge( array_filter( empty($instanceEventData) ? [] : $instanceEventData, 'isNotBlank' ), array_filter($recordData[$callEvent],'isNotBlank'), array_filter( empty($instanceData) ? [] : $instanceData, 'isNotBlank' ));
             
             // Skip MCV calls if past the autoremove date. Need Instance data
-            if ( ($call['template'] == 'mcv') && $call['autoRemoveField'] && $instanceData[$call['autoRemoveField']] &&( $instanceData[$call['autoRemoveField']] < $today) )
+            if ( ($call['template'] == 'mcv') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
                 continue;
                 
             // Skip Scheduled Visit calls if past the autoremove date. Need Instance data
-            if ( ($call['template'] == 'visit') && $call['autoRemoveField'] && $instanceData[$call['autoRemoveField']] &&( $instanceData[$call['autoRemoveField']] < $today) )
+            if ( ($call['template'] == 'visit') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
                 continue;
             
             // Check if the call was recently opened
