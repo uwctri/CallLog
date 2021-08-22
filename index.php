@@ -54,14 +54,14 @@ function loadParsePackCallData() {
         $startTime = microtime(true);
     }
     
-    // Start the Real work
+    // Minor Prep
     $packagedCallData = [];
     $alwaysShowCallbackCol = false;
     $today = Date('Y-m-d');
     foreach( $tabs['config'] as $tab )
         $packagedCallData[$tab["tab_id"]] = [];
     
-    // Construct the needed feilds
+    // Construct the needed feilds (This saves almost no time currently)
     $fields = array_merge([REDCap::getRecordIdField(), $module->metadataField, $withdraw['var'], $withdraw['tmp']['var'], 
     'call_open_date', 'call_left_message', 'call_requested_callback', 'call_notes', 'call_open_datetime', 'call_open_user_full_name', 'call_attempt', 'call_template', 'call_event_name', 'call_callback_date'], 
     array_values($autoRemoveConfig[$callID]), $tabs['allFields']); 
