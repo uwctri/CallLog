@@ -308,8 +308,8 @@ class CustomCallLog extends AbstractExternalModule  {
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
-                    "autoRemove" => !empty($autoRemoveField),
-                    "autoRemoveField" => $callConfig['autoRemove'],
+                    #"autoRemove" => !empty($autoRemoveField),        No longer recorderd on metadata
+                    #"autoRemoveField" => $callConfig['autoRemove'],
                     "maxVoiceMails" => $callConfig['maxVoiceMails'],
                     "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
@@ -419,8 +419,8 @@ class CustomCallLog extends AbstractExternalModule  {
                     "event_id" => $callConfig['event'],
                     "event" => $eventMap[$callConfig['event']],
                     "end" => $data[$callConfig['event']][$callConfig['autoRemove']],
-                    "autoRemove" => !empty($autoRemoveField),
-                    "autoRemoveField" => $callConfig['autoRemove'],
+                    #"autoRemove" => !empty($autoRemoveField),        No longer recorderd on metadata
+                    #"autoRemoveField" => $callConfig['autoRemove'],
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
@@ -581,8 +581,9 @@ class CustomCallLog extends AbstractExternalModule  {
     }
     
     public function loadBadPhoneConfig() {
-        $config = [$this->getProjectSetting('bad_phone_event')[0],$this->getProjectSetting('bad_phone_flag')[0],
-                   $this->getProjectSetting('bad_phone_notes')[0],$this->getProjectSetting('bad_phone_resolved')[0]];
+        $settings = $this->getProjectSettings();
+        $config = [$settings['bad_phone_event'][0],$settings['bad_phone_flag'][0],
+                   $settings['bad_phone_notes'][0],$settings['bad_phone_resolved'][0]];
         $missing = count(array_filter($config)) != count($config);
         return [
             'event' => $config[0],
@@ -594,15 +595,16 @@ class CustomCallLog extends AbstractExternalModule  {
     }
     
     public function loadAdhocTemplateConfig() {
-        foreach( $this->getProjectSetting("call_template") as $i => $template) {
+        $settings = $this->getProjectSettings();
+        foreach( $settings["call_template"] as $i => $template) {
             if ( $template != "adhoc" ) 
                 continue;
-            $reasons = $this->getProjectSetting("adhoc_reason")[$i][0];
+            $reasons = $settings["adhoc_reason"][$i][0];
             if ( empty($reasons) )
                 continue;
-            $config[$this->getProjectSetting("call_id")[$i]] = [ 
-                "id" => $this->getProjectSetting("call_id")[$i],
-                "name" => $this->getProjectSetting("call_name")[$i],
+            $config[$settings["call_id"][$i]] = [ 
+                "id" => $settings["call_id"][$i],
+                "name" => $settings["call_name"][$i],
                 "reasons" => $this->explodeCodedValueText($reasons)
             ];
         }
@@ -623,13 +625,14 @@ class CustomCallLog extends AbstractExternalModule  {
         $ntsConfig = [];
         $adhocConfig = [];
         $visitConfig = [];
-        foreach( $this->getProjectSetting("call_template") as $i => $template) {
-            $max = $this->getProjectSetting("max_voice_mails")[$i];
-            $maxWeek = $this->getProjectSetting("max_voice_mails_per_week")[$i];
-            $hide = $this->getProjectSetting("hide_after_attempts")[$i];
+        $settings = $this->getProjectSettings();
+        foreach( $settings["call_template"] as $i => $template) {
+            $max = $settings["max_voice_mails"][$i];
+            $maxWeek = $settings["max_voice_mails_per_week"][$i];
+            $hide = $settings["hide_after_attempts"][$i];
             $commonConfig = [
-                "id" => $this->getProjectSetting("call_id")[$i],
-                "name" => $this->getProjectSetting("call_name")[$i],
+                "id" => $settings["call_id"][$i],
+                "name" => $settings["call_name"][$i],
                 "maxVoiceMails" => $max ? (int)$max : 9999,
                 "maxVoiceMailsPerWeek" => $maxWeek ? (int)$maxWeek : 9999,
                 "hideAfterAttempt" => $hide ? (int)$hide : 9999
@@ -637,7 +640,7 @@ class CustomCallLog extends AbstractExternalModule  {
 
             // Load New Entry Config
             if ( $template == "new" ) {
-                $days = intval($this->getProjectSetting("new_expire_days")[$i][0]);
+                $days = intval($settings["new_expire_days"][$i][0]);
                 $arr = array_merge([
                     "expire" => $days
                 ], $commonConfig);
@@ -646,16 +649,16 @@ class CustomCallLog extends AbstractExternalModule  {
             
             // Load Reminder Config
             elseif ( $template == "reminder" ) {
-                $field = $this->getProjectSetting("reminder_variable")[$i][0];
+                $field = $settings["reminder_variable"][$i][0];
                 if ( !empty($field) ){
-                    $includeEvents = array_map('trim', explode(',',$this->getProjectSetting("reminder_include_events")[$i][0])); 
+                    $includeEvents = array_map('trim', explode(',',$settings["reminder_include_events"][$i][0])); 
                     foreach( $includeEvents as $eventName ) {
                         $arr = array_merge([
                             "event" => REDCap::getEventIdFromUniqueEvent($eventName),
                             "field" => $field,
-                            "days" => (int)$this->getProjectSetting("reminder_days")[$i][0],
-                            "removeEvent" => $this->getProjectSetting("reminder_remove_event")[$i][0],
-                            "removeVar" => $this->getProjectSetting("reminder_remove_var")[$i][0]
+                            "days" => (int)$settings["reminder_days"][$i][0],
+                            "removeEvent" => $settings["reminder_remove_event"][$i][0],
+                            "removeVar" => $settings["reminder_remove_var"][$i][0]
                         ], $commonConfig);
                         $arr['id'] = $arr['id'].'|'.$eventName;
                         $arr['name'] = $arr['name'].' - '.$eventNameMap[$eventName];
@@ -666,11 +669,11 @@ class CustomCallLog extends AbstractExternalModule  {
             
             // Load Follow up Config
             elseif ( $template == "followup" ) {
-                $event = $this->getProjectSetting("followup_event")[$i][0];
-                $field = $this->getProjectSetting("followup_date")[$i][0];
-                $days = (int)$this->getProjectSetting("followup_days")[$i][0];
-                $auto = $this->getProjectSetting("followup_auto_remove")[$i][0];
-                $length = (int)$this->getProjectSetting("followup_length")[$i][0];
+                $event = $settings["followup_event"][$i][0];
+                $field = $settings["followup_date"][$i][0];
+                $days = (int)$settings["followup_days"][$i][0];
+                $auto = $settings["followup_auto_remove"][$i][0];
+                $length = (int)$settings["followup_length"][$i][0];
                 if ( !empty($field) && !empty($event) && !empty($days) ) {
                     $followupConfig[] = array_merge([
                         "event" => $event,
@@ -680,7 +683,7 @@ class CustomCallLog extends AbstractExternalModule  {
                         "autoRemove" => $auto
                     ], $commonConfig);
                 } elseif ( !empty($field) && !empty(days) ) {
-                    $includeEvents = array_map('trim', explode(',',$this->getProjectSetting("followup_include_events")[$i][0])); 
+                    $includeEvents = array_map('trim', explode(',',$settings["followup_include_events"][$i][0])); 
                     foreach( $includeEvents as $eventName ) {
                         $arr = array_merge([
                             "event" => REDCap::getEventIdFromUniqueEvent($eventName),
@@ -698,11 +701,11 @@ class CustomCallLog extends AbstractExternalModule  {
             
             // Load Missed/Cancelled Visit Config
             elseif ( $template == "mcv" ) {
-                $indicator = $this->getProjectSetting("mcv_indicator")[$i][0];
-                $dateField = $this->getProjectSetting("mcv_date")[$i][0];
-                $autoField = $this->getProjectSetting("mcv_auto_remove")[$i][0];
+                $indicator = $settings["mcv_indicator"][$i][0];
+                $dateField = $settings["mcv_date"][$i][0];
+                $autoField = $settings["mcv_auto_remove"][$i][0];
                 if ( !empty($indicator) && !empty($dateField) ) {
-                    $includeEvents = array_map('trim', explode(',',$this->getProjectSetting("mcv_include_events")[$i][0])); 
+                    $includeEvents = array_map('trim', explode(',',$settings["mcv_include_events"][$i][0])); 
                     foreach( $includeEvents as $eventName ) {
                         $arr = array_merge([
                             "event" => REDCap::getEventIdFromUniqueEvent($eventName),
@@ -719,11 +722,11 @@ class CustomCallLog extends AbstractExternalModule  {
             
             // Load Need to Schedule Visit Config
             elseif ( $template == "nts" ) {
-                $indicator = $this->getProjectSetting("nts_indicator")[$i][0];
-                $dateField = $this->getProjectSetting("nts_date")[$i][0];
-                $skipField = $this->getProjectSetting("nts_skip")[$i][0];
+                $indicator = $settings["nts_indicator"][$i][0];
+                $dateField = $settings["nts_date"][$i][0];
+                $skipField = $settings["nts_skip"][$i][0];
                 if ( !empty($indicator) && !empty($dateField) ) {
-                    $includeEvents = array_map('trim', explode(',',$this->getProjectSetting("nts_include_events")[$i][0]));
+                    $includeEvents = array_map('trim', explode(',',$settings["nts_include_events"][$i][0]));
                     foreach( $includeEvents as $eventName ) {
                         $arr = array_merge([
                             "event" => REDCap::getEventIdFromUniqueEvent($eventName),
@@ -740,7 +743,7 @@ class CustomCallLog extends AbstractExternalModule  {
             
             // Load Adhoc Visit Config
             elseif ( $template == "adhoc" ) {
-                $reasons = $this->getProjectSetting("adhoc_reason")[$i][0];
+                $reasons = $settings["adhoc_reason"][$i][0];
                 if ( !empty($reasons) ) {
                     $arr = array_merge([
                         "reasons" => $this->explodeCodedValueText($reasons),
@@ -751,10 +754,10 @@ class CustomCallLog extends AbstractExternalModule  {
             
             // Load Scheduled Phone Visit Config
             elseif ( $template == "visit" ) {
-                $indicator = $this->getProjectSetting("visit_indicator")[$i][0];
-                $autoField = $this->getProjectSetting("visit_auto_remove")[$i][0];
+                $indicator = $settings["visit_indicator"][$i][0];
+                $autoField = $settings["visit_auto_remove"][$i][0];
                 if ( !empty($indicator) ) {
-                    $includeEvents = array_map('trim', explode(',',$this->getProjectSetting("visit_include_events")[$i][0]));
+                    $includeEvents = array_map('trim', explode(',',$settings["visit_include_events"][$i][0]));
                     foreach( $includeEvents as $eventName ) {
                         $arr = array_merge([
                             "event" => REDCap::getEventIdFromUniqueEvent($eventName),
@@ -781,33 +784,47 @@ class CustomCallLog extends AbstractExternalModule  {
         return $this->_callTemplateConfig;
     }
     
+    public function loadAutoRemoveConfig() {
+        $settings = $this->getProjectSettings();
+        $config = [];
+        foreach( $settings["call_template"] as $i => $template) {
+            if ( $template == "mcv" )
+                $config[$settings["call_id"][$i]] = $settings["mcv_auto_remove"][$i][0];
+            if ( $template == "visit" )
+                $config[$settings["call_id"][$i]] = $settings["visit_auto_remove"][$i][0];
+        }
+        return $config;
+    }
+    
     public function loadTabConfig() {
         global $Proj;
-        foreach( $this->getProjectSetting("tab_name") as $i => $tab_name) {
-            $calls = $this->getProjectSetting("tab_calls_included")[$i];
+        $allFields = [];
+        $settings = $this->getProjectSettings();
+        foreach( $settings["tab_name"] as $i => $tab_name) {
+            $calls = $settings["tab_calls_included"][$i];
             $tab_id = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '_',strtolower($tab_name)));
             $tabConfig[$i] = [
                "tab_name" => $tab_name,
                "included_calls" => $calls,
                "tab_id" => $tab_id,
-               "fields" => $this->getProjectSetting("tab_field")[$i],
-               "showFollowupWindows" => $this->getProjectSetting("tab_includes_followup")[$i] == '1',
-               "showMissedDateTime" => $this->getProjectSetting("tab_includes_mcv")[$i] == '1',
-               "showAdhocDates" => $this->getProjectSetting("tab_includes_adhoc")[$i] == '1'
+               "fields" => $settings["tab_field"][$i],
+               "showFollowupWindows" => $settings["tab_includes_followup"][$i] == '1',
+               "showMissedDateTime" => $settings["tab_includes_mcv"][$i] == '1',
+               "showAdhocDates" => $settings["tab_includes_adhoc"][$i] == '1'
             ];
             $tabNameMap[$tab_id] = $tab_name;
             $calls = array_map('trim',explode(',',$calls));
             foreach( $calls as $call ) {
                 $call2TabMap[$call] = $tab_id;
             }
-            foreach( $this->getProjectSetting("tab_field")[$i] as $j => $field ) {
-                $name = $this->getProjectSetting("tab_field_name")[$i][$j];
+            foreach( $settings["tab_field"][$i] as $j => $field ) {
+                $name = $settings["tab_field_name"][$i][$j];
                 $name = $name ? $name : trim($this->getDictionaryLabelFor($field), ":?");
                 $validation = $Proj->metadata[$field]["element_validation_type"];
                 $validation = $validation ? $validation : "";
-                $default = $this->getProjectSetting("tab_field_default")[$i][$j];
+                $default = $settings["tab_field_default"][$i][$j];
                 $default = $default !== "" && !is_null($default) ? $default : "";
-                $expanded =  $this->getProjectSetting("tab_field_expanded")[$i][$j];
+                $expanded =  $settings["tab_field_expanded"][$i][$j];
                 $expanded = $expanded ? true : false;
                 $tabConfig[$i]["fields"][$j] = [
                     "field" => $field,
@@ -817,11 +834,12 @@ class CustomCallLog extends AbstractExternalModule  {
                     "isFormStatus" => $Proj->isFormStatus($field),
                     "expanded" => $expanded,
                     "fieldType" => $Proj->metadata[$field]["element_type"],
-                    "link" => $this->getProjectSetting("tab_field_link")[$i][$j],
-                    "linkedEvent" => $this->getProjectSetting("tab_field_link_event")[$i][$j],
-                    "linkedInstrument" => $this->getProjectSetting("tab_field_link_instrument")[$i][$j],
+                    "link" => $settings["tab_field_link"][$i][$j],
+                    "linkedEvent" => $settings["tab_field_link_event"][$i][$j],
+                    "linkedInstrument" => $settings["tab_field_link_instrument"][$i][$j],
                     "default" => $default
                 ];
+                $allFields[] = $field;
             }
             
         }
@@ -829,7 +847,8 @@ class CustomCallLog extends AbstractExternalModule  {
             'config' => $tabConfig,
             'call2tabMap' => $call2TabMap,
             'tabNameMap' => $tabNameMap,
-            'showBadges' => $this->getProjectSetting("show_badges")
+            'showBadges' => $settings["show_badges"],
+            'allFields' => $allFields
         ];
     }
     
