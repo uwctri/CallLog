@@ -21,7 +21,7 @@ function isNotBlank($string) {
     return $string != "";
 }
 
-function loadParsePackCallData() {
+function loadParsePackCallData($skipDataPack = false) {
     $startTime = microtime(true);
     global $project_id,$module;
 
@@ -66,11 +66,10 @@ function loadParsePackCallData() {
     'call_open_date', 'call_left_message', 'call_requested_callback', 'call_notes', 'call_open_datetime', 'call_open_user_full_name', 'call_attempt', 'call_template', 'call_event_name', 'call_callback_date'], 
     array_values($autoRemoveConfig[$callID]), $tabs['allFields']); 
     
+    
     // Main Loop
-    $dataLoad = REDCap::getData($project_id,'array', null, $fields);
-    if( !$_POST['reloadData'] ) { 
-        printToScreen('Data Loaded in '. round((microtime(true)-$startTime),5) .' seconds');
-    }
+    $records = $skipDataPack ? '-1' : null;
+    $dataLoad = REDCap::getData($project_id,'array', $records, $fields);
     foreach( $dataLoad as $record => $recordData ) {
         
         // Check if the dag is empty or if it matches the User's DAG
@@ -206,14 +205,14 @@ $module->includeDataTables();
 $module->includeCss('css/list.css');
 
 // Load, parse, and pack the Call Data for display
-list($packagedCallData, $tabs, $alwaysShowCallbackCol, $timeTaken, $issues) = loadParsePackCallData();
-printToScreen('Data Transformed in '.$timeTaken.' seconds');
-printToScreen('Issues encountered: ' . json_encode($issues));
+list($packagedCallData, $tabs, $alwaysShowCallbackCol, $timeTaken, $issues) = loadParsePackCallData(true);
+if ( count($issues) )
+    printToScreen('Issues encountered: ' . json_encode($issues));
 ?>
 
 <div class="projhdr"><i class="fas fa-phone"></i> Call List</div>
 
-<div class="card">
+<div class="card" style="display:none">
     <?php if( count($tabs['config']) > 1) {?>
     <div class="card-header tab-header">
         <ul class="nav nav-tabs card-header-tabs">
@@ -460,7 +459,6 @@ printToScreen('Issues encountered: ' . json_encode($issues));
         // Note: THIS MUST BE THE LAST COL
         cols.push({
             title: 'Call Back & Info',
-            visible: CTRICallLog.alwaysShowCallbackCol,
             name: 'callbackCol',
             className: 'callbackCol',
             render: function (data, type, row, meta) {
@@ -553,12 +551,15 @@ printToScreen('Issues encountered: ' . json_encode($issues));
     
     function toggleHiddenCalls() {
         CTRICallLog.hideCalls = !CTRICallLog.hideCalls;
+        toggleCallBackCol();
+        $('*[data-toggle="tooltip"]').tooltip();//Enable Tooltips for the info icon
+    }
+    
+    function toggleCallBackCol() {
         $.each( $('.callTable'), function() {
-            if ( !CTRICallLog.alwaysShowCallbackCol )
-                $(this).DataTable().column( 'callbackCol:name' ).visible(!CTRICallLog.hideCalls);
+            $(this).DataTable().column( 'callbackCol:name' ).visible(CTRICallLog.alwaysShowCallbackCol || !CTRICallLog.hideCalls);
             $(this).DataTable().draw();
         });
-        $('*[data-toggle="tooltip"]').tooltip();//Enable Tooltips for the info icon
     }
     
     function refreshTableData() {
@@ -568,8 +569,9 @@ printToScreen('Issues encountered: ' . json_encode($issues));
             data: {reloadData: true},
             error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
             success: (data) => {
-                data = JSON.parse(data);
-                CTRICallLog.packagedCallData = data[0];
+                let [ packagedCallData, tabConfig, alwaysShowCallbackCol, timeTaken, issues ] = JSON.parse(data);
+                CTRICallLog.packagedCallData = packagedCallData;
+                CTRICallLog.alwaysShowCallbackCol = alwaysShowCallbackCol;
                 $('.callTable').each( function(index,el) {
                     let table = $(el).DataTable();
                     let page = table.page.info().page;
@@ -579,7 +581,8 @@ printToScreen('Issues encountered: ' . json_encode($issues));
                     table.draw();
                     table.page(page).draw('page');
                 });
-                console.log('Refreshed data in '+data[3]+' seconds');
+                toggleCallBackCol();
+                console.log('Refreshed data in '+timeTaken+' seconds');
             }
         });
     }
@@ -663,6 +666,9 @@ printToScreen('Issues encountered: ' . json_encode($issues));
                 $(".call-link[data-tabid="+tab_id+"]").append('<span class="badge badge-secondary">'+badge+'</span>');
         });
         
+        // Tabs are built, show the body now
+        $(".card").fadeIn();
+        
         // Insert custom search box 
         $('.dataTables_length').after(
                 "<div class='dataTables_filter customSearch'><label>Search:<input type='search'></label></div>");
@@ -705,6 +711,11 @@ printToScreen('Issues encountered: ' . json_encode($issues));
         
         // Refresh the data occasionally
         setInterval( refreshTableData, 2*60*1000);
+        
+        // Load the initial data
+        toggleCallBackCol();
+        refreshTableData();
+        $(".dataTables_empty").text('Loading...')
         
     });
 </script>

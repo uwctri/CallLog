@@ -254,6 +254,8 @@ class CustomCallLog extends AbstractExternalModule  {
             }
             if ( $data[$callConfig['removeEvent']][$callConfig['removeVar']] )
                 continue;
+            $newStart = $this->dateMath($data[$callConfig['event']][$callConfig['field']], '-', $callConfig['days']);
+            $newEnd = $this->dateMath($data[$callConfig['event']][$callConfig['field']], '+', $callConfig['days'] == 0 ? 365 : 0);
             if ( !empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == ""
                   && count($meta[$callConfig['id']]['instances']) == 0 ) {
                 // Scheduled appt was removed and no call was made, get rid of reminder call too.
@@ -267,11 +269,18 @@ class CustomCallLog extends AbstractExternalModule  {
                 // Appt is today, autocomplete the call so it stops showing up places, we might double set but it doesn't matter
                 $meta[$callConfig['id']]['complete'] = true;
             }
+            elseif (!empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "" && 
+                    ($meta[$callConfig['id']]['start'] != $newStart || $meta[$callConfig['id']]['end'] != $newEnd)) {
+                // Scheduled appt exists, the meta has the call id, but the dates don't match (re-shchedule occured)
+                $meta[$callConfig['id']]['complete'] = false;
+                $meta[$callConfig['id']]['start'] = $newStart;
+                $meta[$callConfig['id']]['end'] = $newEnd;
+            }
             elseif (empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != ""  ) {
                 // Scheduled appt exists and the meta doesn't have the call id in it yet
                 $meta[$callConfig['id']] = [
-                    "start" => $this->dateMath($data[$callConfig['event']][$callConfig['field']], '-', $callConfig['days']),
-                    "end" => $this->dateMath($data[$callConfig['event']][$callConfig['field']], '+', $callConfig['days'] == 0 ? 365 : 0),
+                    "start" => $newStart,
+                    "end" => $newEnd,
                     "template" => 'reminder',
                     "event_id" => $callConfig['event'],
                     "event" => $eventMap[$callConfig['event']],
