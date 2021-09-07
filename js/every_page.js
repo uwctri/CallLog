@@ -1,9 +1,15 @@
 CTRICallLog.defaultDateFormat = 'MM-dd-y';
 CTRICallLog.defaultDateTimeFormat = 'MM-dd-y hh:mma';
 
-Date.prototype.addDays = function (days) {
-    return new Date( this.setDate(this.getDate() + days) );
+function ArraysEqual(a1, a2) {
+    var i = a1.length;
+    while (i--) {
+        if (a1[i] !== a2[i]) return false;
+    }
+    return true
 }
+
+Date.prototype.addDays = (days) => new Date( this.setDate(this.getDate() + days) );
 
 Object.filter = (obj, predicate) => 
     Object.keys(obj)

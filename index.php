@@ -575,9 +575,11 @@ if ( count($issues) )
                 $('.callTable').each( function(index,el) {
                     let table = $(el).DataTable();
                     let page = table.page.info().page;
+                    let tab_id = $(el).closest('.tab-pane').prop('id');
                     table.clear();
-                    table.rows.add(
-                        CTRICallLog.packagedCallData[$(el).closest('.tab-pane').prop('id')]);
+                    table.rows.add(CTRICallLog.packagedCallData[tab_id]);
+                    if ( CTRICallLog.alwaysShowCallbackCol && ArraysEqual(table.order()[0],[ 1, "asc" ]) )
+                        table.order( [[ CTRICallLog.colConfig[tab_id].length-1, "desc" ]] );
                     table.draw();
                     table.page(page).draw('page');
                 });
