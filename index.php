@@ -606,7 +606,6 @@ if ( count($issues) )
         
         // Custom search options
         $('.card-body').on('input propertychange paste','.customSearch', function() {
-            console.log('new search hit');
             let $table = $('.callTable:visible').DataTable();
             let query = $('.card-body:visible input').val();
             if ( query.split(' ')[0] == 'regex' )
@@ -640,7 +639,7 @@ if ( count($issues) )
             $(el).DataTable({
                 lengthMenu: [ [25,50,100,-1], [25,50,100, "All"] ],
                 columns: CTRICallLog.colConfig[tab_id],
-                order: defaultOrder,
+                order: defaultOrder, //Always going to be [[1,asc]] at init
                 createdRow: (row,data,index) => $(row).addClass('dataTablesRow'),
                 data: CTRICallLog.packagedCallData[tab_id],
                 sDom: 'ltpi'
