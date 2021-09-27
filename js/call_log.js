@@ -406,12 +406,14 @@ $(document).ready(function () {
     
     // Call ID missing failsafe.
     setTimeout(function() {
-        if ( ($(".nav-link").length > 0) && ($("input[name=call_id]").val() == "") )
+        if ( ($(".nav-link").length > 0) && ($("input[name=call_id]").val() == "") ) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Issue Configuring Call Log',
                 text: "There was an issue determining what call this log is for. Please refresh the page. If this issue persists contact the REDCap administrator.",
             });
+            $(".nav-link:visible").first().click();
+        }
     }, 5000);
     
     // Force Call Incomplete when call back is requested
