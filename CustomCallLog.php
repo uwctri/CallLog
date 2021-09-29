@@ -138,11 +138,12 @@ class CustomCallLog extends AbstractExternalModule  {
         $config = $this->loadBadPhoneConfig();
         if ( $config['_missing'] )
             return;
-        $data = REDCap::getData($project_id,'array',$record,[$config['flag'],$config['notes']],$config['event'])[$record][$config['event']];
+        $event = $config['event'];
+        $oldNotes = REDCap::getData($project_id,'array',$record,$config['notes'],$event)[$record][$event][$config['notes']];
         $callData = end($this->getAllCallData($project_id, $record));
         if ( $callData['call_disconnected'][1] == "1" ) {
-            $write[$record][$config['event']][$config['flag']] = "1";
-            $write[$record][$config['event']][$config['notes']] = $callData['call_open_date'].' '.$callData['call_open_time'].' '.$callData['call_open_user_full_name'].': '.$callData['call_notes'].'\\n\\n'.$data[$record][$config['event']][$config['notes']];
+            $write[$record][$event][$config['flag']] = "1";
+            $write[$record][$event][$config['notes']] = $callData['call_open_date'].' '.$callData['call_open_time'].' '.$callData['call_open_user_full_name'].': '.$callData['call_notes']."\r\n\r\n".$oldNotes;
             REDCap::saveData($project_id,'array',$write,'overwrite');
         }
     }
@@ -151,11 +152,13 @@ class CustomCallLog extends AbstractExternalModule  {
         $config = $this->loadBadPhoneConfig();
         if ( $config['_missing'] )
             return;
-        $data = REDCap::getData($project_id,'array',$record,[$config['flag'],$config['notes'],$config['resolved']],$event)[$record][$config['event']];
-        if ( $data[$config['resolved']][1] == "1" ) {
-            $write[$record][$config['event']][$config['flag']] = "";
-            $write[$record][$config['event']][$config['notes']] = "";
-            $write[$record][$config['event']][$config['resolved']][1] = "0";
+        $event = $config['event'];
+        $isResolved = REDCap::getData($project_id,'array',$record,
+            $config['resolved'],$event)[$record][$event][$config['resolved']][1] == "1";
+        if ( $isResolved ) {
+            $write[$record][$event][$config['flag']] = "";
+            $write[$record][$event][$config['notes']] = "";
+            $write[$record][$event][$config['resolved']][1] = "0";
             REDCap::saveData($project_id,'array',$write,'overwrite');
         }
     }
