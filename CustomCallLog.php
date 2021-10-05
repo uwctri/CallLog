@@ -68,6 +68,8 @@ class CustomCallLog extends AbstractExternalModule  {
             $this->metadataPhoneVisit($project_id, $record);
             // Check if we need to extend the duration of the call flag
             $this->metadataCallStartedUpdate($project_id, $record);
+            // Check if we have changed how reminders should be sent
+            $this->metadataReminder($project_id, $record);
         }
     }
     
@@ -240,7 +242,7 @@ class CustomCallLog extends AbstractExternalModule  {
     }
     
     public function metadataReminder($project_id, $record) {
-        // Only envoked via URL Post from custom Scheduling solution
+        // Can be envoked via URL Post from custom Scheduling solution
         $config = $this->loadCallTemplateConfig()["reminder"];
         if ( empty($config) )
             return;
