@@ -1,13 +1,12 @@
 <?php
 # This page handles all GET/POST requests from scripts and internally from the EM
 $module = new \UWMadison\CustomCallLog\CustomCallLog();
-
 $route = $_POST['route'] ?? $_GET['route'];
 $pid = $_GET['pid'];
 
 $sendSuccess = False;
 $sendDone = False;
-$sendMalformed = True; #echo "Malformed POST to ".__FILE__;
+$sendMalformed = True;
 
 switch ( $route ) {
     case "adhocLoad":
