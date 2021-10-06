@@ -44,6 +44,11 @@
                 "name": "Create Ad-hoc Call",
                 "icon": "gear",
                 "url": "POST/newAdhoc.php?NOAUTH"
+            },
+            {
+                "name": "Router Page",
+                "icon": "gear",
+                "url": "router.php?NOAUTH"
             }
         ]
     },
@@ -51,7 +56,8 @@
         "POST/newEntryLoad",
         "POST/scheduleLoad",
         "POST/adhocResolve",
-        "POST/newAdhoc"
+        "POST/newAdhoc",
+        "router"
     ],
     "framework-version": 5,
     "project-settings": [
