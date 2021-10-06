@@ -1,5 +1,5 @@
-CTRICallLog.defaultDateFormat = 'MM-dd-y';
-CTRICallLog.defaultDateTimeFormat = 'MM-dd-y hh:mma';
+CallLog.defaultDateFormat = 'MM-dd-y';
+CallLog.defaultDateTimeFormat = 'MM-dd-y hh:mma';
 
 function ArraysEqual(a1, a2) {
     var i = a1.length;
@@ -81,7 +81,7 @@ function goToCallList() {
 }
 
 function editLeftSideCallLog() {
-    let a = `#form\\[${CTRICallLog.static.instrumentLower}\\]`;
+    let a = `#form\\[${CallLog.static.instrumentLower}\\]`;
     if ( $(a).next().length ) {
         $(a).next().hide();
         $(a).prev().prop('href',$(a).next().prop('href'));
@@ -95,7 +95,7 @@ function editLeftSideCallLog() {
 }
 
 function showCallStartWarning() {
-    if ( !CTRICallLog.recentCaller )
+    if ( !CallLog.recentCaller )
         return
     $("#questiontable").before(`
     <div class="alert alert-danger" style="text-align:center" role="alert">
@@ -103,7 +103,7 @@ function showCallStartWarning() {
         <div class="row">
             <div class="col-1"><i class="fas fa-exclamation-triangle h2 mt-1"></i></div>
             <div class="col-10 h6">
-                This subject's record was recently opened from the Call List by ${CTRICallLog.userNameMap[CTRICallLog.recentCaller]}.
+                This subject's record was recently opened from the Call List by ${CallLog.userNameMap[CallLog.recentCaller]}.
                 <br>
                 They may currently be on the phone with the subject.
             </div>

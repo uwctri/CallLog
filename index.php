@@ -264,14 +264,14 @@ if ( count($issues) )
 </div>
 
 <script>
-    CTRICallLog.packagedCallData = <?php echo json_encode($packagedCallData); ?>;
-    CTRICallLog.tabs = <?php echo json_encode($tabs); ?>;
-    CTRICallLog.alwaysShowCallbackCol = <?php echo json_encode($alwaysShowCallbackCol); ?>;
-    CTRICallLog.reloadDataPOST = <?php echo json_encode($module->getURL(__FILE__)); ?>;
-    CTRICallLog.hideCalls = true;
-    CTRICallLog.childRows = {};
-    CTRICallLog.colConfig = {};
-    CTRICallLog.displayedData = {};
+    CallLog.packagedCallData = <?php echo json_encode($packagedCallData); ?>;
+    CallLog.tabs = <?php echo json_encode($tabs); ?>;
+    CallLog.alwaysShowCallbackCol = <?php echo json_encode($alwaysShowCallbackCol); ?>;
+    CallLog.reloadData = <?php echo json_encode($module->getURL(__FILE__)); ?>;
+    CallLog.hideCalls = true;
+    CallLog.childRows = {};
+    CallLog.colConfig = {};
+    CallLog.displayedData = {};
     
     function projectLog( action, call_id, record ) {
         if (typeof ez !== "undefined") {
@@ -286,7 +286,7 @@ if ( count($issues) )
                 '<div class="col-4">'+
                     '<div class="row dtChildData">'+
                         '<div class="col-auto">'+
-                            CTRICallLog.childRows[tab]+
+                            CallLog.childRows[tab]+
                         '</div>'+
                         '<div class="col">'+
                             childData.map(x=>'<div class="row">'+(x||"________")+'</div>').join('')+
@@ -308,7 +308,7 @@ if ( count($issues) )
                             (notesData.map(x=>
                             '<div class="row m-2 pb-2 border-bottom">'+
                                 '<div class="col-auto">'+
-                                    '<div class="row">'+formatDate(new Date(x[0].split(' ')[0]+"T00:00:00"),CTRICallLog.defaultDateFormat)+" "+conv24to12(x[0].split(' ')[1])+'</div>'+
+                                    '<div class="row">'+formatDate(new Date(x[0].split(' ')[0]+"T00:00:00"),CallLog.defaultDateFormat)+" "+conv24to12(x[0].split(' ')[1])+'</div>'+
                                     '<div class="row">'+x[1]+'</div>'+
                                     '<div class="row">'+x[2]+'</div>'+
                                 '</div>'+
@@ -336,7 +336,7 @@ if ( count($issues) )
                 'title="This subject may already be in a call."></i></span>' : ''
         }];
         
-        $.each( CTRICallLog.tabs['config'][index]['fields'], function(colIndex,fConfig) {
+        $.each( CallLog.tabs['config'][index]['fields'], function(colIndex,fConfig) {
             
             // Standard Config for all fields
             let colConfig = {
@@ -380,11 +380,11 @@ if ( count($issues) )
             } else if ( fConfig.isFormStatus ) {
                 colConfig.render = (data,type,row,meta) => ['Incomplete','Unverified','Complete'][data];
             } else if ( colConfig.data == "call_event_name" ) {
-                colConfig.render = (data,type,row,meta) => CTRICallLog.eventNameMap[data] || "";
+                colConfig.render = (data,type,row,meta) => CallLog.eventNameMap[data] || "";
             } else if ( fConfig.validation == 'phone' ) {
                 colConfig.render = (data,type,row,meta) => (data && (type === 'filter')) ? data.replace(/[\\(\\)\\-\s]/g,'') : data || "";
-            } else if ( Object.keys(CTRICallLog.usernameLists).includes(fConfig.field) ) {
-                colConfig.render = (data,type,row,meta) => data ? data.includes($("#username-reference").text()) ? CTRICallLog.usernameLists[fConfig.field]['include'] : CTRICallLog.usernameLists[fConfig.field]['exclude'] : "";
+            } else if ( Object.keys(CallLog.usernameLists).includes(fConfig.field) ) {
+                colConfig.render = (data,type,row,meta) => data ? data.includes($("#username-reference").text()) ? CallLog.usernameLists[fConfig.field]['include'] : CallLog.usernameLists[fConfig.field]['exclude'] : "";
             }
             
             // Build out any links
@@ -393,11 +393,11 @@ if ( count($issues) )
                 if (fConfig.link == "home")
                     url = '../DataEntry/record_home.php?pid='+pid+'&id=RECORD';
                 else if (fConfig.link == "call")
-                    url = '../DataEntry/index.php?pid='+pid+'&id=RECORD&event_id='+CTRICallLog.events.callLog.id+'&page='+CTRICallLog.static.instrumentLower+'&instance=INSTANCE&call_id=CALLID&showReturn=1';
+                    url = '../DataEntry/index.php?pid='+pid+'&id=RECORD&event_id='+CallLog.events.callLog.id+'&page='+CallLog.static.instrumentLower+'&instance=INSTANCE&call_id=CALLID&showReturn=1';
                 else if (fConfig.link == "instrument")
                     url = '../DataEntry/index.php?pid='+pid+'&id=RECORD&event_id='+fConfig.linkedEvent+'&page='+fConfig.linkedInstrument;
                 colConfig.createdCell = function (td, cellData, rowData, row, col) {
-                    let thisURL = url.replace('RECORD',rowData[CTRICallLog.static.record_id]).
+                    let thisURL = url.replace('RECORD',rowData[CallLog.static.record_id]).
                         replace('INSTANCE',rowData['_nextInstance']).
                         replace('CALLID',rowData['_call_id']);
                     let dt = "";
@@ -408,7 +408,7 @@ if ( count($issues) )
                     } else if ( rowData['call_callback_time'] ) {
                         dt = today+" "+rowData['call_callback_time'];
                     }
-                    let record = rowData[CTRICallLog.static.record_id];
+                    let record = rowData[CallLog.static.record_id];
                     let id = rowData['_call_id'];
                     $(td).html("<a onclick=\"callURLclick("+record+",'"+id+"','"+thisURL+"','"+dt+"')\">"+cellData+"</a>");
                 }
@@ -418,7 +418,7 @@ if ( count($issues) )
             if ( fConfig.expanded ) {
                 colConfig.visible = false;
                 colConfig.className = 'expandedInfo';
-                CTRICallLog.childRows[tab_id] += '<div class="row">'+fConfig.displayName+'</div>';
+                CallLog.childRows[tab_id] += '<div class="row">'+fConfig.displayName+'</div>';
             }
             
             //Done
@@ -426,24 +426,24 @@ if ( count($issues) )
         });
         
         // Tack on Lower and Upper windows for Follow ups
-        if ( CTRICallLog.tabs['config'][index]['showFollowupWindows'] ) {
+        if ( CallLog.tabs['config'][index]['showFollowupWindows'] ) {
             cols.push({title: 'Start Calling',data: '_windowLower'});
             cols.push({title: 'Complete By',data: '_windowUpper'});
         }
         
         // Tack on Missed Appt date
-        if ( CTRICallLog.tabs['config'][index]['showMissedDateTime'] ) {
+        if ( CallLog.tabs['config'][index]['showMissedDateTime'] ) {
             cols.push({title: 'Missed Date',data: '_appt_dt', render: (data,type,row,meta) =>
-                ( type === 'display' || type === 'filter' ) ? formatDate(new Date(data),CTRICallLog.defaultDateTimeFormat).toLowerCase() || "Not Specified" : data || "Not Specified"
+                ( type === 'display' || type === 'filter' ) ? formatDate(new Date(data),CallLog.defaultDateTimeFormat).toLowerCase() || "Not Specified" : data || "Not Specified"
             });
         }
         
         // Tack on Adhoc call info
-        if ( CTRICallLog.tabs['config'][index]['showAdhocDates'] ) {
+        if ( CallLog.tabs['config'][index]['showAdhocDates'] ) {
             cols.push({title: 'Reason',data: '_adhocReason'});
             cols.push({title: 'Call on',data: '_adhocContactOn', render: function (data,type,row,meta) {
                 if ( type === 'display' || type === 'filter' ) {
-                    let format =  data.length <= 10 ? CTRICallLog.defaultDateFormat : CTRICallLog.defaultDateTimeFormat;
+                    let format =  data.length <= 10 ? CallLog.defaultDateFormat : CallLog.defaultDateTimeFormat;
                     data = data.length <= 10 ? data + "T00:00" : data;
                     return formatDate(new Date(data),format).toLowerCase() || "Not Specified";
                 } else {
@@ -469,7 +469,7 @@ if ( count($issues) )
                 let displayDate = '';
                 if ( row['call_requested_callback'] && row['call_requested_callback'][1] == '1' ) {
                     if ( row['call_callback_date'] )
-                        displayDate += formatDate(new Date(row['call_callback_date']+'T00:00:00'), CTRICallLog.defaultDateFormat)+" ";
+                        displayDate += formatDate(new Date(row['call_callback_date']+'T00:00:00'), CallLog.defaultDateFormat)+" ";
                     displayDate += conv24to12(row['call_callback_time']);
                     if (!displayDate)
                         displayDate = "Not specified";
@@ -525,8 +525,9 @@ if ( count($issues) )
         projectLog("Started Call", call_id, record);
         $.ajax({
             method: 'POST',
-            url: CTRICallLog.callStartedPOST,
+            url: CallLog.router,
             data: {
+                route: 'setCallStarted',
                 record: record,
                 id: call_id,
                 user: $("#username-reference").text()
@@ -539,8 +540,9 @@ if ( count($issues) )
     function endCall(record, call_id) {
         $.ajax({
             method: 'POST',
-            url: CTRICallLog.callEndedPOST,
+            url: CallLog.router,
             data: {
+                route: 'setCallEnded',
                 record: record,
                 id: call_id
             },
@@ -554,14 +556,14 @@ if ( count($issues) )
     }
     
     function toggleHiddenCalls() {
-        CTRICallLog.hideCalls = !CTRICallLog.hideCalls;
+        CallLog.hideCalls = !CallLog.hideCalls;
         toggleCallBackCol();
         $('*[data-toggle="tooltip"]').tooltip();//Enable Tooltips for the info icon
     }
     
     function toggleCallBackCol() {
         $.each( $('.callTable'), function() {
-            $(this).DataTable().column( 'callbackCol:name' ).visible(CTRICallLog.alwaysShowCallbackCol || !CTRICallLog.hideCalls);
+            $(this).DataTable().column( 'callbackCol:name' ).visible(CallLog.alwaysShowCallbackCol || !CallLog.hideCalls);
             $(this).DataTable().draw();
         });
     }
@@ -569,21 +571,21 @@ if ( count($issues) )
     function refreshTableData() {
         $.ajax({
             method: 'POST',
-            url: CTRICallLog.reloadDataPOST,
+            url: CallLog.reloadData,
             data: {reloadData: true},
             error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
             success: (data) => {
                 let [ packagedCallData, tabConfig, alwaysShowCallbackCol, timeTaken, issues ] = JSON.parse(data);
-                CTRICallLog.packagedCallData = packagedCallData;
-                CTRICallLog.alwaysShowCallbackCol = alwaysShowCallbackCol;
+                CallLog.packagedCallData = packagedCallData;
+                CallLog.alwaysShowCallbackCol = alwaysShowCallbackCol;
                 $('.callTable').each( function(index,el) {
                     let table = $(el).DataTable();
                     let page = table.page.info().page;
                     let tab_id = $(el).closest('.tab-pane').prop('id');
                     table.clear();
-                    table.rows.add(CTRICallLog.packagedCallData[tab_id]);
-                    if ( CTRICallLog.alwaysShowCallbackCol && ArraysEqual(table.order()[0],[ 1, "asc" ]) )
-                        table.order( [[ CTRICallLog.colConfig[tab_id].length-1, "desc" ]] );
+                    table.rows.add(CallLog.packagedCallData[tab_id]);
+                    if ( CallLog.alwaysShowCallbackCol && ArraysEqual(table.order()[0],[ 1, "asc" ]) )
+                        table.order( [[ CallLog.colConfig[tab_id].length-1, "desc" ]] );
                     table.draw();
                     table.page(page).draw('page');
                 });
@@ -596,8 +598,9 @@ if ( count($issues) )
     function noCallsToday(record, call_id) {
         $.ajax({
             method: 'POST',
-            url: CTRICallLog.noCallsTodayPOST,
+            url: CallLog.router,
             data: {
+                route: 'setNoCallsToday',
                 record: record,
                 id: call_id
             },
@@ -624,7 +627,7 @@ if ( count($issues) )
         $.fn.dataTable.ext.search.push(
             function(settings, searchData, index, rowData, counter) {
                 return !(
-                    CTRICallLog.hideCalls && (
+                    CallLog.hideCalls && (
                         (rowData['_atMaxAttempts'] && !rowData['_callbackToday']) || rowData['_callbackNotToday'] || rowData['_noCallsToday']
                     )
                 );
@@ -635,39 +638,39 @@ if ( count($issues) )
         // Main table build out
         $('.callTable').each( function(index,el) {
             let tab_id = $(el).closest('.tab-pane').prop('id');
-            CTRICallLog.childRows[tab_id] = "";
-            CTRICallLog.colConfig[tab_id] = createColConfig(index, tab_id);
+            CallLog.childRows[tab_id] = "";
+            CallLog.colConfig[tab_id] = createColConfig(index, tab_id);
             
             // Init the table
-            let defaultOrder = CTRICallLog.alwaysShowCallbackCol ? [[ CTRICallLog.colConfig[tab_id].length-1, "desc" ]] : [[ 1, "asc" ]];
+            let defaultOrder = CallLog.alwaysShowCallbackCol ? [[ CallLog.colConfig[tab_id].length-1, "desc" ]] : [[ 1, "asc" ]];
             $(el).DataTable({
                 lengthMenu: [ [25,50,100,-1], [25,50,100, "All"] ],
-                columns: CTRICallLog.colConfig[tab_id],
+                columns: CallLog.colConfig[tab_id],
                 order: defaultOrder, //Always going to be [[1,asc]] at init
                 createdRow: (row,data,index) => $(row).addClass('dataTablesRow'),
-                data: CTRICallLog.packagedCallData[tab_id],
+                data: CallLog.packagedCallData[tab_id],
                 sDom: 'ltpi'
             });
             
             // Create a data object for reports to access and for below
-            //let visibleCols = CTRICallLog.colConfig[tab_id].map(x=>x['visible']!=false || (x['data'] && x['data'].includes('callback')) ? x['title']: null).filter(x=>x&&!x.startsWith('_'));
-            //let visibleColsIndex = CTRICallLog.colConfig[tab_id].map((e,i)=>e['visible']!=false || (e['data'] && e['data'].includes('callback')) ? i: null).filter(x=>x);
-            //CTRICallLog.displayedData[tab_id] = [];
+            //let visibleCols = CallLog.colConfig[tab_id].map(x=>x['visible']!=false || (x['data'] && x['data'].includes('callback')) ? x['title']: null).filter(x=>x&&!x.startsWith('_'));
+            //let visibleColsIndex = CallLog.colConfig[tab_id].map((e,i)=>e['visible']!=false || (e['data'] && e['data'].includes('callback')) ? i: null).filter(x=>x);
+            //CallLog.displayedData[tab_id] = [];
             //$(el).DataTable().rows().every( function() {
             //    let values = this.cells().render('display').toArray().filter((e,i)=>visibleColsIndex.includes(i));
             //    console.log(this.cells().render('display').toArray())
             //    let merger = visibleCols.reduce((obj, keys, index) => ({ ...obj, [keys]: values[index] }), {})
-            //    CTRICallLog.displayedData[tab_id].push( merger );
+            //    CallLog.displayedData[tab_id].push( merger );
             //});
-            let visibleCols = CTRICallLog.colConfig[tab_id].map(x=>x['visible']!=false ? x['data']: null).filter(x=>x&&!x.startsWith('_'));
-            visibleCols = visibleCols.concat( CTRICallLog.packagedCallData[tab_id].length > 0 ? Object.keys(CTRICallLog.packagedCallData[tab_id][0]).filter(x=>x.includes('callback')&&!x.startsWith('_')) : [])
-            CTRICallLog.displayedData[tab_id] = $(el).DataTable().rows().data().toArray().map( x=> Object.filterKeys(x, visibleCols));
+            let visibleCols = CallLog.colConfig[tab_id].map(x=>x['visible']!=false ? x['data']: null).filter(x=>x&&!x.startsWith('_'));
+            visibleCols = visibleCols.concat( CallLog.packagedCallData[tab_id].length > 0 ? Object.keys(CallLog.packagedCallData[tab_id][0]).filter(x=>x.includes('callback')&&!x.startsWith('_')) : [])
+            CallLog.displayedData[tab_id] = $(el).DataTable().rows().data().toArray().map( x=> Object.filterKeys(x, visibleCols));
             
             // Create tab badges
             let badge = 0;
-            let user = $("#impersonate-user-select").val() || CTRICallLog.user;
-            CTRICallLog.displayedData[tab_id].forEach( x=>Object.values(x).includes(CTRICallLog.userNameMap[user]) && badge++ );
-            if ( badge > 0 && CTRICallLog.tabs.showBadges)
+            let user = $("#impersonate-user-select").val() || CallLog.user;
+            CallLog.displayedData[tab_id].forEach( x=>Object.values(x).includes(CallLog.userNameMap[user]) && badge++ );
+            if ( badge > 0 && CallLog.tabs.showBadges)
                 $(".call-link[data-tabid="+tab_id+"]").append('<span class="badge badge-secondary">'+badge+'</span>');
         });
         
@@ -679,7 +682,7 @@ if ( count($issues) )
                 "<div class='dataTables_filter customSearch'><label>Search:<input type='search'></label></div>");
         
         // Select the first tab on the call list
-        let savedTab = Cookies.get('CTRICallLog'+pid);
+        let savedTab = Cookies.get('CallLog'+pid);
         if ( savedTab )
             $(".call-link[data-tabid="+savedTab+"]").click();
         else
@@ -687,7 +690,7 @@ if ( count($issues) )
         
         // Setup cookie for remembering call tab
         $(".call-link").on('click', function() {
-            Cookies.set('CTRICallLog'+pid,$(this).data('tabid'),{sameSite: 'lax'});
+            Cookies.set('CallLog'+pid,$(this).data('tabid'),{sameSite: 'lax'});
         });
         
         // Enable click to expand
@@ -699,7 +702,7 @@ if ( count($issues) )
                 $(this).removeClass('shown');
             } else {
                 let data = row.data()
-                let record = data[CTRICallLog.static.record_id];
+                let record = data[CallLog.static.record_id];
                 let call = data['_call_id'];
                 let tab_id = $(this).closest('.tab-pane').prop('id');
                 let notes = data['_callNotes'];

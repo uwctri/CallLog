@@ -1,7 +1,7 @@
 $(document).ready(function() {
     console.log("Loaded CTRI Call Log config")
     
-    if ( CTRICallLog.configError ) {
+    if ( CallLog.configError ) {
         Swal.fire({
           icon: 'error',
           title: 'CTRI Call Log Config Issue',
@@ -12,7 +12,7 @@ $(document).ready(function() {
     var $modal = $('#external-modules-configure-modal');
     $modal.on('show.bs.modal', function() {
         // Making sure we are overriding this modules's modal only.
-        if ($(this).data('module') !== CTRICallLog.modulePrefix)
+        if ($(this).data('module') !== CallLog.modulePrefix)
             return;
     
         if (typeof ExternalModules.Settings.prototype.resetConfigInstancesOld === 'undefined')
@@ -20,7 +20,7 @@ $(document).ready(function() {
 
         ExternalModules.Settings.prototype.resetConfigInstances = function() {
             ExternalModules.Settings.prototype.resetConfigInstancesOld();
-            if ($modal.data('module') !== CTRICallLog.modulePrefix)
+            if ($modal.data('module') !== CallLog.modulePrefix)
                 return;
             
             // Basic cleanup
@@ -99,7 +99,7 @@ $(document).ready(function() {
 
     $modal.on('hide.bs.modal', function() {
         // Making sure we are overriding this modules's modal only.
-        if ($(this).data('module') !== CTRICallLog.modulePrefix)
+        if ($(this).data('module') !== CallLog.modulePrefix)
             return;
 
         if (typeof ExternalModules.Settings.prototype.resetConfigInstancesOld !== 'undefined')
