@@ -112,7 +112,8 @@ switch ( $route ) {
 
 if ( $sendDone ) {
     echo json_encode([
-        "text" => "Done"
+        "text" => "Done",
+        "success" => false
     ]);
 } elseif ( $sendSuccess ) {
     echo json_encode([
@@ -121,7 +122,8 @@ if ( $sendDone ) {
     ]);
 } else {
     echo json_encode([
-        "text" => "Malformed action '$route' was posted to ".__FILE__
+        "text" => "Malformed action '$route' was posted to ".__FILE__,
+        "success" => false
     ]);
 }
 
