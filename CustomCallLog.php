@@ -1,16 +1,10 @@
 <?php
 
 namespace UWMadison\CustomCallLog;
-
 use ExternalModules\AbstractExternalModule;
 use ExternalModules\ExternalModules;
-
 use REDCap;
 use User;
-
-function printToScreen($string) {
-    ?><script>console.log(<?=json_encode($string); ?>);</script><?php
-}
 
 class CustomCallLog extends AbstractExternalModule  {
     
@@ -38,11 +32,6 @@ class CustomCallLog extends AbstractExternalModule  {
     private $flatpickrCSS = "https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css";
     private $flatpickrJS  = "https://cdn.jsdelivr.net/npm/flatpickr";
     private $cookieJS = "https://cdn.jsdelivr.net/npm/js-cookie@2.2.1/src/js.cookie.min.js";
-    
-    public function __construct() {
-        parent::__construct();
-        define("MODULE_DOCROOT", $this->getModulePath());
-    }
     
     /////////////////////////////////////////////////
     // REDCap Hooks
@@ -552,7 +541,7 @@ class CustomCallLog extends AbstractExternalModule  {
     
     public function saveCallMetadata($project_id, $record, $data) {
         $response = REDCap::saveData($project_id,'array', [$record=>[$this->getProjectSetting('metadata_event')=>[$this->metadataField=>json_encode($data)]]]);
-        printToScreen($response);
+        $this->consolePrint($response); #TODO Return a value to caller instead
     }
     
     /////////////////////////////////////////////////
@@ -869,6 +858,10 @@ class CustomCallLog extends AbstractExternalModule  {
     /////////////////////////////////////////////////
     // Private Utility Functions
     /////////////////////////////////////////////////
+    
+    private function consolePrint($string) {
+        ?><script>console.log(<?=json_encode($string); ?>);</script><?php
+    }
     
     private function dateMath($date, $operation, $days) {
         $oldDate = date('Y-m-d', strtotime( $date ) );
