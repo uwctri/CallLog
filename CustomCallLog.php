@@ -159,6 +159,9 @@ class CustomCallLog extends AbstractExternalModule  {
             return;
         $config = $this->loadCallTemplateConfig()["new"];
         foreach( $config as $callConfig ) {
+            // Don't re-create call
+            if ( !empty($meta[$callConfig['id']]) )
+                continue;
             $meta[$callConfig['id']] = [
                 "template" => 'new',
                 "event" => '',//None for new entry calls
