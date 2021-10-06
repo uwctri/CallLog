@@ -85,8 +85,8 @@ function loadParsePackCallData($skipDataPack = false) {
             continue;
         
         foreach( $meta as $callID => $call ) {
-            $fullCallID = $callID;
-            $callID = explode('|',$callID)[0]; // We only need the simple ID here
+            $fullCallID = $callID; // Full ID could be X|Y, X||Y or X|Y||Z. CALLID|EVENT||DATE
+            [$callID, $part2, $part3] = array_pad(array_filter(explode('|',$callID)),3,""); 
             
             // Skip if call complete, debug call, or if call ID isn't assigned to a tab
             if ( $call['complete'] || substr($callID,0,1) == '_' || empty($tabs['call2tabMap'][$callID]) )
@@ -106,6 +106,10 @@ function loadParsePackCallData($skipDataPack = false) {
             
             // Skip New (onload) calls that have expire days
             if ( ($call['template'] == 'new') && $call['expire'] && (date('Y-m-d', strtotime($call['load']."+".$call['expire']." days")) < $today) )
+                continue;
+            
+            // Skip if MCV was created today (A call attempt was already made)
+            if ( ($call['template'] == 'mcv') && ($part2 == $today) )
                 continue;
             
             $instanceData = $recordData['repeat_instances'][$callEvent][$module->instrumentLower][end($call['instances'])]; // This could be empty for New Entry calls, but it won't matter.
