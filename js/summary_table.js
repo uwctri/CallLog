@@ -130,7 +130,7 @@ function buildCallSummaryTable() {
                 let instance = getParameterByName('instance') > 1 ? getParameterByName('instance')-1 : 1;
                 // Post to delete, removes metadata too
                 $.ajax({
-                    method: 'POST',callDelete
+                    method: 'POST',
                     url: CallLog.router,
                     data: {
                         route: 'callDelete',
