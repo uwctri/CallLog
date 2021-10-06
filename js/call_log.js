@@ -1,6 +1,6 @@
-CTRICallLog.html = CTRICallLog.html || {};
+CallLog.html = CallLog.html || {};
 
-CTRICallLog.html.wrapper = `
+CallLog.html.wrapper = `
 <tr style="border: 1px solid #ddd"><td colspan="2">
 <div class="card-header">
     <ul class="nav nav-tabs card-header-tabs">
@@ -8,12 +8,12 @@ CTRICallLog.html.wrapper = `
 </div>
 </td></tr>`;
 
-CTRICallLog.html.tab = `
+CallLog.html.tab = `
 <li class="nav-item call-tab">
     <a class="nav-link mr-1" href="#" data-call-id="CALLID">TABNAME</a>
 </li>`;
 
-CTRICallLog.html.historic = `
+CallLog.html.historic = `
 <tr><td colspan="2">
     <div class="alert alert-danger mb-0">
         <div class="container row">
@@ -24,7 +24,7 @@ CTRICallLog.html.historic = `
     </div>
 </td><tr>`;
 
-CTRICallLog.html.noCalls = `
+CallLog.html.noCalls = `
 <tr><td colspan="2">
     <div class="yellow">
         <div class="container row">
@@ -33,7 +33,7 @@ CTRICallLog.html.noCalls = `
     </div>
 </td><tr>`;
 
-CTRICallLog.html.notes = `
+CallLog.html.notes = `
 <td class="col-7 notesRow" colspan="2" style="background-color:#f5f5f5"> 
     <div class="container">
         <div class="row mb-3 mt-2 font-weight-bold"> Notes </div>
@@ -49,9 +49,9 @@ CTRICallLog.html.notes = `
     </div>
 </td>`;
 
-CTRICallLog.html.adhoc = `<button type="button" class="btn btn-primaryrc btn-sm position-absolute adhocButton" data-toggle="modal" data-target="#MODALID">TEXT</button>`;
+CallLog.html.adhoc = `<button type="button" class="btn btn-primaryrc btn-sm position-absolute adhocButton" data-toggle="modal" data-target="#MODALID">TEXT</button>`;
 
-CTRICallLog.html.adhocModal = `
+CallLog.html.adhocModal = `
 <div class="modal fade" id="MODALID" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
@@ -99,7 +99,7 @@ CTRICallLog.html.adhocModal = `
 </div>
 `;
 
-CTRICallLog.optionalCSS = `
+CallLog.optionalCSS = `
 <style>
     .formHeader {
         background-color: #675186;
@@ -117,34 +117,36 @@ CTRICallLog.optionalCSS = `
     }
 </style>`;
 
-CTRICallLog.functions = {};
+CallLog.functions = {};
 
-CTRICallLog.functions.callAdminEdit = function () {
+CallLog.functions.callAdminEdit = function () {
     $("*[class='@HIDDEN']").show();
     $("#__SUBMITBUTTONS__-tr").hide();
 }
 
-CTRICallLog.functions.saveMetadata = function () {
+CallLog.functions.saveMetadata = function () {
     $.ajax({
         method: 'POST',
-        url: CTRICallLog.metadataPOST,
+        url: CallLog.router,
         data: {
+            route: 'metadataSave',
             record: getParameterByName('id'),
-            metadata: JSON.stringify(CTRICallLog.metadata)
+            metadata: JSON.stringify(CallLog.metadata)
         },
         error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
         success: (data) => console.log(data)
     });
 }
 
-CTRICallLog.functions.saveCalldata = function (instance, dataVar, dataVal, isCheckbox) {
+CallLog.functions.saveCalldata = function (instance, dataVar, dataVal, isCheckbox) {
     isCheckbox = !!isCheckbox;
     if ( isCheckbox ) 
         dataVal = JSON.stringify(dataVal);
     $.ajax({
         method: 'POST',
-        url: CTRICallLog.calldataPOST,
+        url: CallLog.router,
         data: {
+            route: 'calldataSave',
             record: getParameterByName('id'),
             instance: instance,
             dataVar: dataVar,
@@ -156,11 +158,11 @@ CTRICallLog.functions.saveCalldata = function (instance, dataVar, dataVal, isChe
     });
 }
 
-CTRICallLog.functions.UpdateCallTypeEndDates = function (call_type, days) {
-    $.each(CTRICallLog.metadata, function(callid, data) {
+CallLog.functions.UpdateCallTypeEndDates = function (call_type, days) {
+    $.each(CallLog.metadata, function(callid, data) {
         if ( !callid.includes(call_type) ) 
             return;
-        CTRICallLog.metadata[callid]['end'] = formatDate( ( new Date(CTRICallLog.metadata[callid]['start']+"T00:00" ).addDays(days) ), 'y-MM-dd');
+        CallLog.metadata[callid]['end'] = formatDate( ( new Date(CallLog.metadata[callid]['start']+"T00:00" ).addDays(days) ), 'y-MM-dd');
     });
 }
 
@@ -169,18 +171,18 @@ function sendToCallList() {
 }
 
 function getPreviousCalldatetime( callID ) {
-    if ( !CTRICallLog.metadata[callID] || isEmpty(CTRICallLog.metadata[callID].instances) )
+    if ( !CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances) )
         return "";
-    let data = CTRICallLog.data[ CTRICallLog.metadata[callID].instances.slice(-1)[0]  ];
+    let data = CallLog.data[ CallLog.metadata[callID].instances.slice(-1)[0]  ];
     if ( !data ) 
         return "";
     return formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +conv24to12(data['call_open_time']);
 }
 
 function getPreviousCallTasks( callID ) {
-    if ( !CTRICallLog.metadata[callID] || isEmpty(CTRICallLog.metadata[callID].instances) )
+    if ( !CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances) )
         return [];
-    let data = CTRICallLog.data[ CTRICallLog.metadata[callID].instances.slice(-1)[0]  ];
+    let data = CallLog.data[ CallLog.metadata[callID].instances.slice(-1)[0]  ];
     if ( !data )
         return [];
     let arr = [];
@@ -192,11 +194,11 @@ function getPreviousCallTasks( callID ) {
 }
 
 function getPreviousCallNotes( callID ) {
-    if ( !CTRICallLog.metadata[callID] || isEmpty(CTRICallLog.metadata[callID].instances) )
+    if ( !CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances) )
         return [];
     let notes = [];
-    $.each( CTRICallLog.metadata[callID].instances, function(_,instance) {
-        let data = CTRICallLog.data[instance];
+    $.each( CallLog.metadata[callID].instances, function(_,instance) {
+        let data = CallLog.data[instance];
         if ( !data ) 
             return;
         notes.push( {
@@ -228,20 +230,20 @@ function getWeekNumber(d) {
 }
 
 function getLeaveMessage(callID) {
-    let meta = CTRICallLog.metadata[callID]
+    let meta = CallLog.metadata[callID]
     if ( meta.voiceMails >= meta.maxVoiceMails )
         return 'No';
     if ( meta.maxVMperWeek >= meta.voiceMails )
         return 'Yes';
     let thisWeek = getWeekNumber(new Date())[1];
-    return CTRICallLog.metadata[callID].instances.map(
-            x=>getWeekNumber(CTRICallLog.data[x]['call_open_date']
+    return CallLog.metadata[callID].instances.map(
+            x=>getWeekNumber(CallLog.data[x]['call_open_date']
         ) == thisWeek ).filter(x=>x).length >= meta.maxVMperWeek ? 'No' : 'Yes';
 }
 
 function buildNotesArea() {
     $("#call_notes-tr td").hide();
-    $("#call_notes-tr").append(CTRICallLog.html.notes);
+    $("#call_notes-tr").append(CallLog.html.notes);
     $(".panel-left").resizable({
         handleSelector: ".splitter",
         resizeHeight: false,
@@ -253,8 +255,8 @@ function buildNotesArea() {
 $(document).ready(function () {
     
     // Check if user can be here
-    if ( isEmpty(CTRICallLog.metadata) ) {
-        if ( isEmpty(CTRICallLog.adhoc.config) ) 
+    if ( isEmpty(CallLog.metadata) ) {
+        if ( isEmpty(CallLog.adhoc) ) 
             sendToCallList();// If the call log is un-used so far kick them to the Call List page
         else 
             setTimeout( () => $("#call_hdr_details-tr").nextAll('tr').addBack().hide(), 100 ); // dodge branching logic
@@ -262,25 +264,25 @@ $(document).ready(function () {
     
     // Load some Default CSS if none exists 
     if ( $('.formHeader').css('text-align') != 'center' )
-        $('head').append(CTRICallLog.optionalCSS);
+        $('head').append(CallLog.optionalCSS);
     
     // Hide a few things for style
     $("#formtop-div").hide();
     $("td.context_msg").hide();
-    $(`#${CTRICallLog.static.instrumentLower}_complete-sh-tr`).hide();
-    $(`#${CTRICallLog.static.instrumentLower}_complete-tr`).hide();
+    $(`#${CallLog.static.instrumentLower}_complete-sh-tr`).hide();
+    $(`#${CallLog.static.instrumentLower}_complete-tr`).hide();
     
     //Build out the Notes area
     buildNotesArea();
     
     // If we are on a completed version of the Call Log show a warning, update the details and leave
-    if ( $(`select[name=${CTRICallLog.static.instrumentLower}_complete]`).val() != "0" ) {
-        $(".formtbody").prepend(CTRICallLog.html.historic);
+    if ( $(`select[name=${CallLog.static.instrumentLower}_complete]`).val() != "0" ) {
+        $(".formtbody").prepend(CallLog.html.historic);
         $("#__SUBMITBUTTONS__-tr").hide();
         // Fill out call details
-        let id = CTRICallLog.data[getParameterByName('instance')]['call_id'];
-        let data = CTRICallLog.data[getParameterByName('instance')];
-        $("#CallLogCurrentCall").text(CTRICallLog.metadata[id]['name']);
+        let id = CallLog.data[getParameterByName('instance')]['call_id'];
+        let data = CallLog.data[getParameterByName('instance')];
+        $("#CallLogCurrentCall").text(CallLog.metadata[id]['name']);
         $("td:contains(Current Caller)").next().text(data['call_open_user_full_name']);
         $("#CallLogCurrentTime").text(formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +conv24to12(data['call_open_time']));
         $("#CallLogPreviousTime").text("Historic");
@@ -289,14 +291,14 @@ $(document).ready(function () {
     }
     
     // Build out the tabs
-    $("#questiontable tr[id]").first().before(CTRICallLog.html.wrapper);
-    $.each( CTRICallLog.metadata, function(callID, callData) {
+    $("#questiontable tr[id]").first().before(CallLog.html.wrapper);
+    $.each( CallLog.metadata, function(callID, callData) {
         // Hide completed calls, blank call IDs (errors), future calls, and follow-ups that were never completed (auto remove)
         if( this.complete || (callID[0] == "_") || (callID == "") || 
             (callData.start && (callData.start > today)) || 
             (callData.autoRemove && callData.end && (callData.end < today)) )
             return;
-        $(".card-header-tabs").append(CTRICallLog.html.tab.
+        $(".card-header-tabs").append(CallLog.html.tab.
             replace('CALLID',callID).replace('TABNAME',callData.name||"Unknown"));
     });
     
@@ -304,20 +306,20 @@ $(document).ready(function () {
     if ( $(".nav-link").length == 0 ) {
         setTimeout( function(){ 
             $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
-            $(".formtbody").append(CTRICallLog.html.noCalls);
+            $(".formtbody").append(CallLog.html.noCalls);
             $("#formSaveTip").remove();
         },100 ); // dodge branching logic
     }
     
     // Check if their is any data at all. We need the record to exist to continue
-    if ( Object.keys(CTRICallLog.data).length == 0 )
+    if ( Object.keys(CallLog.data).length == 0 )
         return
     
     //Build out ad-hoc buttons 
-    $.each( CTRICallLog.adhoc.config, function(index, adhoc) {
-        $("div.card-header").after(CTRICallLog.html.adhoc.replace('TEXT','New '+adhoc.name).replace('MODALID',adhoc.id));
+    $.each( CallLog.adhoc, function(index, adhoc) {
+        $("div.card-header").after(CallLog.html.adhoc.replace('TEXT','New '+adhoc.name).replace('MODALID',adhoc.id));
         $(".adhocButton").first().css('transform', 'translate('+(790-$(".adhocButton").first().outerWidth())+'px,-34px)');
-        $(".formtbody tr").first().append(CTRICallLog.html.adhocModal.replace('MODALID', adhoc.id).replace('MODAL TITLE','New '+adhoc.name));
+        $(".formtbody tr").first().append(CallLog.html.adhocModal.replace('MODALID', adhoc.id).replace('MODAL TITLE','New '+adhoc.name));
         $.each(adhoc.reasons, (code,value) => $(`#${adhoc.id} select[name=reason]`).append(`<option value="${code}">${value}</option>`) );
         $(`#${adhoc.id} input[name=callDate]`).datepicker();
         $(`#${adhoc.id} input[name=callTime]`).flatpickr({
@@ -332,15 +334,16 @@ $(document).ready(function () {
             date = date ? formatDate(new Date(date), 'y-MM-dd') : "";
             $.ajax({
                 method: 'POST',
-                url: CTRICallLog.adhoc.post,
+                url: CallLog.router,
                 data: {
+                    route: 'adhocLoad',
                     record: getParameterByName('id'),
                     id: adhoc.id,
                     date: date, 
                     time: conv12to24($(`#${adhoc.id} input[name=callTime]`).val()),
                     reason: $(`#${adhoc.id} select[name=reason]`).val(),
                     notes: $(`#${adhoc.id} textarea[name=notes]`).val(),
-                    reporter: CTRICallLog.userNameMap[$("#username-reference").text()]
+                    reporter: CallLog.userNameMap[$("#username-reference").text()]
                 },
                 error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
                 success: function(data){
@@ -362,7 +365,7 @@ $(document).ready(function () {
         $(".nav-link.active").removeClass('active');
         $(this).addClass('active');
         let id = $(this).data('call-id');
-        let call = CTRICallLog.metadata[id];
+        let call = CallLog.metadata[id];
         $("#CallLogCurrentCall").text(call.name);
         $("#CallLogLeaveAMessage").text( getLeaveMessage(id) );
         $("#CallLogPreviousTime").text( call.instances.length == 0 ? 'None' : getPreviousCalldatetime(id));

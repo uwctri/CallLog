@@ -6,7 +6,7 @@ $(document).ready(function () {
     `)
     
     // Replace Call Log icons with the phone
-    $(`#event_grid_table td:contains(${CTRICallLog.static.instrument})`).parent().find('button, a').each( function() {
+    $(`#event_grid_table td:contains(${CallLog.static.instrument})`).parent().find('button, a').each( function() {
         let src = "";
         // First instance
         if ( $(this).is('a') && $(this).siblings().length == 0 )
@@ -26,7 +26,7 @@ $(document).ready(function () {
     
     // Handle the CTRI System Man Table too
     let src = "";
-    let c = $(`#systemManagementTable td:contains(${CTRICallLog.static.instrument})`);
+    let c = $(`#systemManagementTable td:contains(${CallLog.static.instrument})`);
     if (c) {
         $(c).find('a, button').hide();
         $(c).find('a').after(`<a class="CallLogLink"><i class="fa fa-phone"></i></a>`);
@@ -40,7 +40,7 @@ $(document).ready(function () {
     }
     
     // Hide the Call Log repeating instrument table table
-    $(`th.header:contains(${CTRICallLog.static.instrument})`).closest('table').parent().remove();
+    $(`th.header:contains(${CallLog.static.instrument})`).closest('table').parent().remove();
     
     $("#center").show();
 });

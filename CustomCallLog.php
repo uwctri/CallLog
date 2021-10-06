@@ -9,7 +9,7 @@ use User;
 class CustomCallLog extends AbstractExternalModule  {
     
     private $module_prefix = 'CTRI_Custom_CallLog';
-    private $module_global = 'CTRICallLog';
+    private $module_global = 'CallLog';
     private $module_name = 'CTRICallLog';
     
     // Hard Coded Data Dictionary Values
@@ -84,9 +84,6 @@ class CustomCallLog extends AbstractExternalModule  {
             $this->includeCookies();
             $this->passArgument('usernameLists', $this->getUserNameListConfig());
             $this->passArgument('eventNameMap', $this->getEventNameMap());
-            $this->passArgument('noCallsTodayPOST', $this->getURL('POST/setNoCallsToday.php'));
-            $this->passArgument('callStartedPOST', $this->getURL('POST/setCallStarted.php'));
-            $this->passArgument('callEndedPOST', $this->getURL('POST/setCallEnded.php'));
         }
     }
     
@@ -94,9 +91,6 @@ class CustomCallLog extends AbstractExternalModule  {
         $summary = $this->getProjectSetting('call_summary');
         if ( $instrument == $this->instrumentLower ) {
             $this->passArgument('metadata', $this->getCallMetadata($project_id, $record));
-            $this->passArgument('metadataPOST', $this->getURL('POST/metadataSave.php'));
-            $this->passArgument('calldataPOST', $this->getURL('POST/calldataSave.php'));
-            $this->passArgument('calldeletePOST', $this->getURL('POST/callDelete.php'));
             $this->passArgument('data', $this->getAllCallData($project_id, $record));
             $this->passArgument('eventNameMap', $this->getEventNameMap());
             $this->passArgument('adhoc', $this->loadAdhocTemplateConfig());
@@ -611,10 +605,7 @@ class CustomCallLog extends AbstractExternalModule  {
                 "reasons" => $this->explodeCodedValueText($reasons)
             ];
         }
-        return [
-            'post' => $this->getURL('POST/adhocLoad.php'),
-            'config' => $config
-        ];
+        return $config;
     }
     
     public function loadCallTemplateConfig() {
@@ -986,8 +977,6 @@ class CustomCallLog extends AbstractExternalModule  {
     }
     
     private function initCTRIglobal() {
-        //instruments exist, repeating/not repeating
-
         $project_error = false;
         $call_event = $this->getProjectSetting('call_log_event');
         $meta_event = $this->getProjectSetting('metadata_event');
@@ -1025,7 +1014,8 @@ class CustomCallLog extends AbstractExternalModule  {
                 "instrumentMetadata" => $this->instrumentMeta,
                 "record_id" => REDCap::getRecordIdField()
             ],
-            "configError" => $project_error
+            "configError" => $project_error,
+            "router" => $this->getURL('router.php')
         );
         echo "<script>var ".$this->module_global." = ".json_encode($data).";</script>";
     }
