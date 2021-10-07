@@ -9,7 +9,21 @@ $sendDone = False;
 $sendMalformed = True;
 
 switch ( $route ) {
+    case "newAdhoc":
+        # This page is intended to be posted to by an outside script or DET to make a singe new adhoc call on a record
+        # url: ExternalModules/?prefix=CTRI_Custom_CallLog&page=newAdhoc&pid=NNN&adhocCode=NNN&record=NNN&type=NNN&fudate=NNN&futime=NNN&reporter=NAME
+        $module->metadataAdhoc( $pid, $_GET['record'], [
+            'id' => $_GET['type'],
+            'date' => $_GET['fudate'],
+            'time' => $_GET['futime'],
+            'reason' => $_GET['adhocCode'],
+            'reporter' => $_GET['reporter']
+        ]);
+        $sendDone = True;
+        break;
     case "adhocLoad":
+        # Posted to by the call log to save a new adhoc call
+        # It should not be posted to from any other source
         $record = $_POST['record'];
         $call_id = $_POST['id'];
         if( !empty($pid) && !empty($record) && !empty($call_id) ) {
@@ -25,14 +39,16 @@ switch ( $route ) {
         }
         break;
     case "adhocResolve":
-        #This page is intended to be posted to by an outside script or DET to resolve an existing adhoc call on a record(s)
-        #The URL is of the form: https://ctri-redcap.dom.wisc.edu/redcap/redcap_v10.2.1/ExternalModules/?prefix=CTRI_Custom_CallLog&page=adhocResolve&pid=NNN&adhocCode=NNN&recordList=NNN
+        # Intended to be posted to by an outside script or DET to resolve an existing adhoc call on a record(s)
+        # url: /ExternalModules/?prefix=CTRI_Custom_CallLog&page=router&route=adhocResolve&pid=NNN&adhocCode=NNN&recordList=NNN
         foreach ( explode(',',$_GET['recordList']) as $record ) {
             $module->resolveAdhoc($pid,trim($record),$_GET['adhocCode']);
         }
         $sendDone = True;
         break;
     case "calldataSave":
+        # Posted to by the call log to save the record's data via the console.
+        # This is useful for debugging and resolving enduser issues.
         $record = $_POST['record'];
         $instance = $_POST['instance'];
         $var = $_POST['dataVar'];
@@ -46,6 +62,7 @@ switch ( $route ) {
         }
         break;
     case "callDelete":
+        # Posted to by the call log to delete the last saved instance of the call log instrument.
         $record = $_POST['record'];
         if( !empty($pid) && !empty($record) ) {
             $module->deleteLastCallInstance($pid, $record);
@@ -53,29 +70,25 @@ switch ( $route ) {
         }
         break;
     case "metadataSave":
+        # Posted to by the call log to save the record's data via the console.
+        # This is useful for debugging and resolving enduser issues.
         $record = $_POST['record'];
         if( !empty($pid) && !empty($record) ) {
             $module->saveCallMetadata( $pid, $record, json_decode($_POST['metadata'], true) );
             $sendDone = True;
         }
         break;
-    case "newAdhoc":
-        $module->metadataAdhoc( $pid, $_GET['record'], [
-            'id' => $_GET['type'],
-            'date' => $_GET['fudate'],
-            'time' => $_GET['futime'],
-            'reason' => $_GET['adhocCode'],
-            'reporter' => $_GET['reporter']
-        ]);
-        $sendDone = True;
-        break;
     case "newEntryLoad":
+        # This page is intended to be posted to by an outside script to load New Entry calls for any number of records
+        # url: /ExternalModules/?prefix=CTRI_Custom_CallLog&page=newEntryLoad&pid=NNN&recordList=NNN
         foreach ( explode(',',$_GET['recordList']) as $record ) {
             $module->metadataNewEntry($pid,trim($record));
         }
         $sendDone = True;
         break;
     case "scheduleLoad":
+        # This page is intended to be posted to by an outside script after scheduling occurs. 
+        # url: /ExternalModules/?prefix=CTRI_Custom_CallLog&page=scheduleLoad&pid=NNN&recordList=NNN
         foreach ( explode(',',$_GET['recordList']) as $record ) {
             $module->metadataReminder($pid,trim($record));
             $module->metadataMissedCancelled($pid,trim($record));
@@ -84,6 +97,7 @@ switch ( $route ) {
         $sendDone = True;
         break;
     case "setCallEnded":
+        # This page is posted to by the call list to flag a call as no longer in progress
         $record = $_POST['record'];
         $call_id = $_POST['id'];
         if( !empty($pid) && !empty($record) && !empty($call_id) ) {
@@ -92,6 +106,7 @@ switch ( $route ) {
         } 
         break;
     case "setCallStarted":
+        # This page is posted to by the call list to flag a call as in progress
         $record = $_POST['record'];
         $call_id = $_POST['id'];
         $user = $_POST['user'];
@@ -101,6 +116,7 @@ switch ( $route ) {
         } 
         break;
     case "setNoCallsToday":
+        # This page is posted to by the call list to flag a call as "no calls today"
         $record = $_POST['record'];
         $call_id = $_POST['id'];
         if( !empty($pid) && !empty($record) && !empty($call_id) ) {
