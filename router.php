@@ -6,7 +6,6 @@ $pid = $_GET['pid'];
 
 $sendSuccess = False;
 $sendDone = False;
-$sendMalformed = True;
 
 switch ( $route ) {
     case "newAdhoc":

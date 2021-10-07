@@ -66,7 +66,7 @@ class CustomCallLog extends AbstractExternalModule  {
         if ( !defined("USERID") ) //Skip if user isn't logged in.
             return;
 
-        $this->initCTRIglobal();
+        $this->initGlobal();
         $this->includeJs('js/every_page.js');
         
         // Record Home Page
@@ -177,7 +177,7 @@ class CustomCallLog extends AbstractExternalModule  {
                 "complete" => false
             ];
         }
-        $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $meta);
     }
     
     public function metadataFollowup($project_id, $record) {
@@ -224,7 +224,7 @@ class CustomCallLog extends AbstractExternalModule  {
                 }
             }
         }
-        $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $meta);
     }
     
     public function metadataReminder($project_id, $record) {
@@ -286,7 +286,7 @@ class CustomCallLog extends AbstractExternalModule  {
             }
             
         }
-        $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $meta);
     }
     
     public function metadataMissedCancelled($project_id, $record) {
@@ -331,7 +331,7 @@ class CustomCallLog extends AbstractExternalModule  {
                     $callData['complete'] = true;
             }
         }
-        $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $meta);
     }
     
     public function metadataNeedToSchedule($project_id, $record) {
@@ -363,7 +363,7 @@ class CustomCallLog extends AbstractExternalModule  {
                 $meta[$callConfig['id']]['complete'] = true;
             }
         }
-        $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $meta);
     }
     
     public function metadataAdhoc($project_id, $record, $payload) {
@@ -392,7 +392,7 @@ class CustomCallLog extends AbstractExternalModule  {
             "hideAfterAttempt" => $config['hideAfterAttempt'],
             "complete" => false
         ];
-        $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $meta);
     }
     
     public function resolveAdhoc($project_id, $record, $code) {
@@ -402,7 +402,7 @@ class CustomCallLog extends AbstractExternalModule  {
                 continue;
             $callData['complete'] = true; // Don't delete, just comp. Might need info for something
         }
-        $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $meta);
     }
     
     public function metadataPhoneVisit($project_id, $record) {
@@ -431,7 +431,7 @@ class CustomCallLog extends AbstractExternalModule  {
                 ];
             }
         }
-        $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $meta);
     }
     
     public function metadataUpdateCommon($project_id, $record) {
@@ -450,14 +450,14 @@ class CustomCallLog extends AbstractExternalModule  {
         if ( $data['call_outcome'] == '1' )
             $meta[$id]['complete'] = true;
         $meta[$id]['callStarted'] = '';
-        $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $meta);
     }
     
     public function metadataNoCallsToday($project_id, $record, $call_id) {
         $meta = $this->getCallMetadata($project_id, $record);
         if ( !empty($meta) && !empty($meta[$call_id]) ) {
             $meta[$call_id]['noCallsToday'] = date('Y-m-d');
-            $this->saveCallMetadata($project_id, $record, $meta);
+            return $this->saveCallMetadata($project_id, $record, $meta);
         }
     }
     
@@ -466,7 +466,7 @@ class CustomCallLog extends AbstractExternalModule  {
         if ( !empty($meta) && !empty($meta[$call_id]) ) {
             $meta[$call_id]['callStarted'] = date("Y-m-d H:i");
             $meta[$call_id]['callStartedBy'] = $user;
-            $this->saveCallMetadata($project_id, $record, $meta);
+            return $this->saveCallMetadata($project_id, $record, $meta);
         }
     }
     
@@ -481,14 +481,14 @@ class CustomCallLog extends AbstractExternalModule  {
             if ( !$call['complete'] && ($call['callStartedBy'] == $user) && (strtotime($call['callStarted']) > $grace) )
                 $meta[$id]['callStarted'] = $now;
         }
-        $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $meta);
     }
     
     public function metadataCallEnded($project_id, $record, $call_id) {
         $meta = $this->getCallMetadata($project_id, $record);
         if ( !empty($meta) && !empty($meta[$call_id]) ) {
             $meta[$call_id]['callStarted'] = '';
-            $this->saveCallMetadata($project_id, $record, $meta);
+            return $this->saveCallMetadata($project_id, $record, $meta);
         }
     }
     
@@ -513,12 +513,11 @@ class CustomCallLog extends AbstractExternalModule  {
         }
         $fields = array_values(array_intersect( REDCap::getFieldNames($this->instrumentLower), array_keys($data[$record][$event]) ));
         db_query( 'DELETE FROM redcap_data WHERE project_id='. $project_id . ' AND record=' . $record . $instanceText . ' AND (field_name="' . implode('" OR field_name="', $fields) . '");' );
-        $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $meta);
     }
     
     public function saveCallData($project_id, $record, $instance, $var, $val) {
-        $response = REDCap::saveData($project_id,'array', [$record=>['repeat_instances'=>[$this->getProjectSetting('call_log_event')=>[$this->instrumentLower=>[$instance=>[$var=>$val]]]]]],'overwrite');
-        echo json_encode($response);
+        return REDCap::saveData($project_id,'array', [$record=>['repeat_instances'=>[$this->getProjectSetting('call_log_event')=>[$this->instrumentLower=>[$instance=>[$var=>$val]]]]]],'overwrite');
     }
     
     public function getAllCallData($project_id, $record) {
@@ -537,8 +536,7 @@ class CustomCallLog extends AbstractExternalModule  {
     }
     
     public function saveCallMetadata($project_id, $record, $data) {
-        $response = REDCap::saveData($project_id,'array', [$record=>[$this->getProjectSetting('metadata_event')=>[$this->metadataField=>json_encode($data)]]]);
-        $this->consolePrint($response); #TODO Return a value to caller instead
+        return REDCap::saveData($project_id,'array', [$record=>[$this->getProjectSetting('metadata_event')=>[$this->metadataField=>json_encode($data)]]]);
     }
     
     /////////////////////////////////////////////////
@@ -558,9 +556,7 @@ class CustomCallLog extends AbstractExternalModule  {
         $all_group_names = REDCap::getGroupNames(true);
         if ( $all_group_names[$user_group] == $record_group_name )
             return true;
-        if ( $user_group == "" )
-            return true; # allow users without DAG restrictions access to all data
-        return false;
+        return $user_group == ""; # allow users without DAG restrictions access to all data
     }
     
     public function recentCallStarted($project_id, $record) {
@@ -853,10 +849,6 @@ class CustomCallLog extends AbstractExternalModule  {
     // Private Utility Functions
     /////////////////////////////////////////////////
     
-    private function consolePrint($string) {
-        ?><script>console.log(<?=json_encode($string); ?>);</script><?php
-    }
-    
     private function dateMath($date, $operation, $days) {
         $oldDate = date('Y-m-d', strtotime( $date ) );
         $date = date('Y-m-d', strtotime( $date.' '.$operation.$days.' days'));
@@ -883,7 +875,7 @@ class CustomCallLog extends AbstractExternalModule  {
     
     private function number_of_working_days($from, $to) {
         $workingDays = [1, 2, 3, 4, 5]; # date format = N (1 = Monday, ...)
-        $holidayDays = ['*-12-25', '*-12-24', '*-12-31', '*-07-04', '*-01-01']; # variable and fixed holidays
+        $holidays = ['*-12-25', '*-12-24', '*-12-31', '*-07-04', '*-01-01']; # variable and fixed holidays
         
         if ( $from > $to ) {
             $_to = $to;
@@ -899,8 +891,8 @@ class CustomCallLog extends AbstractExternalModule  {
         $days = 0;
         foreach ($periods as $period) {
             if (!in_array($period->format('N'), $workingDays)) continue;
-            if (in_array($period->format('Y-m-d'), $holidayDays)) continue;
-            if (in_array($period->format('*-m-d'), $holidayDays)) continue;
+            if (in_array($period->format('Y-m-d'), $holidays)) continue;
+            if (in_array($period->format('*-m-d'), $holidays)) continue;
             $days++;
         }
         return $days;
@@ -946,8 +938,7 @@ class CustomCallLog extends AbstractExternalModule  {
         if(!array_key_exists($format, $this->_dataDictionary)){
             $this->_dataDictionary[$format] = \REDCap::getDataDictionary($format);
         }
-        $dictionaryToReturn = $this->_dataDictionary[$format];
-        return $dictionaryToReturn;
+        return $this->_dataDictionary[$format];
     }
     
     private function getDictionaryValuesFor($key) {
@@ -975,11 +966,10 @@ class CustomCallLog extends AbstractExternalModule  {
     private function flatten_type_values($value) {
         $split = explode('|', $value);
         $mapped = array_map(function ($value) { return $this->comma_delim_to_key_value_array($value); }, $split);
-        $result = $this->array_flatten($mapped);
-        return $result;
+        return $this->array_flatten($mapped);
     }
     
-    private function initCTRIglobal() {
+    private function initGlobal() {
         $project_error = false;
         $call_event = $this->getProjectSetting('call_log_event');
         $meta_event = $this->getProjectSetting('metadata_event');
