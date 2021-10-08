@@ -204,10 +204,6 @@ function loadParsePackCallData($skipDataPack = false) {
 // Page Load
 /////////////////////////////////////////////////
 
-// Libraries
-$module->includeDataTables();
-$module->includeCss('css/list.css');
-
 // Load, parse, and pack the Call Data for display
 list($packagedCallData, $tabs, $alwaysShowCallbackCol, $timeTaken, $issues) = loadParsePackCallData(true);
 if ( count($issues) )

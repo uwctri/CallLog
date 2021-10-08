@@ -82,6 +82,8 @@ class CustomCallLog extends AbstractExternalModule  {
         // Index of Call List
         if (strpos(PAGE, 'ExternalModules/index.php') !== false && $project_id != NULL) {
             $this->includeCookies();
+            $this->includeDataTables();
+            $this->includeCss('css/list.css');
             $this->passArgument('usernameLists', $this->getUserNameListConfig());
             $this->passArgument('eventNameMap', $this->getEventNameMap());
         }
@@ -572,7 +574,7 @@ class CustomCallLog extends AbstractExternalModule  {
         return '';
     }
     
-    public function getUserNameMap() {
+    private function getUserNameMap() {
         return array_map(function($x){return substr(explode('(',$x)[1],0,-1);},User::getUsernames(null,true));
     }
     
@@ -1035,7 +1037,7 @@ class CustomCallLog extends AbstractExternalModule  {
         echo '<script type="text/javascript" src="'.$this->cookieJS.'"></script>';
     }
     
-    public function includeDataTables() {
+    private function includeDataTables() {
         echo '<link rel="stylesheet" href="'.$this->datatablesCSS.'"/>';
         echo '<script type="text/javascript" src="'.$this->datatablesJS.'"></script>';
     }
@@ -1044,7 +1046,7 @@ class CustomCallLog extends AbstractExternalModule  {
         echo '<script src="' . $this->getUrl($path) . '"></script>';
     }
     
-    public function includeCss($path) {
+    private function includeCss($path) {
         echo '<link rel="stylesheet" href="' . $this->getUrl($path) . '"/>';
     }
     
