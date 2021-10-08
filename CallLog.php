@@ -1,16 +1,15 @@
 <?php
 
-namespace UWMadison\CustomCallLog;
+namespace UWMadison\CallLog;
 use ExternalModules\AbstractExternalModule;
 use ExternalModules\ExternalModules;
 use REDCap;
 use User;
 
-class CustomCallLog extends AbstractExternalModule  {
+class CallLog extends AbstractExternalModule  {
     
-    private $module_prefix = 'CTRI_Custom_CallLog';
+    private $module_prefix = 'call_log';
     private $module_global = 'CallLog';
-    private $module_name = 'CTRICallLog';
     
     // Hard Coded Data Dictionary Values
     public $instrumentName = "Call Log";

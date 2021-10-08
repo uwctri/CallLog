@@ -1,6 +1,6 @@
 {
-    "name": "CTRI Custom Call Log",
-    "namespace": "UWMadison\\CustomCallLog",
+    "name": "Call Log",
+    "namespace": "UWMadison\\CallLog",
     "description": "A configurable, searchable, call list dashboard for Reminders, Follow ups, Missed Vists and more.",
     "authors": [
         {
