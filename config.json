@@ -26,26 +26,6 @@
                 "show-header-and-footer": true
             },
             {
-                "name": "Load New Entry Calls",
-                "icon": "gear",
-                "url": "POST/newEntryLoad.php?NOAUTH"
-            },
-            {
-                "name": "Load Reminder Calls",
-                "icon": "gear",
-                "url": "POST/scheduleLoad.php?NOAUTH"
-            },
-            {
-                "name": "Resolve Ad-hoc Calls",
-                "icon": "gear",
-                "url": "POST/adhocResolve.php?NOAUTH"
-            },
-            {
-                "name": "Create Ad-hoc Call",
-                "icon": "gear",
-                "url": "POST/newAdhoc.php?NOAUTH"
-            },
-            {
                 "name": "Router Page",
                 "icon": "gear",
                 "url": "router.php?NOAUTH"
@@ -53,10 +33,6 @@
         ]
     },
     "no-auth-pages": [
-        "POST/newEntryLoad",
-        "POST/scheduleLoad",
-        "POST/adhocResolve",
-        "POST/newAdhoc",
         "router"
     ],
     "framework-version": 5,
