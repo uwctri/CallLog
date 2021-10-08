@@ -1,11 +1,11 @@
 $(document).ready(function() {
-    console.log("Loaded CTRI Call Log config")
+    console.log("Loaded Call Log config")
     
     if ( CallLog.configError ) {
         Swal.fire({
           icon: 'error',
-          title: 'CTRI Call Log Config Issue',
-          text: 'The Call Log instrument used by CTRI Custom Call Log is either missing or not marked as a repeatable instrument. Please invesitage and resovle.',
+          title: 'Call Log config Issue',
+          text: 'The Call Log instrument used by the Call Log External Module is either missing or not marked as a repeatable instrument. Please invesitage and resovle.',
         })
     }
     
