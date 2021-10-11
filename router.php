@@ -1,6 +1,6 @@
 <?php
 # This page handles all GET/POST requests from scripts and internally from the EM
-$module = new \UWMadison\CustomCallLog\CustomCallLog();
+$module = new \UWMadison\CallLog\CallLog();
 $route = $_POST['route'] ?? $_GET['route'];
 $pid = $_GET['pid'];
 
