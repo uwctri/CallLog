@@ -7,8 +7,6 @@ use REDCap;
 use User;
 
 class CallLog extends AbstractExternalModule  {
-    
-    private $module_prefix = 'call_log';
     private $module_global = 'CallLog';
     
     // Hard Coded Data Dictionary Values
@@ -989,7 +987,7 @@ class CallLog extends AbstractExternalModule  {
             }
         }
         $data = array(
-            "modulePrefix" => $this->module_prefix,
+            "modulePrefix" => $this->PREFIX,
             "events" => [
                 "callLog" => [
                     "name" => REDCap::getEventNames(true,false,$call_event),
