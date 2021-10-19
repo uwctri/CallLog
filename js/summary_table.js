@@ -20,6 +20,7 @@ CallLog.html.callHistoryRow = `
         </label>
     </div>
 </div>`;
+CallLog.callSummaryPageSize = 20;
 
 function buildCallSummaryTable() {
     if ( isEmpty(CallLog.metadata) || !(Object.keys(CallLog.data).length > 1 || !CallLog.data[1] ||CallLog.data[1]['call_id']) )
@@ -27,8 +28,8 @@ function buildCallSummaryTable() {
     $("#center").append(`<div class="callHistoryContainer"><table class="callSummaryTable compact" style="width:100%"></table></div>`);
     $('.callHistoryContainer').css('top',$("#record_id-tr").offset().top);
     $('.callSummaryTable').DataTable({
-        pageLength: 50,
-        dom: 'rt',
+        pageLength: 20,
+        dom: Object.keys(CallLog.data).length > CallLog.callSummaryPageSize ? 'rtp' : 'rt',
         order: [[ 0, "desc" ]],
         createdRow: (row,data,index) => $(row).addClass('dataTablesRow'),
         columns: [
@@ -51,6 +52,8 @@ function buildCallSummaryTable() {
             };
         })
     });
+    // Adjust width upward by 10% for a little extra room
+    $(".callHistoryContainer").css('width',$(".callHistoryContainer").css('width').slice(0,-2)*1.1)
     
     // Setup the settings menu, used for un-completing any calls
     $(".callHistoryContainer .sorting_disabled").html('<i class="fas fa-ellipsis-v callSummarySettings"></i>');
