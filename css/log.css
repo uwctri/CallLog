@@ -111,7 +111,15 @@
 .callSummarySettings {
     cursor: pointer;
 }
-
+/* Call Log summary Table Scrollbar*/
+.dataTables_wrapper .paginate_button.next,
+.dataTables_wrapper .paginate_button.previous {
+    display: none!important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    color: #333!important;
+    background: white!important;
+}
 /* Slider CSS from w3 */
 .switch {
   position: relative;
