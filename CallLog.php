@@ -62,7 +62,7 @@ class CallLog extends AbstractExternalModule  {
     public function redcap_every_page_top($project_id) {
         if ( !defined("USERID") ) //Skip if user isn't logged in.
             return;
-
+        
         $this->initGlobal();
         $this->includeJs('js/every_page.js');
         
@@ -75,7 +75,7 @@ class CallLog extends AbstractExternalModule  {
         if (strpos(PAGE, 'manager/project.php') !== false && $project_id != NULL) {
             $this->includeJs('js/config.js');
         }
-
+        
         // Index of Call List
         if (strpos(PAGE, 'ExternalModules/index.php') !== false && $project_id != NULL) {
             $this->includeCookies();
@@ -109,9 +109,7 @@ class CallLog extends AbstractExternalModule  {
     }
     
     public function redcap_module_link_check_display($project_id, $link) {
-        if ( strpos( $link['url'], 'index') !== false )
-            return true;
-        return null;
+        return ( strpos( $link['url'], 'index') !== false ) ? true : null;
     }
     
     /////////////////////////////////////////////////
@@ -874,7 +872,7 @@ class CallLog extends AbstractExternalModule  {
     
     private function number_of_working_days($from, $to) {
         $workingDays = [1, 2, 3, 4, 5]; # date format = N (1 = Monday, ...)
-        $holidays = ['*-12-25', '*-12-24', '*-12-31', '*-07-04', '*-01-01']; # variable and fixed holidays
+        $holidays = ['*-12-25', '*-12-24', '*-12-31', '*-07-04', '*-01-01']; # Fixed holidays
         
         if ( $from > $to ) {
             $_to = $to;
