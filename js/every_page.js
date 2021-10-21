@@ -1,5 +1,22 @@
 CallLog.defaultDateFormat = 'MM-dd-y';
 CallLog.defaultDateTimeFormat = 'MM-dd-y hh:mma';
+CallLog.html = CallLog.html || {};
+CallLog.fn = CallLog.fn || {};
+
+CallLog.html.callStartedWarning = `
+<div class="alert alert-danger" style="text-align:center" role="alert">
+    <br>
+    <div class="row">
+        <div class="col-1"><i class="fas fa-exclamation-triangle h2 mt-1"></i></div>
+        <div class="col-10 h6">
+            This subject's record was recently opened from the Call List by ${CallLog.userNameMap[CallLog.recentCaller]}.
+            <br>
+            They may currently be on the phone with the subject.
+        </div>
+        <div class="col-1"><i class="fas fa-exclamation-triangle h2 mt-1"></i></div>
+    </div>
+    <br>
+</div>`;
 
 function ArraysEqual(a1, a2) {
     var i = a1.length;
@@ -97,20 +114,7 @@ function editLeftSideCallLog() {
 function showCallStartWarning() {
     if ( !CallLog.recentCaller )
         return
-    $("#questiontable").before(`
-    <div class="alert alert-danger" style="text-align:center" role="alert">
-        <br>
-        <div class="row">
-            <div class="col-1"><i class="fas fa-exclamation-triangle h2 mt-1"></i></div>
-            <div class="col-10 h6">
-                This subject's record was recently opened from the Call List by ${CallLog.userNameMap[CallLog.recentCaller]}.
-                <br>
-                They may currently be on the phone with the subject.
-            </div>
-            <div class="col-1"><i class="fas fa-exclamation-triangle h2 mt-1"></i></div>
-        </div>
-        <br>
-    </div>`);
+    $("#questiontable").before(CallLog.html.callStartedWarning);
 }
 
 $(document).ready(function () {

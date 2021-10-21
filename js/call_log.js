@@ -1,4 +1,5 @@
 CallLog.html = CallLog.html || {};
+CallLog.fn = CallLog.fn || {};
 
 CallLog.html.wrapper = `
 <tr style="border: 1px solid #ddd"><td colspan="2">
@@ -117,14 +118,16 @@ CallLog.optionalCSS = `
     }
 </style>`;
 
-CallLog.functions = {};
+CallLog.hideSaveTipCSS = `<style>#formSaveTip{display:none!important}</style>`;
 
-CallLog.functions.callAdminEdit = function () {
+// Debug function, show all hidden fields
+CallLog.fn.callAdminEdit = function () {
     $("*[class='@HIDDEN']").show();
     $("#__SUBMITBUTTONS__-tr").hide();
 }
 
-CallLog.functions.saveMetadata = function () {
+// Debug function, easily save the metadata after directly editing it
+CallLog.fn.saveMetadata = function () {
     $.ajax({
         method: 'POST',
         url: CallLog.router,
@@ -138,7 +141,8 @@ CallLog.functions.saveMetadata = function () {
     });
 }
 
-CallLog.functions.saveCalldata = function (instance, dataVar, dataVal, isCheckbox) {
+// Debug function, easily upate data on an older log
+CallLog.fn.saveCalldata = function (instance, dataVar, dataVal, isCheckbox) {
     isCheckbox = !!isCheckbox;
     if ( isCheckbox ) 
         dataVal = JSON.stringify(dataVal);
@@ -158,7 +162,8 @@ CallLog.functions.saveCalldata = function (instance, dataVar, dataVal, isCheckbo
     });
 }
 
-CallLog.functions.UpdateCallTypeEndDates = function (call_type, days) {
+// Debug function, give yourself a few extra days for that call
+CallLog.fn.UpdateCallTypeEndDates = function (call_type, days) {
     $.each(CallLog.metadata, function(callid, data) {
         if ( !callid.includes(call_type) ) 
             return;
@@ -166,11 +171,8 @@ CallLog.functions.UpdateCallTypeEndDates = function (call_type, days) {
     });
 }
 
-function sendToCallList() {
-    location.href = $("#external_modules_panel a:contains('Call List')").prop('href');
-}
-
-function getPreviousCalldatetime( callID ) {
+// Fetch the last known contact time for a given call id
+CallLog.fn.getPreviousCalldatetime = function ( callID ) {
     if ( !CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances) )
         return "";
     let data = CallLog.data[ CallLog.metadata[callID].instances.slice(-1)[0]  ];
@@ -179,7 +181,8 @@ function getPreviousCalldatetime( callID ) {
     return formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +conv24to12(data['call_open_time']);
 }
 
-function getPreviousCallTasks( callID ) {
+// Fetch the checkboxes of remaining tasks from previous call given a id
+CallLog.fn.getPreviousCallTasks = function ( callID ) {
     if ( !CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances) )
         return [];
     let data = CallLog.data[ CallLog.metadata[callID].instances.slice(-1)[0]  ];
@@ -193,7 +196,8 @@ function getPreviousCallTasks( callID ) {
     return arr;
 }
 
-function getPreviousCallNotes( callID ) {
+// Fetch all previous call notes and compile them.
+CallLog.fn.getPreviousCallNotes = function ( callID ) {
     if ( !CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances) )
         return [];
     let notes = [];
@@ -210,17 +214,17 @@ function getPreviousCallNotes( callID ) {
     return notes;
 }
 
-function updateCallNotes( callID ) {
+CallLog.fn.updateCallNotes = function ( callID ) {
     $('.notesOld').val("")
     $('.notesNew').val( $('textarea[name=call_notes]').val() );
-    $.each( getPreviousCallNotes(callID), function() {
+    $.each( CallLog.fn.getPreviousCallNotes(callID), function() {
         if ( this.text == "" )
             return;
         $('.notesOld').val(`${this.dt} ${this.user}: ${this.text} \n\n${$('.notesOld').val()}`.trim());
     });
 }
 
-function getWeekNumber(d) {
+CallLog.fn.getWeekNumber = function (d) {
     d = typeof d == 'object' ? d : new Date(d);
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
@@ -229,19 +233,32 @@ function getWeekNumber(d) {
     return [d.getUTCFullYear(), weekNo];
 }
 
-function getLeaveMessage(callID) {
+CallLog.fn.getLeaveMessage = function (callID) {
     let meta = CallLog.metadata[callID]
     if ( meta.voiceMails >= meta.maxVoiceMails )
         return 'No';
     if ( meta.maxVMperWeek >= meta.voiceMails )
         return 'Yes';
-    let thisWeek = getWeekNumber(new Date())[1];
+    let thisWeek = CallLog.fn.getWeekNumber(new Date())[1];
     return CallLog.metadata[callID].instances.map(
-            x=>getWeekNumber(CallLog.data[x]['call_open_date']
+            x=>CallLog.fn.getWeekNumber(CallLog.data[x]['call_open_date']
         ) == thisWeek ).filter(x=>x).length >= meta.maxVMperWeek ? 'No' : 'Yes';
 }
 
-function buildNotesArea() {
+CallLog.fn.selectTab = function() { 
+    if ( $("input[name=call_id]").val() != "" )
+        return;
+    if ( getParameterByName('call_id') ) {
+        $(`.nav-link[data-call-id=${decodeURI(getParameterByName('call_id')).replace(/\|/g,"\\|").replace(/\:/g,"\\:").replace(/\s/g,"\\ ")}]`).click();
+    } else {
+        $(".nav-link:visible").first().click();
+    }
+    if ( !$(".nav-link.active:visible").length ) {
+        setTimeout(CallLog.fn.selectTab, 500);
+    }
+}
+
+CallLog.fn.buildNotesArea = function () {
     $("#call_notes-tr td").hide();
     $("#call_notes-tr").append(CallLog.html.notes);
     $(".panel-left").resizable({
@@ -252,45 +269,26 @@ function buildNotesArea() {
     $('.notesNew').on('change', () => $('textarea[name=call_notes]').val( $('.notesNew').val() ));
 }
 
-$(document).ready(function () {
+CallLog.fn.isCompletedLog = function() {
+    if ( $(`select[name=${CallLog.static.instrumentLower}_complete]`).val() == "0" )
+        return false;
     
-    // Check if user can be here
-    if ( isEmpty(CallLog.metadata) ) {
-        if ( isEmpty(CallLog.adhoc) ) 
-            sendToCallList();// If the call log is un-used so far kick them to the Call List page
-        else 
-            setTimeout( () => $("#call_hdr_details-tr").nextAll('tr').addBack().hide(), 100 ); // dodge branching logic
-    }
+    // Prevent editing
+    $(".formtbody").prepend(CallLog.html.historic);
+    $("#__SUBMITBUTTONS__-tr").hide();
     
-    // Load some Default CSS if none exists 
-    if ( $('.formHeader').css('text-align') != 'center' )
-        $('head').append(CallLog.optionalCSS);
-    
-    // Hide a few things for style
-    $("#formtop-div").hide();
-    $("td.context_msg").hide();
-    $(`#${CallLog.static.instrumentLower}_complete-sh-tr`).hide();
-    $(`#${CallLog.static.instrumentLower}_complete-tr`).hide();
-    
-    //Build out the Notes area
-    buildNotesArea();
-    
-    // If we are on a completed version of the Call Log show a warning, update the details and leave
-    if ( $(`select[name=${CallLog.static.instrumentLower}_complete]`).val() != "0" ) {
-        $(".formtbody").prepend(CallLog.html.historic);
-        $("#__SUBMITBUTTONS__-tr").hide();
-        // Fill out call details
-        let id = CallLog.data[getParameterByName('instance')]['call_id'];
-        let data = CallLog.data[getParameterByName('instance')];
-        $("#CallLogCurrentCall").text(CallLog.metadata[id]['name']);
-        $("td:contains(Current Caller)").next().text(data['call_open_user_full_name']);
-        $("#CallLogCurrentTime").text(formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +conv24to12(data['call_open_time']));
-        $("#CallLogPreviousTime").text("Historic");
-        updateCallNotes(id);
-        return;
-    }
-    
-    // Build out the tabs
+    // Fill out call details
+    let id = CallLog.data[getParameterByName('instance')]['call_id'];
+    let data = CallLog.data[getParameterByName('instance')];
+    $("#CallLogCurrentCall").text(CallLog.metadata[id]['name']);
+    $("td:contains(Current Caller)").next().text(data['call_open_user_full_name']);
+    $("#CallLogCurrentTime").text(formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +conv24to12(data['call_open_time']));
+    $("#CallLogPreviousTime").text("Historic");
+    CallLog.fn.updateCallNotes(id);
+    return true;
+}
+
+CallLog.fn.buildTabs = function () {
     $("#questiontable tr[id]").first().before(CallLog.html.wrapper);
     $.each( CallLog.metadata, function(callID, callData) {
         // Hide completed calls, blank call IDs (errors), future calls, and follow-ups that were never completed (auto remove)
@@ -301,21 +299,9 @@ $(document).ready(function () {
         $(".card-header-tabs").append(CallLog.html.tab.
             replace('CALLID',callID).replace('TABNAME',callData.name||"Unknown"));
     });
-    
-    // If no tabs then we have no calls. 
-    if ( $(".nav-link").length == 0 ) {
-        setTimeout( function(){ 
-            $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
-            $(".formtbody").append(CallLog.html.noCalls);
-            $("#formSaveTip").remove();
-        },100 ); // dodge branching logic
-    }
-    
-    // Check if their is any data at all. We need the record to exist to continue
-    if ( Object.keys(CallLog.data).length == 0 )
-        return
-    
-    //Build out ad-hoc buttons 
+}
+
+CallLog.fn.buildAdhocMenu = function() {
     $.each( CallLog.adhoc, function(index, adhoc) {
         $("div.card-header").after(CallLog.html.adhoc.replace('TEXT','New '+adhoc.name).replace('MODALID',adhoc.id));
         $(".adhocButton").first().css('transform', 'translate('+(790-$(".adhocButton").first().outerWidth())+'px,-34px)');
@@ -355,9 +341,54 @@ $(document).ready(function () {
             $(`#${adhoc.id}`).modal('hide');
         });
     });
+}
+
+$(document).ready(function () {
     
-   // If we have calls then build out the call summary table
-    buildCallSummaryTable()
+    // Check if there is any metadata to use
+    if ( isEmpty(CallLog.metadata) && isEmpty(CallLog.adhoc) ) {
+        // Dodge branching logic, hide everything on the call log
+        setTimeout( () => $("#call_hdr_details-tr").nextAll('tr').addBack().hide(), 100 ); 
+    }
+    
+    // Load some Default CSS if none exists 
+    if ( $('.formHeader').css('text-align') != 'center' )
+        $('head').append(CallLog.optionalCSS);
+    
+    // Hide a few things for style
+    $("#formtop-div").hide();
+    $("td.context_msg").hide();
+    $(`#${CallLog.static.instrumentLower}_complete-sh-tr`).hide();
+    $(`#${CallLog.static.instrumentLower}_complete-tr`).hide();
+    
+    //Build out the Notes area
+    CallLog.fn.buildNotesArea();
+    
+    // If we are on a completed version of the Call Log show a warning, update the details and leave
+    if ( CallLog.fn.isCompletedLog() )
+        return;
+    
+    // Build out the tabs
+    CallLog.fn.buildTabs();
+    
+    // If no tabs then we have no calls. 
+    if ( $(".nav-link").length == 0 ) {
+        setTimeout( function(){ 
+            $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
+            $(".formtbody").append(CallLog.html.noCalls);
+            $("#formSaveTip").remove();
+        },100 ); // dodge branching logic
+    }
+    
+    // Check if their is any data at all. We need the record to exist to continue
+    if ( Object.keys(CallLog.data).length == 0 )
+        return
+    
+    //Build out ad-hoc buttons 
+    CallLog.fn.buildAdhocMenu();
+    
+    // If we have calls then build out the call summary table
+    CallLog.fn.buildCallSummaryTable();
     
     // Fill in Call Details on Tab Change
     $("#CallLogCurrentTime").text( $("input[name=call_open_date]").val() + " " + conv24to12($("input[name=call_open_time]").val()) );
@@ -367,19 +398,19 @@ $(document).ready(function () {
         let id = $(this).data('call-id');
         let call = CallLog.metadata[id];
         $("#CallLogCurrentCall").text(call.name);
-        $("#CallLogLeaveAMessage").text( getLeaveMessage(id) );
-        $("#CallLogPreviousTime").text( call.instances.length == 0 ? 'None' : getPreviousCalldatetime(id));
+        $("#CallLogLeaveAMessage").text( CallLog.fn.getLeaveMessage(id) );
+        $("#CallLogPreviousTime").text( call.instances.length == 0 ? 'None' : CallLog.fn.getPreviousCalldatetime(id));
         $("input[name=call_attempt]").val( call.instances.length + 1 ).blur();
         $("input[name=call_id]").val( id ).blur();
         $("select[name=call_template]").val( call['template'] ).change();
         $("input[name=call_event_name]").val( id.split('|')[1] || "" );
-        updateCallNotes(id)
+        CallLog.fn.updateCallNotes(id)
     });
     
     // Update Remaining Call Tasks (Call Outcome changes or Tab changes)
     $("input[name^=call_outcome], .nav-link").on('click', function() {
         if( $("input[name$=call_task_remaining]").is(':visible') ) {
-            let tasks = getPreviousCallTasks( $("input[name=call_id]").val() );
+            let tasks = CallLog.fn.getPreviousCallTasks( $("input[name=call_id]").val() );
             $.each( tasks, function() {
                 $(`input[name$=call_task_remaining][code=${this}]`).click();
             });
@@ -387,25 +418,14 @@ $(document).ready(function () {
     });
     
     if ( getParameterByName('showReturn') ) {
-        setInterval(function() {
-            $("#formSaveTip .btn-group").hide();
-        }, 100);
+        $("head").append(CallLog.hideSaveTipCSS);
+        setInterval(() => {$("#formSaveTip .btn-group").hide();}, 100);
         $("#__SUBMITBUTTONS__-div .btn-group").hide();
         $("#__SUBMITBUTTONS__-div #submit-btn-saverecord").clone(true).off().attr('onclick','goToCallList()').prop('id','goto-call-list').addClass('ml-1').text('Save & Go To Call List').insertAfter("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
     }
     
     // Select the correct tab based on URL or default
-    function selectTab() { 
-        if ( getParameterByName('call_id') )
-            $(`.nav-link[data-call-id=${decodeURI(getParameterByName('call_id')).replace(/\|/g,"\\|").replace(/\:/g,"\\:").replace(/\s/g,"\\ ")}]`).click();
-        else
-            $(".nav-link:visible").first().click();
-    }
-    selectTab();
-    setInterval(function(){ //Watchdog, some call logs were being saved without a call id
-        if ( $("input[name=call_id]").val() == "" )
-            selectTab();
-    }, 1000);
+    CallLog.fn.selectTab();
     
     // Call ID missing failsafe.
     setTimeout(function() {
