@@ -66,23 +66,22 @@ function loadParsePackCallData($skipDataPack = false) {
     'call_open_date', 'call_left_message', 'call_requested_callback', 'call_notes', 'call_open_datetime', 'call_open_user_full_name', 'call_attempt', 'call_template', 'call_event_name', 'call_callback_date'], 
     array_values($autoRemoveConfig[$callID]), $tabs['allFields']); 
     
-    
     // Main Loop
     $records = $skipDataPack ? '-1' : null;
-    $dataLoad = REDCap::getData($project_id,'array', $records, $fields);
+    $dataLoad = REDCap::getData($project_id,'array', $records, $fields); 
     foreach( $dataLoad as $record => $recordData ) {
         
         // Check if the dag is empty or if it matches the User's DAG
         if ( !$module->isInDAG($record) )
             continue;
         
-        $meta = json_decode($recordData[$metaEvent][$module->metadataField],true);
-        
         // Check if withdrawn or tmp withdrawn
         if ( $recordData[$withdraw['event']][$withdraw['var']] )
             continue; 
         if ( $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']] && $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']]<$today )
             continue;
+        
+        $meta = json_decode($recordData[$metaEvent][$module->metadataField],true);
         
         foreach( $meta as $callID => $call ) {
             $fullCallID = $callID; // Full ID could be X|Y, X||Y or X|Y||Z. CALLID|EVENT||DATE
@@ -116,13 +115,25 @@ function loadParsePackCallData($skipDataPack = false) {
             $instanceEventData = $recordData[$call['event_id']];
             $instanceData = array_merge( array_filter( empty($instanceEventData) ? [] : $instanceEventData, 'isNotBlank' ), array_filter($recordData[$callEvent],'isNotBlank'), array_filter( empty($instanceData) ? [] : $instanceData, 'isNotBlank' ));
             
-            // Skip MCV calls if past the autoremove date. Need Instance data
-            if ( ($call['template'] == 'mcv') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
-                continue;
+            // Check to see if a call back was request for tomorrow+
+            $instanceData['_callbackNotToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] > $today);
+            $instanceData['_callbackToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] <= $today);
+            
+            // If no call back will happen today then check for autoremove conditions
+            if ( !$instanceData['_callbackToday'] ) {
                 
-            // Skip Scheduled Visit calls if past the autoremove date. Need Instance data
-            if ( ($call['template'] == 'visit') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
-                continue;
+                // Skip MCV calls if past the autoremove date. Need Instance data
+                if ( ($call['template'] == 'mcv') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
+                    continue;
+                    
+                // Skip Scheduled Visit calls if past the autoremove date. Need Instance data
+                if ( ($call['template'] == 'visit') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
+                    continue;
+            
+            }
+            
+            // set global if any Callback will be shown, done after our last check to skip a call
+            $alwaysShowCallbackCol = $alwaysShowCallbackCol ? true : ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] <= $today);
             
             // Check if the call was recently opened
             $instanceData['_callStarted'] = strtotime($call['callStarted']) > strtotime('-'.$module->startedCallGrace.' minutes');
@@ -160,11 +171,6 @@ function loadParsePackCallData($skipDataPack = false) {
             
             // Add the Event's name for possible display (only used by MCV?)
             $instanceData['call_event_name'] = $call['event'];
-            
-            // Check to see if a call back was request for tomorrow+, set global if any Callback will be shown
-            $instanceData['_callbackNotToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] > $today);
-            $instanceData['_callbackToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] <= $today);
-            $alwaysShowCallbackCol = $alwaysShowCallbackCol ? true : ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] <= $today);
             
             // Add lower and upper windows (data is on reminders too but isn't displayed now)
             if ( $call['template'] == 'followup' ) { 
@@ -606,7 +612,6 @@ if ( count($issues) )
     }
     
     $(document).ready(function() {
-        
         // Custom search options
         $('.card-body').on('input propertychange paste','.customSearch', function() {
             let $table = $('.callTable:visible').DataTable();
@@ -720,7 +725,6 @@ if ( count($issues) )
         toggleCallBackCol();
         refreshTableData();
         $(".dataTables_empty").text('Loading...')
-        
     });
 </script>
 <?php
