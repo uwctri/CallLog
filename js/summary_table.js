@@ -1,4 +1,11 @@
 CallLog.html = CallLog.html || {};
+CallLog.fn = CallLog.fn || {};
+
+CallLog.html.callHistoryTable = `
+<div class="callHistoryContainer">
+    <table class="callSummaryTable compact" style="width:100%">
+    </table>
+</div>`;
 CallLog.html.callHistorySettings = `
 <div class="row">
     <div class="col">
@@ -20,13 +27,20 @@ CallLog.html.callHistoryRow = `
         </label>
     </div>
 </div>`;
+CallLog.html.deleteLog = `<a class="deleteInstance"><i class="fas fa-times"></i></a>`;
+CallLog.html.settingsButton = `<i class="fas fa-ellipsis-v callSummarySettings"></i>`;
 CallLog.callSummaryPageSize = 20;
 
-function buildCallSummaryTable() {
+CallLog.fn.buildCallSummaryTable = function () {
+    // Check if we have anything to actually build
     if ( isEmpty(CallLog.metadata) || !(Object.keys(CallLog.data).length > 1 || !CallLog.data[1] ||CallLog.data[1]['call_id']) )
         return;
-    $("#center").append(`<div class="callHistoryContainer"><table class="callSummaryTable compact" style="width:100%"></table></div>`);
+        
+    // Insert the table, lock its location
+    $("#center").append(CallLog.html.callHistoryTable);
     $('.callHistoryContainer').css('top',$("#record_id-tr").offset().top);
+    
+    // Init the DataTable
     $('.callSummaryTable').DataTable({
         pageLength: 20,
         dom: Object.keys(CallLog.data).length > CallLog.callSummaryPageSize ? 'rtp' : 'rt',
@@ -48,15 +62,16 @@ function buildCallSummaryTable() {
                 name: m && m['name'] ? m['name'] : (data['call_id'] || "Unknown"),
                 datetime: data['call_open_datetime'],
                 leftMessage: data['call_left_message'][1] == "1" ? 'Yes' : 'No',
-                deleteInstance: allowDelete ? '<a class="deleteInstance"><i class="fas fa-times"></i></a>' : ''
+                deleteInstance: allowDelete ? CallLog.html.deleteLog : ''
             };
         })
     });
+    
     // Adjust width upward by 10% for a little extra room
     $(".callHistoryContainer").css('width',$(".callHistoryContainer").css('width').slice(0,-2)*1.1)
     
-    // Setup the settings menu, used for un-completing any calls
-    $(".callHistoryContainer .sorting_disabled").html('<i class="fas fa-ellipsis-v callSummarySettings"></i>');
+    // Build the "settings" menu, used for un-completing any calls
+    $(".callHistoryContainer .sorting_disabled").html(CallLog.html.settingsButton);
     let callHistroyRows = "";
     $.each( CallLog.metadata, function(k,v) {
         callHistroyRows += CallLog.html.callHistoryRow.replace('CALLID',k).replace('CALLNAME',v.name).replace('checked',v.complete ? 'checked' : '');
@@ -69,28 +84,31 @@ function buildCallSummaryTable() {
             showCancelButton: true,
             focusCancel: true
         }).then((result) => {
-            if (result.isConfirmed) {
-                // Edit the CallLog.metadata
-                $(".callMetadataEdit").each(function() {
-                    CallLog.metadata[ $(this).data('call') ].complete = $(this).is(':checked');
-                });
-                // Write back the metadata
-                $.ajax({
-                    method: 'POST',
-                    url: CallLog.router,
-                    data: {
-                        route: 'metadataSave',
-                        record: getParameterByName('id'),
-                        metadata: JSON.stringify(CallLog.metadata)
-                    },
-                    error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
-                    success: (data) => {
-                        // Force page reload
-                        window.onbeforeunload = function() { };
-                        window.location = window.location;
-                    }
-                });
-            }
+            
+            if (!result.isConfirmed)
+                return;
+                
+            // Edit the CallLog.metadata
+            $(".callMetadataEdit").each(function() {
+                CallLog.metadata[ $(this).data('call') ].complete = $(this).is(':checked');
+            });
+            
+            // Write back the metadata
+            $.ajax({
+                method: 'POST',
+                url: CallLog.router,
+                data: {
+                    route: 'metadataSave',
+                    record: getParameterByName('id'),
+                    metadata: JSON.stringify(CallLog.metadata)
+                },
+                error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+                success: (data) => {
+                    // Force page reload
+                    window.onbeforeunload = function() { };
+                    window.location = window.location;
+                }
+            });
         })
     });
     
@@ -129,31 +147,33 @@ function buildCallSummaryTable() {
             cancelButtonText: 'Close',
             confirmButtonText: 'Delete Call Log'
         }).then((result) => {
-            if (result.isConfirmed) {
-                let instance = getParameterByName('instance') > 1 ? getParameterByName('instance')-1 : 1;
-                // Post to delete, removes metadata too
-                $.ajax({
-                    method: 'POST',
-                    url: CallLog.router,
-                    data: {
-                        route: 'callDelete',
-                        record: getParameterByName('id')
-                    },
-                    error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
-                    success: (data) => {
-                        let url = new URL(location.href);
-                        url.searchParams.set('instance',instance);
-                        window.onbeforeunload = function() { };
-                        window.location = url;
-                    }
-                });
-            }
+            if (!result.isConfirmed)
+                return;
+            let instance = getParameterByName('instance') > 1 ? getParameterByName('instance')-1 : 1;
+            // Post to delete, removes metadata too
+            $.ajax({
+                method: 'POST',
+                url: CallLog.router,
+                data: {
+                    route: 'callDelete',
+                    record: getParameterByName('id')
+                },
+                error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+                success: (data) => {
+                    let url = new URL(location.href);
+                    url.searchParams.set('instance',instance);
+                    window.onbeforeunload = function() { };
+                    window.location = url;
+                }
+            });
         })
     });
 }
 
 $(document).ready(function () {
-    if ( getParameterByName('page') == CallLog.static.instrumentLower)
+    // Don't load here, the "call_log.js" script will call our build
+    if ( getParameterByName('page') == CallLog.static.instrumentLower )
         return;
-    buildCallSummaryTable();
+    // Build that table
+    CallLog.fn.buildCallSummaryTable();
 });

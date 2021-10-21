@@ -101,10 +101,7 @@ $(document).ready(function() {
         // Making sure we are overriding this modules's modal only.
         if ($(this).data('module') !== CallLog.modulePrefix)
             return;
-
         if (typeof ExternalModules.Settings.prototype.resetConfigInstancesOld !== 'undefined')
             ExternalModules.Settings.prototype.resetConfigInstances = ExternalModules.Settings.prototype.resetConfigInstancesOld;
-
-        $modal.removeClass('defaultFormStatusConfig');
     });
 });
