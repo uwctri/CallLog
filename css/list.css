@@ -18,6 +18,10 @@
     margin-bottom: 10px!important;
 }
 
+.card-header {
+    background-color: #f7f7f7!important;
+}
+
 .card {
     margin-right: 20px;
     max-width: 1600px;
@@ -42,7 +46,7 @@
 }
 
 .tab-header {
-    background-color: white;
+    background-color: white!important;
     padding-bottom: 0;
 }
 
