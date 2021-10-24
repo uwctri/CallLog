@@ -178,7 +178,7 @@ CallLog.fn.getPreviousCalldatetime = function ( callID ) {
     let data = CallLog.data[ CallLog.metadata[callID].instances.slice(-1)[0]  ];
     if ( !data ) 
         return "";
-    return formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +conv24to12(data['call_open_time']);
+    return formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +format_time(data['call_open_time']);
 }
 
 // Fetch the checkboxes of remaining tasks from previous call given a id
@@ -206,7 +206,7 @@ CallLog.fn.getPreviousCallNotes = function ( callID ) {
         if ( !data ) 
             return;
         notes.push( {
-            'dt': formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +conv24to12(data['call_open_time']),
+            'dt': formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +format_time(data['call_open_time']),
             'text': data['call_notes'],
             'user': data['call_open_user_full_name']
         });
@@ -282,7 +282,7 @@ CallLog.fn.isCompletedLog = function() {
     let data = CallLog.data[getParameterByName('instance')];
     $("#CallLogCurrentCall").text(CallLog.metadata[id]['name']);
     $("td:contains(Current Caller)").next().text(data['call_open_user_full_name']);
-    $("#CallLogCurrentTime").text(formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +conv24to12(data['call_open_time']));
+    $("#CallLogCurrentTime").text(formatDate(new Date(data['call_open_date']+"T00:00:00"),'MM-dd-y') + " " +format_time(data['call_open_time']));
     $("#CallLogPreviousTime").text("Historic");
     CallLog.fn.updateCallNotes(id);
     return true;
@@ -326,7 +326,7 @@ CallLog.fn.buildAdhocMenu = function() {
                     record: getParameterByName('id'),
                     id: adhoc.id,
                     date: date, 
-                    time: conv12to24($(`#${adhoc.id} input[name=callTime]`).val()),
+                    time: format_time($(`#${adhoc.id} input[name=callTime]`).val()),
                     reason: $(`#${adhoc.id} select[name=reason]`).val(),
                     notes: $(`#${adhoc.id} textarea[name=notes]`).val(),
                     reporter: CallLog.userNameMap[$("#username-reference").text()]
@@ -391,7 +391,7 @@ $(document).ready(function () {
     CallLog.fn.buildCallSummaryTable();
     
     // Fill in Call Details on Tab Change
-    $("#CallLogCurrentTime").text( $("input[name=call_open_date]").val() + " " + conv24to12($("input[name=call_open_time]").val()) );
+    $("#CallLogCurrentTime").text( $("input[name=call_open_date]").val() + " " + format_time($("input[name=call_open_time]").val()) );
     $(".nav-link").on('click', function() {
         $(".nav-link.active").removeClass('active');
         $(this).addClass('active');

@@ -310,7 +310,7 @@ if ( count($issues) )
                             (notesData.map(x=>
                             '<div class="row m-2 pb-2 border-bottom">'+
                                 '<div class="col-auto">'+
-                                    '<div class="row">'+formatDate(new Date(x[0].split(' ')[0]+"T00:00:00"),CallLog.defaultDateFormat)+" "+conv24to12(x[0].split(' ')[1])+'</div>'+
+                                    '<div class="row">'+formatDate(new Date(x[0].split(' ')[0]+"T00:00:00"),CallLog.defaultDateFormat)+" "+format_time(x[0].split(' ')[1])+'</div>'+
                                     '<div class="row">'+x[1]+'</div>'+
                                     '<div class="row">'+x[2]+'</div>'+
                                 '</div>'+
@@ -370,7 +370,7 @@ if ( count($issues) )
                     }
                 }
             } else if ( fConfig.validation == 'time' ) {
-                colConfig.render = (data,type,row,meta) => conv24to12(data) || fConfig.default;
+                colConfig.render = (data,type,row,meta) => format_time(data) || fConfig.default;
             } else if ( ["radio","select"].includes(fConfig.fieldType) ){
                 colConfig.render = (data,type,row,meta) => fConfig.map[data] || fConfig.default;
             } else if ( ["yesno","truefalse"].includes(fConfig.fieldType) ){
@@ -472,7 +472,7 @@ if ( count($issues) )
                 if ( row['call_requested_callback'] && row['call_requested_callback'][1] == '1' ) {
                     if ( row['call_callback_date'] )
                         displayDate += formatDate(new Date(row['call_callback_date']+'T00:00:00'), CallLog.defaultDateFormat)+" ";
-                    displayDate += conv24to12(row['call_callback_time']);
+                    displayDate += row['call_callback_time'] ? format_time(row['call_callback_time']) : "";
                     if (!displayDate)
                         displayDate = "Not specified";
                 }
