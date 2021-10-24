@@ -564,7 +564,7 @@ if ( count($issues) )
     }
     
     function toggleCallBackCol() {
-        $.each( $('.callTable'), function() {
+        $('.callTable').each( function() {
             $(this).DataTable().column( 'callbackCol:name' ).visible(CallLog.alwaysShowCallbackCol || !CallLog.hideCalls);
             $(this).DataTable().draw();
         });
@@ -580,6 +580,7 @@ if ( count($issues) )
                 let [ packagedCallData, tabConfig, alwaysShowCallbackCol, timeTaken, issues ] = JSON.parse(data);
                 CallLog.packagedCallData = packagedCallData;
                 CallLog.alwaysShowCallbackCol = alwaysShowCallbackCol;
+                
                 $('.callTable').each( function(index,el) {
                     let table = $(el).DataTable();
                     let page = table.page.info().page;
@@ -590,7 +591,10 @@ if ( count($issues) )
                         table.order( [[ CallLog.colConfig[tab_id].length-1, "desc" ]] );
                     table.draw();
                     table.page(page).draw('page');
+                    updateDataCache(tab_id);
+                    updateBadges(tab_id);
                 });
+                
                 toggleCallBackCol();
                 console.log('Refreshed data in '+timeTaken+' seconds');
             }
@@ -611,7 +615,26 @@ if ( count($issues) )
         });
     }
     
+    function updateDataCache(tab_id) {
+        CallLog.displayedData[tab_id] = [];
+        $("#"+tab_id+" table").DataTable().rows().every( function() {
+            let rowData = [];
+            $(this.node()).find("td:visible").each((i,el)=>rowData.push($(el).text()));
+            if (rowData.length)
+                CallLog.displayedData[tab_id].push(rowData.slice(1));
+        });
+    }
+    
+    function updateBadges(tab_id) {
+        let badge = 0;
+        let user = $("#impersonate-user-select").val() || CallLog.user;
+        CallLog.displayedData[tab_id].forEach( x=>Object.values(x).includes(CallLog.userNameMap[user]) && badge++ );
+        if ( badge > 0 && CallLog.tabs.showBadges)
+            $(".call-link[data-tabid="+tab_id+"]").append('<span class="badge badge-secondary">'+badge+'</span>');
+    }
+    
     $(document).ready(function() {
+        
         // Custom search options
         $('.card-body').on('input propertychange paste','.customSearch', function() {
             let $table = $('.callTable:visible').DataTable();
@@ -643,36 +666,13 @@ if ( count($issues) )
             CallLog.colConfig[tab_id] = createColConfig(index, tab_id);
             
             // Init the table
-            let defaultOrder = CallLog.alwaysShowCallbackCol ? [[ CallLog.colConfig[tab_id].length-1, "desc" ]] : [[ 1, "asc" ]];
             $(el).DataTable({
                 lengthMenu: [ [25,50,100,-1], [25,50,100, "All"] ],
                 columns: CallLog.colConfig[tab_id],
-                order: defaultOrder, //Always going to be [[1,asc]] at init
                 createdRow: (row,data,index) => $(row).addClass('dataTablesRow'),
-                data: CallLog.packagedCallData[tab_id],
                 sDom: 'ltpi'
             });
             
-            // Create a data object for reports to access and for below
-            //let visibleCols = CallLog.colConfig[tab_id].map(x=>x['visible']!=false || (x['data'] && x['data'].includes('callback')) ? x['title']: null).filter(x=>x&&!x.startsWith('_'));
-            //let visibleColsIndex = CallLog.colConfig[tab_id].map((e,i)=>e['visible']!=false || (e['data'] && e['data'].includes('callback')) ? i: null).filter(x=>x);
-            //CallLog.displayedData[tab_id] = [];
-            //$(el).DataTable().rows().every( function() {
-            //    let values = this.cells().render('display').toArray().filter((e,i)=>visibleColsIndex.includes(i));
-            //    console.log(this.cells().render('display').toArray())
-            //    let merger = visibleCols.reduce((obj, keys, index) => ({ ...obj, [keys]: values[index] }), {})
-            //    CallLog.displayedData[tab_id].push( merger );
-            //});
-            let visibleCols = CallLog.colConfig[tab_id].map(x=>x['visible']!=false ? x['data']: null).filter(x=>x&&!x.startsWith('_'));
-            visibleCols = visibleCols.concat( CallLog.packagedCallData[tab_id].length > 0 ? Object.keys(CallLog.packagedCallData[tab_id][0]).filter(x=>x.includes('callback')&&!x.startsWith('_')) : [])
-            CallLog.displayedData[tab_id] = $(el).DataTable().rows().data().toArray().map( x=> Object.filterKeys(x, visibleCols));
-            
-            // Create tab badges
-            let badge = 0;
-            let user = $("#impersonate-user-select").val() || CallLog.user;
-            CallLog.displayedData[tab_id].forEach( x=>Object.values(x).includes(CallLog.userNameMap[user]) && badge++ );
-            if ( badge > 0 && CallLog.tabs.showBadges)
-                $(".call-link[data-tabid="+tab_id+"]").append('<span class="badge badge-secondary">'+badge+'</span>');
         });
         
         // Tabs are built, show the body now
@@ -684,10 +684,11 @@ if ( count($issues) )
         
         // Select the first tab on the call list
         let savedTab = Cookies.get('CallLog'+pid);
-        if ( savedTab )
+        if ( savedTab ) {
             $(".call-link[data-tabid="+savedTab+"]").click();
-        else
+        } else {
             $(".call-link").first().click();
+        }
         
         // Setup cookie for remembering call tab
         $(".call-link").on('click', function() {
@@ -719,7 +720,7 @@ if ( count($issues) )
         $('*[data-toggle="tooltip"]').tooltip();
         
         // Refresh the data occasionally
-        setInterval( refreshTableData, 2*60*1000);
+        setInterval( refreshTableData, 5*60*1000);
         
         // Load the initial data
         toggleCallBackCol();
