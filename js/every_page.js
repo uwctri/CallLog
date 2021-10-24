@@ -40,20 +40,6 @@ Object.filterKeys = (obj, allowedKeys) =>
                 res[key] = obj[key];
                 return res; }, {});
 
-function conv24to12(ts) {
-    if (!ts) return "";
-    let H = +ts.substr(0, 2);
-    let h = (H % 12) || 12;
-    h = (h < 10)?("0"+h):h;
-    return h + ts.substr(2, 3) + (H < 12 ? "am" : "pm");
-};
-
-function conv12to24(ts) {
-    if (!ts) return "";
-    let H = ('0' + (+ts.substr(0, 2) + (ts.includes('PM') ? 12 : 0))).slice(-2);
-    return H + ':' + ts.split(' ')[0].split(':')[1] ;
-}
-
 function isCallLogNext() {
     return $(".form_menu_selected").parent().nextAll().filter( function() {
         return $(this).find('a').css('pointer-events') != "none";
