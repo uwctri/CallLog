@@ -28,7 +28,8 @@ class CallLog extends AbstractExternalModule  {
     private $datatablesJS = "https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js";
     private $flatpickrCSS = "https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css";
     private $flatpickrJS  = "https://cdn.jsdelivr.net/npm/flatpickr";
-    private $cookieJS = "https://cdn.jsdelivr.net/npm/js-cookie@2.2.1/src/js.cookie.min.js";
+    private $cookieJS = "https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js";
+    
     
     /////////////////////////////////////////////////
     // REDCap Hooks
@@ -1099,7 +1100,7 @@ class CallLog extends AbstractExternalModule  {
         foreach( $tabs['config'] as $tab )
             $packagedCallData[$tab["tab_id"]] = [];
         
-        // Construct the needed feilds (This saves almost no time currently)
+        // Construct the needed feilds (This is needed to save time. Loading all data takes several seconds, this is sub 1sec)
         $fields = array_merge([REDCap::getRecordIdField(), $this->metadataField, $withdraw['var'], $withdraw['tmp']['var'], 
         'call_open_date', 'call_left_message', 'call_requested_callback', 'call_notes', 'call_open_datetime', 'call_open_user_full_name', 'call_attempt', 'call_template', 'call_event_name', 'call_callback_date'], 
         array_values($autoRemoveConfig), $tabs['allFields']); 
