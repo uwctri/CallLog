@@ -617,19 +617,18 @@ if ( count($issues) )
     
     function updateDataCache(tab_id) {
         CallLog.displayedData[tab_id] = [];
-        $("#"+tab_id+" table").DataTable().rows().every( function() {
-            let rowData = [];
-            $(this.node()).find("td:visible").each((i,el)=>rowData.push($(el).text()));
-            if (rowData.length)
-                CallLog.displayedData[tab_id].push(rowData.slice(1));
-        });
+        let table = $("#"+tab_id+" table").DataTable();
+        let headers = CallLog.colConfig[tab_id].map( x => x.data );
+        CallLog.displayedData[tab_id] = table.rows().data().toArray().map( x=> Object.filterKeys(x, headers));
     }
     
     function updateBadges(tab_id) {
+        if ( !CallLog.tabs.showBadges )
+            return;
         let badge = 0;
         let user = $("#impersonate-user-select").val() || CallLog.user;
         CallLog.displayedData[tab_id].forEach( x=>Object.values(x).includes(CallLog.userNameMap[user]) && badge++ );
-        if ( badge > 0 && CallLog.tabs.showBadges)
+        if ( badge > 0 )
             $(".call-link[data-tabid="+tab_id+"]").append('<span class="badge badge-secondary">'+badge+'</span>');
     }
     
