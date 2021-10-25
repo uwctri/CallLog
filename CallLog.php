@@ -472,7 +472,7 @@ class CallLog extends AbstractExternalModule  {
         $meta = $this->getCallMetadata($project_id, $record);
         if ( empty($meta) )
             return;
-        $grace = strtotime('-'.$module->startedCallGrace.' minutes');
+        $grace = strtotime('-'.$this->startedCallGrace.' minutes');
         $now = date("Y-m-d H:i");
         $user = $this->framework->getUser()->getUsername();
         foreach( $meta as $id=>$call ) {
@@ -561,7 +561,7 @@ class CallLog extends AbstractExternalModule  {
         $meta = $this->getCallMetadata($project_id, $record);
         if ( empty($meta) )
             return '';
-        $grace = strtotime('-'.$module->startedCallGrace.' minutes');
+        $grace = strtotime('-'.$this->startedCallGrace.' minutes');
         $user = $this->framework->getUser()->getUsername();
         foreach( $meta as $call ) {
             if ( !$call['complete'] && ($call['callStartedBy'] != $user) && ((time() - strtotime($call['callStarted'])/60) < $grace) )
@@ -673,7 +673,7 @@ class CallLog extends AbstractExternalModule  {
                         "length" => $length,
                         "autoRemove" => $auto
                     ], $commonConfig);
-                } elseif ( !empty($field) && !empty(days) ) {
+                } elseif ( !empty($field) && !empty($days) ) {
                     $includeEvents = array_map('trim', explode(',',$settings["followup_include_events"][$i][0])); 
                     foreach( $includeEvents as $eventName ) {
                         $arr = array_merge([
@@ -1055,6 +1055,8 @@ class CallLog extends AbstractExternalModule  {
     /////////////////////////////////////////////////
     
     public function projectLog() {
+        $sql = null;
+        $event = null;
         REDCap::logEvent( $_POST['action'] , $_POST['details'], $sql, $_POST['record'], $event, $_GET['pid']);
     }
     
@@ -1100,7 +1102,7 @@ class CallLog extends AbstractExternalModule  {
         // Construct the needed feilds (This saves almost no time currently)
         $fields = array_merge([REDCap::getRecordIdField(), $this->metadataField, $withdraw['var'], $withdraw['tmp']['var'], 
         'call_open_date', 'call_left_message', 'call_requested_callback', 'call_notes', 'call_open_datetime', 'call_open_user_full_name', 'call_attempt', 'call_template', 'call_event_name', 'call_callback_date'], 
-        array_values($autoRemoveConfig[$callID]), $tabs['allFields']); 
+        array_values($autoRemoveConfig), $tabs['allFields']); 
         
         // Main Loop
         $records = $skipDataPack ? '-1' : null;
