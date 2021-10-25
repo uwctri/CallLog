@@ -31,32 +31,38 @@ CallLog.html.callHistoryRow = `
 CallLog.html.deleteLog = `<a class="deleteInstance"><i class="fas fa-times"></i></a>`;
 CallLog.html.settingsButton = `<i class="fas fa-ellipsis-v callSummarySettings"></i>`;
 
-CallLog.fn.buildCallSummaryTable = function () {
+CallLog.fn.buildCallSummaryTable = function() {
     // Check if we have anything to actually build
-    if ( isEmpty(CallLog.metadata) || !(Object.keys(CallLog.data).length > 1 || !CallLog.data[1] ||CallLog.data[1]['call_id']) )
+    if (isEmpty(CallLog.metadata) || !(Object.keys(CallLog.data).length > 1 || !CallLog.data[1] || CallLog.data[1]['call_id']))
         return;
-        
+
     // Insert the table, lock its location
     $("#center").append(CallLog.html.callHistoryTable);
-    $('.callHistoryContainer').css('top',$("#record_id-tr").offset().top);
-    
+    $('.callHistoryContainer').css('top', $("#record_id-tr").offset().top);
+
     // Init the DataTable
     $('.callSummaryTable').DataTable({
         pageLength: 20,
         dom: Object.keys(CallLog.data).length > CallLog.callSummaryPageSize ? 'rtp' : 'rt',
-        order: [[ 0, "desc" ]],
-        createdRow: (row,data,index) => $(row).addClass('dataTablesRow'),
-        columns: [
-            {title:'#',data:'instance',className:'dt-center'},
-            {title:'Call',data:'name'},
-            {title:'Msg',data:'leftMessage', className: 'dt-body-center'},
-            {title:'Call time',data:'datetime', render: (data,type,row,meta) =>
-                ( type === 'display' || type === 'filter' ) ? formatDate(new Date(data),CallLog.defaultDateTimeFormat).toLowerCase(): data },
-            {title:'',data:'deleteInstance',bSortable: false}
+        order: [
+            [0, "desc"]
         ],
-        data: $.map(CallLog.data, function(data, index) { 
+        createdRow: (row, data, index) => $(row).addClass('dataTablesRow'),
+        columns: [
+            { title: '#', data: 'instance', className: 'dt-center' },
+            { title: 'Call', data: 'name' },
+            { title: 'Msg', data: 'leftMessage', className: 'dt-body-center' },
+            {
+                title: 'Call time',
+                data: 'datetime',
+                render: (data, type, row, meta) =>
+                    (type === 'display' || type === 'filter') ? formatDate(new Date(data), CallLog.defaultDateTimeFormat).toLowerCase() : data
+            },
+            { title: '', data: 'deleteInstance', bSortable: false }
+        ],
+        data: $.map(CallLog.data, function(data, index) {
             let m = CallLog.metadata[data['call_id']];
-            let allowDelete = (Object.keys(CallLog.data)[Object.keys(CallLog.data).length-1] == index) && (data['call_outcome'] != '1');
+            let allowDelete = (Object.keys(CallLog.data)[Object.keys(CallLog.data).length - 1] == index) && (data['call_outcome'] != '1');
             return {
                 instance: index,
                 name: m && m['name'] ? m['name'] : (data['call_id'] || "Unknown"),
@@ -66,17 +72,17 @@ CallLog.fn.buildCallSummaryTable = function () {
             };
         })
     });
-    
+
     // Adjust width upward by 10% for a little extra room
-    $(".callHistoryContainer").css('width',$(".callHistoryContainer").css('width').slice(0,-2)*1.1)
-    
+    $(".callHistoryContainer").css('width', $(".callHistoryContainer").css('width').slice(0, -2) * 1.1)
+
     // Build the "settings" menu, used for un-completing any calls
     $(".callHistoryContainer .sorting_disabled").html(CallLog.html.settingsButton);
     let callHistroyRows = "";
-    $.each( CallLog.metadata, function(k,v) {
-        callHistroyRows += CallLog.html.callHistoryRow.replace('CALLID',k).replace('CALLNAME',v.name).replace('checked',v.complete ? 'checked' : '');
+    $.each(CallLog.metadata, function(k, v) {
+        callHistroyRows += CallLog.html.callHistoryRow.replace('CALLID', k).replace('CALLNAME', v.name).replace('checked', v.complete ? 'checked' : '');
     });
-    CallLog.html.callHistorySettings+=callHistroyRows;
+    CallLog.html.callHistorySettings += callHistroyRows;
     $(".callSummarySettings").on('click', function() {
         Swal.fire({
             title: 'Call Metadata Settings',
@@ -84,15 +90,15 @@ CallLog.fn.buildCallSummaryTable = function () {
             showCancelButton: true,
             focusCancel: true
         }).then((result) => {
-            
+
             if (!result.isConfirmed)
                 return;
-                
+
             // Edit the CallLog.metadata
             $(".callMetadataEdit").each(function() {
-                CallLog.metadata[ $(this).data('call') ].complete = $(this).is(':checked');
+                CallLog.metadata[$(this).data('call')].complete = $(this).is(':checked');
             });
-            
+
             // Write back the metadata
             $.ajax({
                 method: 'POST',
@@ -102,38 +108,38 @@ CallLog.fn.buildCallSummaryTable = function () {
                     record: getParameterByName('id'),
                     metadata: JSON.stringify(CallLog.metadata)
                 },
-                error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+                error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " + errorThrown),
                 success: (data) => {
                     // Force page reload
-                    window.onbeforeunload = function() { };
+                    window.onbeforeunload = function() {};
                     window.location = window.location;
                 }
             });
         })
     });
-    
+
     // Enable click to expand child row
-    $('.dataTablesRow').on('click', function () {
+    $('.dataTablesRow').on('click', function() {
         let table = $(this).closest('table').DataTable();
-        let row = table.row( this );
-        if ( row.child.isShown() ) {
+        let row = table.row(this);
+        if (row.child.isShown()) {
             row.child.hide();
             $(this).removeClass('shown');
         } else {
             let data = CallLog.data[row.data()['instance']];
             let note = data['call_notes'] ? data['call_notes'] : "No Notes Taken";
-            row.child( `${data['call_open_user_full_name']} - ${note}`, 'dataTableChild' ).show();
-            $(this).next().addClass( $(this).hasClass('even') ? 'even' : 'odd' );
+            row.child(`${data['call_open_user_full_name']} - ${note}`, 'dataTableChild').show();
+            $(this).next().addClass($(this).hasClass('even') ? 'even' : 'odd');
             $(this).addClass('shown');
         }
     });
-    
+
     // If not on the call log then we are done
-    if ( getParameterByName('page') != CallLog.static.instrumentLower)
+    if (getParameterByName('page') != CallLog.static.instrumentLower)
         return;
-    
+
     // Allow deleting the most recent version of the call log
-    $('.deleteInstance').on('click', function () {
+    $('.deleteInstance').on('click', function() {
         event.stopPropagation(); // Don't expand child row
         Swal.fire({
             icon: 'warning',
@@ -149,7 +155,7 @@ CallLog.fn.buildCallSummaryTable = function () {
         }).then((result) => {
             if (!result.isConfirmed)
                 return;
-            let instance = getParameterByName('instance') > 1 ? getParameterByName('instance')-1 : 1;
+            let instance = getParameterByName('instance') > 1 ? getParameterByName('instance') - 1 : 1;
             // Post to delete, removes metadata too
             $.ajax({
                 method: 'POST',
@@ -158,11 +164,11 @@ CallLog.fn.buildCallSummaryTable = function () {
                     route: 'callDelete',
                     record: getParameterByName('id')
                 },
-                error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+                error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " + errorThrown),
                 success: (data) => {
                     let url = new URL(location.href);
-                    url.searchParams.set('instance',instance);
-                    window.onbeforeunload = function() { };
+                    url.searchParams.set('instance', instance);
+                    window.onbeforeunload = function() {};
                     window.location = url;
                 }
             });
@@ -170,9 +176,9 @@ CallLog.fn.buildCallSummaryTable = function () {
     });
 }
 
-$(document).ready(function () {
+$(document).ready(function() {
     // Don't load here, the "call_log.js" script will call our build
-    if ( getParameterByName('page') == CallLog.static.instrumentLower )
+    if (getParameterByName('page') == CallLog.static.instrumentLower)
         return;
     // Build that table
     CallLog.fn.buildCallSummaryTable();
