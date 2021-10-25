@@ -23,6 +23,10 @@ switch ( $route ) {
         if ( !empty($data) )
             $sendSuccess = True;
         break;
+    case "log":
+        $module->projectLog();
+        $sendDone = True;
+        break;
     case "newAdhoc":
         # Intended to be posted to by an outside script or DET to make a singe new adhoc call on a record
         # url: ExternalModules/?prefix=call_log&page=router&route=newAdhoc&pid=NNN&adhocCode=NNN&record=NNN&type=NNN&fudate=NNN&futime=NNN&reporter=NAME
