@@ -11,7 +11,6 @@ if ( count($issues) )
     printToScreen('Issues encountered: ' . json_encode($issues));
 ?>
 <script>
-CallLog.packagedCallData = <?php echo json_encode($packagedCallData); ?>;
 CallLog.tabs = <?php echo json_encode($tabs); ?>;
 CallLog.alwaysShowCallbackCol = <?php echo json_encode($alwaysShowCallbackCol); ?>;
 CallLog.reloadData = <?php echo json_encode($module->getURL(__FILE__)); ?>;
@@ -40,13 +39,13 @@ $(document).ready(function() {
             );
         }
     );
-    $(".toggleHiddenCalls").on('click', toggleHiddenCalls); // Control all toggles at once
+    $(".toggleHiddenCalls").on('click', CallLog.fn.toggleHiddenCalls); // Control all toggles at once
     
     // Main table build out
     $('.callTable').each( function(index,el) {
         let tab_id = $(el).closest('.tab-pane').prop('id');
         CallLog.childRows[tab_id] = "";
-        CallLog.colConfig[tab_id] = createColConfig(index, tab_id);
+        CallLog.colConfig[tab_id] = CallLog.fn.createColConfig(index, tab_id);
         
         // Init the table
         $(el).DataTable({
@@ -74,7 +73,7 @@ $(document).ready(function() {
     }
     
     // Setup cookie for remembering call tab
-    $(".call-link").on('click', function() {
+    $(".call-link").on('click', function() { 
         Cookies.set('CallLog'+pid,$(this).data('tabid'),{sameSite: 'lax'});
     });
     
@@ -93,7 +92,7 @@ $(document).ready(function() {
             let notes = data['_callNotes'];
             let inCall = data['_callStarted'];
             let cells = table.cells(row,'.expandedInfo').render('display');
-            row.child( childRowFormat(record, call, inCall, cells, notes, tab_id), 'dataTableChild' ).show();
+            row.child( CallLog.fn.childRowFormat(record, call, inCall, cells, notes, tab_id), 'dataTableChild' ).show();
             $(this).next().addClass( $(this).hasClass('even') ? 'even' : 'odd' );
             $(this).addClass('shown');
         }
@@ -103,11 +102,11 @@ $(document).ready(function() {
     $('*[data-toggle="tooltip"]').tooltip();
     
     // Refresh the data occasionally
-    setInterval( refreshTableData, 5*60*1000);
+    setInterval( CallLog.fn.refreshTableData, 5*60*1000);
     
     // Load the initial data
-    toggleCallBackCol();
-    refreshTableData();
+    CallLog.fn.toggleCallBackCol();
+    CallLog.fn.refreshTableData();
     $(".dataTables_empty").text('Loading...')
 });
 </script>

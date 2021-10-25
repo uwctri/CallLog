@@ -4,13 +4,14 @@ CallLog.hideCalls = true;
 CallLog.childRows = {};
 CallLog.colConfig = {};
 CallLog.displayedData = {};
+CallLog.packagedCallData = {};
 
 CallLog.html.noCallsToday = '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="A provider requested that this subject not be contacted today."></i>';
 CallLog.html.atMaxAttempts = '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="This subject has been called the maximum number of times today."></i>';
 CallLog.html.callBack = '<i class="fas fa-stopwatch mr-1" data-toggle="tooltip" data-placement="left" title="Subject\'s requested callback time"></i>DISPLAYDATE<span class="callbackRequestor" data-toggle="tooltip" data-placement="left" title="Callback set by REQUESTEDBY">LETTER</span>';
 CallLog.html.phoneIcon = '<span style="font-size:2em;color:#dc3545;"><i class="fas fa-phone-square-alt" data-toggle="tooltip" data-placement="left" title="This subject may already be in a call."></i></span>'
 
-function projectLog( action, call_id, record ) {
+CallLog.fn.projectLog = function( action, call_id, record ) {
     $.ajax({
         method: 'POST',
         url: CallLog.router,
@@ -25,7 +26,7 @@ function projectLog( action, call_id, record ) {
     });
 }
 
-function childRowFormat( record, call_id, callStarted, childData, notesData, tab ) {
+CallLog.fn.childRowFormat = function( record, call_id, callStarted, childData, notesData, tab ) {
     notesData = notesData.split('|||').map(x=>x.split('||')).filter(x=>x.length>2);
     return '<div class="container">'+
         '<div class="row">'+
@@ -41,9 +42,9 @@ function childRowFormat( record, call_id, callStarted, childData, notesData, tab
                 '<div class="row">'+
                     '<div class="col">'+
                         '<div class="row">'+
-                            '<a class="noCallsButton" onclick="noCallsToday('+record+',\''+call_id+'\')">No Calls Today</a>'+
+                            '<a class="noCallsButton" onclick="CallLog.fn.noCallsToday('+record+',\''+call_id+'\')">No Calls Today</a>'+
                             ( !callStarted ? '' :
-                            '&emsp;<a class="endCallButton" onclick="endCall('+record+',\''+call_id+'\')">End Current Call</a>')+
+                            '&emsp;<a class="endCallButton" onclick="CallLog.fn.endCall('+record+',\''+call_id+'\')">End Current Call</a>')+
                         '</div>'+
                     '</div>'+
                 '</div>'+
@@ -69,7 +70,7 @@ function childRowFormat( record, call_id, callStarted, childData, notesData, tab
     '</div>';
 }
 
-function createColConfig(index, tab_id) {
+CallLog.fn.createColConfig = function(index, tab_id) {
     
     let cols = [{
         title: '',
@@ -153,7 +154,7 @@ function createColConfig(index, tab_id) {
                 }
                 let record = rowData[CallLog.static.record_id];
                 let id = rowData['_call_id'];
-                $(td).html("<a onclick=\"callURLclick("+record+",'"+id+"','"+thisURL+"','"+dt+"')\">"+cellData+"</a>");
+                $(td).html("<a onclick=\"CallLog.fn.callURLclick("+record+",'"+id+"','"+thisURL+"','"+dt+"')\">"+cellData+"</a>");
             }
         }
         
@@ -243,7 +244,7 @@ function createColConfig(index, tab_id) {
     return cols;
 }
 
-function callURLclick( record, call_id, url, callbackDateTime ) {
+CallLog.fn.callURLclick = function( record, call_id, url, callbackDateTime ) {
     event.stopPropagation();
     if (callbackDateTime && ((new Date(now) - new Date(callbackDateTime)) < (-5*1000*60))) {
         Swal.fire({
@@ -256,15 +257,15 @@ function callURLclick( record, call_id, url, callbackDateTime ) {
             confirmButtonText: 'Continue'
         }).then((result) => {
           if (result.isConfirmed)
-              startCall(record, call_id, url);
+              CallLog.fn.startCall(record, call_id, url);
         })
     } else {
-        startCall(record, call_id, url);
+        CallLog.fn.startCall(record, call_id, url);
     }
 }
 
-function startCall(record, call_id, url) {
-    projectLog("Started Call", call_id, record);
+CallLog.fn.startCall = function(record, call_id, url) {
+    CallLog.fn.projectLog("Started Call", call_id, record);
     $.ajax({
         method: 'POST',
         url: CallLog.router,
@@ -279,7 +280,7 @@ function startCall(record, call_id, url) {
     });
 }
 
-function endCall(record, call_id) {
+CallLog.fn.endCall = function(record, call_id) {
     $.ajax({
         method: 'POST',
         url: CallLog.router,
@@ -290,27 +291,27 @@ function endCall(record, call_id) {
         },
         error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
         success: (data) => { 
-            projectLog("Manually Ended Call", call_id, record);
+            CallLog.fn.projectLog("Manually Ended Call", call_id, record);
             console.log('Call ended. Refreshing table data.');
-            refreshTableData()
+            CallLog.fn.refreshTableData()
         }
     });
 }
 
-function toggleHiddenCalls() {
+CallLog.fn.toggleHiddenCalls = function() {
     CallLog.hideCalls = !CallLog.hideCalls;
-    toggleCallBackCol();
+    CallLog.fn.toggleCallBackCol();
     $('*[data-toggle="tooltip"]').tooltip();//Enable Tooltips for the info icon
 }
 
-function toggleCallBackCol() {
+CallLog.fn.toggleCallBackCol = function() {
     $('.callTable').each( function() {
         $(this).DataTable().column( 'callbackCol:name' ).visible(CallLog.alwaysShowCallbackCol || !CallLog.hideCalls);
         $(this).DataTable().draw();
     });
 }
 
-function refreshTableData() {
+CallLog.fn.refreshTableData = function() {
     $.ajax({
         method: 'POST',
         url: CallLog.router,
@@ -342,17 +343,17 @@ function refreshTableData() {
                     table.order( [[ CallLog.colConfig[tab_id].length-1, "desc" ]] );
                 table.draw();
                 table.page(page).draw('page');
-                updateDataCache(tab_id);
-                updateBadges(tab_id);
+                CallLog.fn.updateDataCache(tab_id);
+                CallLog.fn.updateBadges(tab_id);
             });
             
-            toggleCallBackCol();
+            CallLog.fn.toggleCallBackCol();
             console.log('Refreshed data in '+timeTaken+' seconds');
         }
     });
 }
 
-function noCallsToday(record, call_id) {
+CallLog.fn.noCallsToday = function(record, call_id) {
     $.ajax({
         method: 'POST',
         url: CallLog.router,
@@ -362,18 +363,18 @@ function noCallsToday(record, call_id) {
             id: call_id
         },
         error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-        success: (data) => refreshTableData()
+        success: (data) => CallLog.fn.refreshTableData()
     });
 }
 
-function updateDataCache(tab_id) {
+CallLog.fn.updateDataCache = function(tab_id) {
     CallLog.displayedData[tab_id] = [];
     let table = $("#"+tab_id+" table").DataTable();
     let headers = CallLog.colConfig[tab_id].map( x => x.data );
     CallLog.displayedData[tab_id] = table.rows().data().toArray().map( x=> Object.filterKeys(x, headers));
 }
 
-function updateBadges(tab_id) {
+CallLog.fn.updateBadges = function(tab_id) {
     if ( !CallLog.tabs.showBadges )
         return;
     let badge = 0;
