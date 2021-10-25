@@ -5,6 +5,11 @@ CallLog.childRows = {};
 CallLog.colConfig = {};
 CallLog.displayedData = {};
 
+CallLog.html.noCallsToday = '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="A provider requested that this subject not be contacted today."></i>';
+CallLog.html.atMaxAttempts = '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="This subject has been called the maximum number of times today."></i>';
+CallLog.html.callBack = '<i class="fas fa-stopwatch mr-1" data-toggle="tooltip" data-placement="left" title="Subject\'s requested callback time"></i>DISPLAYDATE<span class="callbackRequestor" data-toggle="tooltip" data-placement="left" title="Callback set by REQUESTEDBY">LETTER</span>';
+CallLog.html.phoneIcon = '<span style="font-size:2em;color:#dc3545;"><i class="fas fa-phone-square-alt" data-toggle="tooltip" data-placement="left" title="This subject may already be in a call."></i></span>'
+
 function projectLog( action, call_id, record ) {
     $.ajax({
         method: 'POST',
@@ -71,10 +76,7 @@ function createColConfig(index, tab_id) {
         data: '_callStarted',
         bSortable: false,
         className: 'callStarted',
-        render: (data,type,row,meta) => data ? 
-            '<span style="font-size:2em;color:#dc3545;">'+
-            '<i class="fas fa-phone-square-alt" data-toggle="tooltip" data-placement="left" '+
-            'title="This subject may already be in a call."></i></span>' : ''
+        render: (data,type,row,meta) => data ? CallLog.html.phoneIcon : ''
     }];
     
     $.each( CallLog.tabs['config'][index]['fields'], function(colIndex,fConfig) {
@@ -219,12 +221,11 @@ function createColConfig(index, tab_id) {
             if ( type === 'display'  ) {
                 let display = '';
                 if ( row['_noCallsToday'] )
-                    display += '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="A provider requested that this subject not be contacted today."></i>';
+                    display += CallLog.html.noCallsToday;
                 if ( row['_atMaxAttempts'] )
-                    display += '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="This subject has been called the maximum number of times today."></i>';
+                    display += CallLog.html.atMaxAttempts;
                 if ( displayDate )
-                    display += '<i class="fas fa-stopwatch mr-1" data-toggle="tooltip" data-placement="left" title="Subject\'s requested callback time"></i> '+displayDate+
-                        ' <span class="callbackRequestor" data-toggle="tooltip" data-placement="left" title="Callback set by '+requestedBy+'">'+requestedBy[0]+'</span>';
+                    display += CallLog.html.callBack.replace('DISPLAYDATE',displayDate).replace('REQUESTEDBY',requestedBy).replace('LETTER',requestedBy[0]);
                 return display;
             } 
             else if ( type === 'filter' ) {
@@ -233,7 +234,7 @@ function createColConfig(index, tab_id) {
             }
             else {
                 if ( displayDate )
-                    return row['call_callback_date']+" "+row['call_callback_time'];
+                    return `${row['call_callback_date']} ${row['call_callback_time']}`;
             }
             return '';
         }
@@ -273,7 +274,7 @@ function startCall(record, call_id, url) {
             id: call_id,
             user: $("#username-reference").text()
         },
-        error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
         success: (data) => window.location = url
     });
 }
@@ -287,7 +288,7 @@ function endCall(record, call_id) {
             record: record,
             id: call_id
         },
-        error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
         success: (data) => { 
             projectLog("Manually Ended Call", call_id, record);
             console.log('Call ended. Refreshing table data.');
@@ -316,7 +317,7 @@ function refreshTableData() {
         data: {
             route: 'dataLoad'
         },
-        error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
         success: (routerData) => {
             routerData = JSON.parse(routerData);
             if ( !routerData.success ) {
@@ -360,7 +361,7 @@ function noCallsToday(record, call_id) {
             record: record,
             id: call_id
         },
-        error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
+        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
         success: (data) => refreshTableData()
     });
 }
@@ -379,5 +380,5 @@ function updateBadges(tab_id) {
     let user = $("#impersonate-user-select").val() || CallLog.user;
     CallLog.displayedData[tab_id].forEach( x=>Object.values(x).includes(CallLog.userNameMap[user]) && badge++ );
     if ( badge > 0 )
-        $(".call-link[data-tabid="+tab_id+"]").append('<span class="badge badge-secondary">'+badge+'</span>');
+        $(".call-link[data-tabid="+tab_id+"]").append(`<span class="badge badge-secondary">${badge}</span>`);
 }
