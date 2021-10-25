@@ -8,14 +8,21 @@ $pid = $_GET['pid'];
 $sendSuccess = False;
 $sendDone = False;
 
-if ( empty($pid) || empty($record) || empty($route) ) {
+if ( empty($pid) || (empty($record) && $route != "dataLoad") || empty($route) ) {
     echo json_encode([
         "text" => "Malformed action missing PID ('$pid'), record ('$record'), or route ('$route') was posted to ".__FILE__,
         "success" => false
     ]);
+    return;
 }
 
 switch ( $route ) {
+    case "dataLoad":
+        // Load for the Call List
+        $data = $module->loadCallListData();
+        if ( !empty($data) )
+            $sendSuccess = True;
+        break;
     case "newAdhoc":
         # Intended to be posted to by an outside script or DET to make a singe new adhoc call on a record
         # url: ExternalModules/?prefix=call_log&page=router&route=newAdhoc&pid=NNN&adhocCode=NNN&record=NNN&type=NNN&fudate=NNN&futime=NNN&reporter=NAME
@@ -123,20 +130,26 @@ switch ( $route ) {
 }
 
 if ( $sendDone ) {
-    echo json_encode([
+    $result = [
         "text" => "Done",
         "success" => false
-    ]);
+    ];
 } elseif ( $sendSuccess ) {
-    echo json_encode([
+    $result = [
         "text" => "Action '$route' was completed successfully",
         "success" => true
-    ]);
+    ];
 } else {
-    echo json_encode([
+    $result = [
         "text" => "Malformed action '$route' was posted to ".__FILE__,
         "success" => false
-    ]);
+    ];
 }
+
+if ( !empty($data) ) {
+    $result['data'] = $data;
+}
+
+echo json_encode($result);
 
 ?>

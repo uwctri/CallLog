@@ -421,7 +421,7 @@ $(document).ready(function () {
         $("head").append(CallLog.hideSaveTipCSS);
         setInterval(() => {$("#formSaveTip .btn-group").hide();}, 100);
         $("#__SUBMITBUTTONS__-div .btn-group").hide();
-        $("#__SUBMITBUTTONS__-div #submit-btn-saverecord").clone(true).off().attr('onclick','goToCallList()').prop('id','goto-call-list').addClass('ml-1').text('Save & Go To Call List').insertAfter("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
+        $("#__SUBMITBUTTONS__-div #submit-btn-saverecord").clone(true).off().attr('onclick','CallLog.fn.goToCallList()').prop('id','goto-call-list').addClass('ml-1').text('Save & Go To Call List').insertAfter("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
     }
     
     // Select the correct tab based on URL or default
@@ -437,7 +437,7 @@ $(document).ready(function () {
             });
             $(".nav-link:visible").first().click();
         }
-    }, 5000);
+    }, 3000);
     
     // Force Call Incomplete when call back is requested
     $("input[name$=call_requested_callback]").on('click', function() {
