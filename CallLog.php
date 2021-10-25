@@ -1144,7 +1144,7 @@ class CallLog extends AbstractExternalModule  {
                     continue;
                 
                 // Skip if MCV was created today (A call attempt was already made)
-                if ( ($call['template'] == 'mcv') && ($part2 == $today) )
+                if ( ($call['template'] == 'mcv') && (explode(' ', $call['appt'])[0] == $today) )
                     continue;
                 
                 $instanceData = $recordData['repeat_instances'][$callEvent][$this->instrumentLower][end($call['instances'])]; // This could be empty for New Entry calls, but it won't matter.
@@ -1161,7 +1161,7 @@ class CallLog extends AbstractExternalModule  {
                     // Skip MCV calls if past the autoremove date. Need Instance data
                     if ( ($call['template'] == 'mcv') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
                         continue;
-                        
+                    
                     // Skip Scheduled Visit calls if past the autoremove date. Need Instance data
                     if ( ($call['template'] == 'visit') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
                         continue;
