@@ -40,28 +40,26 @@ Object.filterKeys = (obj, allowedKeys) =>
                 res[key] = obj[key];
                 return res; }, {});
 
-function isCallLogNext() {
+CallLog.fn.isCallLogNext = function() {
     return $(".form_menu_selected").parent().nextAll().filter( function() {
         return $(this).find('a').css('pointer-events') != "none";
     }).first().find('#form\\[call_log\\]').length > 0
 }
 
-function addGoToCallLogButton() {
-    if ( !isCallLogNext() )
+CallLog.fn.addGoToCallLogButton = function() {
+    if ( !CallLog.fn.isCallLogNext() )
         return;
-    setInterval(function() {
-        $("#formSaveTip .btn-group").hide();
-    }, 100);
+    setInterval(() => $("#formSaveTip .btn-group").hide(), 100);
     $("#__SUBMITBUTTONS__-div .btn-group").hide();
-    $("#__SUBMITBUTTONS__-div #submit-btn-saverecord").clone(true).off().attr('onclick','goToCallLog()').prop('id','goto-call-log').text('Save & Go To Call Log').insertAfter("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
+    $("#__SUBMITBUTTONS__-div #submit-btn-saverecord").clone(true).off().attr('onclick','CallLog.fn.goToCallLog()').prop('id','goto-call-log').text('Save & Go To Call Log').insertAfter("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
     $("#goto-call-log").before('<br>');
 }
 
-function hijackRequiredPopup() {
+CallLog.fn.modifyRequiredPopup = function() {
     if ( !$("#reqPopup").length || !isCallLogNext() )
         return;
     if ( !$("#reqPopup:visible").length ) {
-        window.requestAnimationFrame(hijackRequiredPopup);
+        window.requestAnimationFrame(CallLog.fn.modifyRequiredPopup);
         return;
     }
     let $btn = $("#reqPopup").parent().find('.ui-dialog-buttonpane button').first();
@@ -71,19 +69,19 @@ function hijackRequiredPopup() {
     $btn.text('Ignore and go to Call Log');
 }
 
-function goToCallLog() {
+CallLog.fn.goToCallLog = function() {
     appendHiddenInputToForm('save-and-redirect', $('#form\\[call_log\\]').prop('href'));
     dataEntrySubmit('submit-btn-savecontinue');
     return false;
 }
 
-function goToCallList() {
+CallLog.fn.goToCallList = function() {
     appendHiddenInputToForm('save-and-redirect', $("#external_modules_panel a:contains('Call List')").prop('href'));
     dataEntrySubmit('submit-btn-savecontinue');
     return false;
 }
 
-function editLeftSideCallLog() {
+CallLog.fn.formatNavForCalls = function() {
     let a = `#form\\[${CallLog.static.instrumentLower}\\]`;
     if ( $(a).next().length ) {
         $(a).next().hide();
@@ -97,15 +95,10 @@ function editLeftSideCallLog() {
     $(a).prev().find('img').hide().after('<i class="fas fa-phone"></i>')
 }
 
-function showCallStartWarning() {
-    if ( !CallLog.recentCaller )
-        return
-    $("#questiontable").before(CallLog.html.callStartedWarning);
-}
-
 $(document).ready(function () {
-    editLeftSideCallLog()
-    addGoToCallLogButton();
-    showCallStartWarning();
-    hijackRequiredPopup();
+    CallLog.fn.formatNavForCalls()
+    CallLog.fn.addGoToCallLogButton();
+    if ( CallLog.recentCaller )
+        $("#questiontable").before(CallLog.html.callStartedWarning);
+    CallLog.fn.modifyRequiredPopup();
 });

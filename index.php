@@ -1,217 +1,12 @@
 <?php
-/////////////////////////////////////////////////
-// Post Check
-/////////////////////////////////////////////////
-if( $_POST['reloadData'] ) {
-    echo json_encode(loadParsePackCallData());
-    return;
-}
-
 $startTime = microtime(true);
-
-/////////////////////////////////////////////////
-// All Functions
-/////////////////////////////////////////////////
 
 function printToScreen($string) {
     ?><script>console.log(<?=json_encode($string); ?>);</script><?php
 }
 
-function isNotBlank($string) {
-    return $string != "";
-}
-
-function loadParsePackCallData($skipDataPack = false) {
-    $startTime = microtime(true);
-    global $project_id,$module;
-
-    // Issue reporting array
-    $issues = [];
-    
-    // Event IDs
-    $callEvent = $module->getProjectSetting("call_log_event");
-    $metaEvent = $module->getProjectSetting("metadata_event");
-    
-    // Withdraw Conditon Config
-    $withdraw = [
-        'event' => $module->getProjectSetting("withdraw_event"),
-        'var' => $module->getProjectSetting("withdraw_var"),
-        'tmp' => [
-            'event' => $module->getProjectSetting("withdraw_tmp_event"),
-            'var' => $module->getProjectSetting("withdraw_tmp_var")
-        ]
-    ];
-    
-    // MCV and Scheduled Vists Config for Live Data
-    $autoRemoveConfig = $module->loadAutoRemoveConfig();
-    
-    // Large Configs
-    $tabs = $module->loadTabConfig();
-    $adhoc = $module->loadAdhocTemplateConfig();
-    
-    if( !$_POST['reloadData'] ) { 
-        printToScreen('Config Loaded in '. round((microtime(true)-$startTime),5) .' seconds');
-        $startTime = microtime(true);
-    }
-    
-    // Minor Prep
-    $packagedCallData = [];
-    $alwaysShowCallbackCol = false;
-    $today = Date('Y-m-d');
-    foreach( $tabs['config'] as $tab )
-        $packagedCallData[$tab["tab_id"]] = [];
-    
-    // Construct the needed feilds (This saves almost no time currently)
-    $fields = array_merge([REDCap::getRecordIdField(), $module->metadataField, $withdraw['var'], $withdraw['tmp']['var'], 
-    'call_open_date', 'call_left_message', 'call_requested_callback', 'call_notes', 'call_open_datetime', 'call_open_user_full_name', 'call_attempt', 'call_template', 'call_event_name', 'call_callback_date'], 
-    array_values($autoRemoveConfig[$callID]), $tabs['allFields']); 
-    
-    // Main Loop
-    $records = $skipDataPack ? '-1' : null;
-    $dataLoad = REDCap::getData($project_id,'array', $records, $fields); 
-    foreach( $dataLoad as $record => $recordData ) {
-        
-        // Check if the dag is empty or if it matches the User's DAG
-        if ( !$module->isInDAG($record) )
-            continue;
-        
-        // Check if withdrawn or tmp withdrawn
-        if ( $recordData[$withdraw['event']][$withdraw['var']] )
-            continue; 
-        if ( $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']] && $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']]<$today )
-            continue;
-        
-        $meta = json_decode($recordData[$metaEvent][$module->metadataField],true);
-        
-        foreach( $meta as $callID => $call ) {
-            $fullCallID = $callID; // Full ID could be X|Y, X||Y or X|Y||Z. CALLID|EVENT||DATE
-            [$callID, $part2, $part3] = array_pad(array_filter(explode('|',$callID)),3,""); 
-            
-            // Skip if call complete, debug call, or if call ID isn't assigned to a tab
-            if ( $call['complete'] || substr($callID,0,1) == '_' || empty($tabs['call2tabMap'][$callID]) )
-                continue;
-            
-            // Skip when reminders, followups, adhocs aren't in window
-            if ( ($call['template'] == 'reminder' || $call['template'] == 'followup' ) && ($call['start'] > $today) )
-                continue;
-            
-            // Skip reminder calls day-of or future
-            if ( ($call['template'] == 'reminder') && ($call['end'] <= $today) )
-                continue;
-            
-            // Skip followups that are flagged for auto remove and are out of window (after the last day)
-            if ( ($call['template'] == 'followup') && $call['autoRemove'] && ($call['end'] < $today) )
-                continue;
-            
-            // Skip New (onload) calls that have expire days
-            if ( ($call['template'] == 'new') && $call['expire'] && (date('Y-m-d', strtotime($call['load']."+".$call['expire']." days")) < $today) )
-                continue;
-            
-            // Skip if MCV was created today (A call attempt was already made)
-            if ( ($call['template'] == 'mcv') && ($part2 == $today) )
-                continue;
-            
-            $instanceData = $recordData['repeat_instances'][$callEvent][$module->instrumentLower][end($call['instances'])]; // This could be empty for New Entry calls, but it won't matter.
-            $instanceEventData = $recordData[$call['event_id']];
-            $instanceData = array_merge( array_filter( empty($instanceEventData) ? [] : $instanceEventData, 'isNotBlank' ), array_filter($recordData[$callEvent],'isNotBlank'), array_filter( empty($instanceData) ? [] : $instanceData, 'isNotBlank' ));
-            
-            // Check to see if a call back was request for tomorrow+
-            $instanceData['_callbackNotToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] > $today);
-            $instanceData['_callbackToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] <= $today);
-            
-            // If no call back will happen today then check for autoremove conditions
-            if ( !$instanceData['_callbackToday'] ) {
-                
-                // Skip MCV calls if past the autoremove date. Need Instance data
-                if ( ($call['template'] == 'mcv') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
-                    continue;
-                    
-                // Skip Scheduled Visit calls if past the autoremove date. Need Instance data
-                if ( ($call['template'] == 'visit') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
-                    continue;
-            
-            }
-            
-            // set global if any Callback will be shown, done after our last check to skip a call
-            $alwaysShowCallbackCol = $alwaysShowCallbackCol ? true : ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] <= $today);
-            
-            // Check if the call was recently opened
-            $instanceData['_callStarted'] = strtotime($call['callStarted']) > strtotime('-'.$module->startedCallGrace.' minutes');
-            
-            // Check if No Calls Today flag is set
-            if ( $call['noCallsToday'] == $today )
-                $instanceData['_noCallsToday'] = true;
-            
-            // Check if we are at max call attempts for the day
-            // While we are at it, assemble all of the note data too
-            $attempts = $recordData[$callEvent]['call_open_date'] == $today ? 1 : 0;
-            $instanceData['_callNotes'] = "";
-            foreach( array_reverse($call['instances']) as $instance ) {
-                $itterData = $recordData['repeat_instances'][$callEvent][$module->instrumentLower][$instance];
-                $leftMsg = $itterData['call_left_message'][1] == "1" ? '<b>Left Message</b>' : '';
-                $setCB = $itterData['call_requested_callback'][1] == "1" ? 'Set Callback' : '';
-                $text = $leftMsg && $setCB ? $leftMsg." & ".$setCB : $leftMsg.$setCB.'&nbsp;';
-                $notes = $itterData['call_notes'] ? $itterData['call_notes'] : 'none';
-                $instanceData['_callNotes'] .= $itterData['call_open_datetime'].'||'.$itterData['call_open_user_full_name'].'||'.$text.'||'.$notes.'|||';
-                if ( $itterData['call_open_date'] == $today )
-                    $attempts++;
-            }
-            $instanceData['_atMaxAttempts'] = $call['hideAfterAttempt'] <= $attempts;
-            $instanceData['call_attempt'] = count($call['instances']); // For displaying the number of past attempts on log
-            
-            // Add what the next instance should be for possible links
-            $instanceData['_nextInstance'] = 1;
-            if ( !empty($recordData['repeat_instances'][$callEvent][$module->instrumentLower]) )
-                $instanceData['_nextInstance'] = end(array_keys($recordData['repeat_instances'][$callEvent][$module->instrumentLower]))+1;
-            else if ( !empty($recordData[$callEvent]['call_template']) )
-                $instanceData['_nextInstance'] = 2;
-            
-            // Add event_id for possible link to instruments
-            $instanceData['_event'] = $call['event_id'];
-            
-            // Add the Event's name for possible display (only used by MCV?)
-            $instanceData['call_event_name'] = $call['event'];
-            
-            // Add lower and upper windows (data is on reminders too but isn't displayed now)
-            if ( $call['template'] == 'followup' ) { 
-                $instanceData['_windowLower'] = $call['start'];
-                $instanceData['_windowUpper'] = $call['end'];
-            }
-            
-            if ( $call['template'] == 'mcv' ) {
-                $instanceData['_appt_dt'] = $call['appt'];
-            }
-            
-            // Adhoc call time and reason
-            if ( $call['template'] == 'adhoc' ) {
-                $instanceData['_adhocReason'] = $adhoc['config'][$callID]['reasons'][$call['reason']];
-                $instanceData['_adhocContactOn'] = $call['contactOn'];
-                $notes = $call['initNotes'] ?  $call['initNotes'] : "No Notes Taken";
-                if ( $call['reporter'] != "" ) 
-                    $instanceData['_callNotes'] .= $call['reported'].'||'.$call['reporter'].'||'.'&nbsp;'.'||'.$notes.'|||';
-            }
-            
-            // Make sure we 100% have a call ID (first attempt at a call won't get it from the normal data)
-            $instanceData['_call_id'] = $fullCallID;
-            
-            if ( !$instanceData['record_id'] ) {
-                $issues[] = $record . ' - ' . $callID . ' has a call without a record id. Poor save from call log.';
-                continue;
-            }
-            
-            // Pack data - done
-            $packagedCallData[$tabs['call2tabMap'][$callID]][] = $instanceData;
-        }
-    }
-    return array($packagedCallData, $tabs, $alwaysShowCallbackCol, round(((microtime(true)-$startTime)),5), $issues);
-}
-
-/////////////////////////////////////////////////
-// Page Load
-/////////////////////////////////////////////////
-
 // Load, parse, and pack the Call Data for display
-list($packagedCallData, $tabs, $alwaysShowCallbackCol, $timeTaken, $issues) = loadParsePackCallData(true);
+list($packagedCallData, $tabs, $alwaysShowCallbackCol, $timeTaken, $issues) = $module->loadCallListData(true);
 if ( count($issues) )
     printToScreen('Issues encountered: ' . json_encode($issues));
 ?>
@@ -573,11 +368,22 @@ if ( count($issues) )
     function refreshTableData() {
         $.ajax({
             method: 'POST',
-            url: CallLog.reloadData,
-            data: {reloadData: true},
+            url: CallLog.router,
+            data: {
+                route: 'dataLoad'
+            },
             error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " +errorThrown),
-            success: (data) => {
-                let [ packagedCallData, tabConfig, alwaysShowCallbackCol, timeTaken, issues ] = JSON.parse(data);
+            success: (routerData) => {
+                routerData = JSON.parse(routerData);
+                if ( !routerData.success ) {
+                    Swal.fire({
+                        title: 'Unable to Load Data',
+                        text: "Unable to reach the REDCap server to load data. Please refresh the page or contact a REDCap Administrator for assistance.",
+                        icon: 'error',
+                    });
+                    return;
+                }
+                let [ packagedCallData, tabConfig, alwaysShowCallbackCol, timeTaken, issues ] = routerData.data;
                 CallLog.packagedCallData = packagedCallData;
                 CallLog.alwaysShowCallbackCol = alwaysShowCallbackCol;
                 

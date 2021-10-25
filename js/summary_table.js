@@ -1,5 +1,6 @@
 CallLog.html = CallLog.html || {};
 CallLog.fn = CallLog.fn || {};
+CallLog.callSummaryPageSize = 20;
 
 CallLog.html.callHistoryTable = `
 <div class="callHistoryContainer">
@@ -29,7 +30,6 @@ CallLog.html.callHistoryRow = `
 </div>`;
 CallLog.html.deleteLog = `<a class="deleteInstance"><i class="fas fa-times"></i></a>`;
 CallLog.html.settingsButton = `<i class="fas fa-ellipsis-v callSummarySettings"></i>`;
-CallLog.callSummaryPageSize = 20;
 
 CallLog.fn.buildCallSummaryTable = function () {
     // Check if we have anything to actually build
