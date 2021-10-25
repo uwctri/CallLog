@@ -13,12 +13,10 @@ function projectLog( action, call_id, record ) {
             route: 'log',
             action: action,
             details: `Call ID = ${call_id}`,
-            record: record,
+            record: record
         },
-        error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " + errorThrown),
-        success: (data) => {
-            console.log(data);
-        }
+        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
+        success: (data) => console.log(data)
     });
 }
 
