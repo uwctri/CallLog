@@ -81,6 +81,7 @@ class CallLog extends AbstractExternalModule  {
             $this->includeCookies();
             $this->includeDataTables();
             $this->includeCss('css/list.css');
+            $this->includeJs('js/call_list.js');
             $this->passArgument('usernameLists', $this->getUserNameListConfig());
             $this->passArgument('eventNameMap', $this->getEventNameMap());
         }
@@ -1052,6 +1053,10 @@ class CallLog extends AbstractExternalModule  {
     /////////////////////////////////////////////////
     // Private Utility Functions
     /////////////////////////////////////////////////
+    
+    public function projectLog() {
+        REDCap::logEvent( $_POST['action'] , $_POST['details'], $sql, $_POST['record'], $event, $_GET['pid']);
+    }
     
     public function isNotBlank($string) {
         return $string != "";
