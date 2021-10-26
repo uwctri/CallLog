@@ -9,7 +9,7 @@ CallLog.html.callStartedWarning = `
     <div class="row">
         <div class="col-1"><i class="fas fa-exclamation-triangle h2 mt-1"></i></div>
         <div class="col-10 h6">
-            This subject's record was recently opened from the Call List by ${CallLog.userNameMap[CallLog.recentCaller]}.
+            This subject's record was recently opened from the Call List by USERNAME.
             <br>
             They may currently be on the phone with the subject.
         </div>
@@ -24,6 +24,14 @@ function ArraysEqual(a1, a2) {
         if (a1[i] !== a2[i]) return false;
     }
     return true
+}
+
+function to24hr(t) {
+    let isPM = t.includes('P');
+    t = t.toLowerCase().replaceAll(/[amp ]/g,'');
+    if (!isPM) return t;
+    let [h,m] = t.split(':');
+    return h==12 ? t : `${parseInt(h)+12}:${m}`;
 }
 
 Date.prototype.addDays = (days) => new Date(this.setDate(this.getDate() + days));
@@ -99,7 +107,8 @@ CallLog.fn.formatNavForCalls = function() {
 $(document).ready(function() {
     CallLog.fn.formatNavForCalls()
     CallLog.fn.addGoToCallLogButton();
-    if (CallLog.recentCaller)
-        $("#questiontable").before(CallLog.html.callStartedWarning);
+    if (CallLog.recentCaller) {
+        $("#questiontable").before(CallLog.html.callStartedWarning.replace("USERNAME",CallLog.userNameMap[CallLog.recentCaller]));
+    }
     CallLog.fn.modifyRequiredPopup();
 });
