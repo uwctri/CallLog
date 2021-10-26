@@ -1102,7 +1102,7 @@ class CallLog extends AbstractExternalModule  {
         
         // Construct the needed feilds (This is needed to save time. Loading all data takes several seconds, this is sub 1sec)
         $fields = array_merge([REDCap::getRecordIdField(), $this->metadataField, $withdraw['var'], $withdraw['tmp']['var'], 
-        'call_open_date', 'call_left_message', 'call_requested_callback', 'call_callback_requested_by', 'call_notes', 'call_open_datetime', 'call_open_user_full_name', 'call_attempt', 'call_template', 'call_event_name', 'call_callback_date'], 
+        'call_open_date', 'call_left_message', 'call_requested_callback', 'call_callback_requested_by', 'call_notes', 'call_open_datetime', 'call_open_user_full_name', 'call_attempt', 'call_template', 'call_event_name', 'call_callback_date', 'call_callback_time'], 
         array_values($autoRemoveConfig), $tabs['allFields']); 
         
         // Main Loop
