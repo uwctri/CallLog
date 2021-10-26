@@ -14,6 +14,7 @@ if ( count($issues) )
 CallLog.tabs = <?php echo json_encode($tabs); ?>;
 CallLog.alwaysShowCallbackCol = <?php echo json_encode($alwaysShowCallbackCol); ?>;
 CallLog.reloadData = <?php echo json_encode($module->getURL(__FILE__)); ?>;
+CallLog.cookie = {};
 
 $(document).ready(function() {
     
@@ -65,16 +66,19 @@ $(document).ready(function() {
             "<div class='dataTables_filter customSearch'><label>Search:<input type='search'></label></div>");
     
     // Select the first tab on the call list
-    let savedTab = Cookies.get('CallLog'+pid);
-    if ( savedTab ) {
-        $(".call-link[data-tabid="+savedTab+"]").click();
+    let cookie = Cookies.get('RedcapCallLog');
+    cookie = cookie ? JSON.parse(cookie) : false;
+    if ( cookie[pid] ) {
+        CallLog.cookie = cookie;
+        $(".call-link[data-tabid="+cookie[pid]+"]").click();
     } else {
         $(".call-link").first().click();
     }
     
     // Setup cookie for remembering call tab
     $(".call-link").on('click', function() { 
-        Cookies.set('CallLog'+pid,$(this).data('tabid'),{sameSite: 'lax'});
+        CallLog.cookie[pid] = $(this).data('tabid');
+        Cookies.set('RedcapCallLog',JSON.stringify(CallLog.cookie),{sameSite: 'strict'});
     });
     
     // Enable click to expand
