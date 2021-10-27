@@ -2,6 +2,7 @@ CallLog.html = CallLog.html || {};
 CallLog.fn = CallLog.fn || {};
 CallLog.callSummaryPageSize = 20;
 
+CallLog.html.callClosed = `<br><span style='float:right'><b>Call Log Closed</b></span>`;
 CallLog.html.callHistoryTable = `
 <div class="callHistoryContainer">
     <table class="callSummaryTable compact" style="width:100%">
@@ -128,7 +129,8 @@ CallLog.fn.buildCallSummaryTable = function() {
         } else {
             let data = CallLog.data[row.data()['instance']];
             let note = data['call_notes'] ? data['call_notes'] : "No Notes Taken";
-            row.child(`${data['call_open_user_full_name']} - ${note}`, 'dataTableChild').show();
+            let logClosed = data['call_outcome'] == "1" ? CallLog.html.callClosed : "";
+            row.child(`${data['call_open_user_full_name']} - ${note}${logClosed}`, 'dataTableChild').show();
             $(this).next().addClass($(this).hasClass('even') ? 'even' : 'odd');
             $(this).addClass('shown');
         }
