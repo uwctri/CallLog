@@ -49,8 +49,13 @@
             "type": "checkbox"
         },
         {
+            "key": "show_mcv",
+            "name": "<b>Missed/Cancelled Day of</b><br>Show MCV calls the day the visit is reported as missed. By default MCV calls are shown the next day. This is usefull if you wish to log 'will you be able to make your appointment' style calls that you may place when a subject is 5 to 15 mins late to a visit",
+            "type": "checkbox"
+        },
+        {
             "key": "dd_text",
-            "name": "Settings such as 'call scripts' (for reminder calls) and 'tasks remaining' much be edited directly in the data dictionary. Further customization of the call log should be kept minimal with mostly additions. Reporting disconnected phone numbers can be hidden if not used, as can call backs, and remaining tasks.",
+            "name": "Settings such as 'call scripts' (for reminder calls) and 'tasks remaining' must be edited directly in the data dictionary. Further customization of the call log should be kept minimal with mostly additions. Reporting disconnected phone numbers can be hidden if not used, as can call backs, and remaining tasks.",
             "type": "descriptive"
         },
         {

@@ -254,10 +254,12 @@ class CallLog extends AbstractExternalModule  {
             elseif ( !empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == "" ) {
                 // Scheduled appt was removed, but a call was made, mark the reminder as complete
                 $meta[$callConfig['id']]["complete"] = true;
+                $meta[$callConfig['id']]["completedBy"] = "REDCap";
             }
             elseif ( !empty($meta[$callConfig['id']]) && ($data[$callConfig['event']][$callConfig['field']] <= $today) ) {
                 // Appt is today, autocomplete the call so it stops showing up places, we might double set but it doesn't matter
                 $meta[$callConfig['id']]['complete'] = true;
+                $meta[$callConfig['id']]["completedBy"] = "REDCap";
             }
             elseif (!empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "" && 
                     ($meta[$callConfig['id']]['start'] != $newStart || $meta[$callConfig['id']]['end'] != $newEnd)) {
@@ -318,6 +320,7 @@ class CallLog extends AbstractExternalModule  {
                 // The visit has been reschedueld for the exact previous time, or maybe user error
                 // Previously we would usent those calls with 0 instances, but this leads to an issue if a mcv is reschedueld on the first try
                 $meta[$idExact]['complete'] = true;
+                $meta[$idExact]["completedBy"] = "REDCap";
             }
             
             // Search for similar IDs and complete/remove them. We should only have 1 MCV call per event active on the call log
@@ -326,8 +329,10 @@ class CallLog extends AbstractExternalModule  {
                     continue;
                 if ( count($callData["instances"]) == 0 )
                     unset($meta[$callID]);
-                else
+                else {
                     $callData['complete'] = true;
+                    $callData['completedBy'] = "REDCap";
+                }
             }
         }
         return $this->saveCallMetadata($project_id, $record, $meta);
@@ -360,6 +365,7 @@ class CallLog extends AbstractExternalModule  {
                 ];
             } elseif ( !empty($meta[$callConfig['id']]) && !empty($data[$callConfig['event']][$callConfig['apptDate']]) ) {
                 $meta[$callConfig['id']]['complete'] = true;
+                $meta[$callConfig['id']]['completedBy'] = "REDCap";
             }
         }
         return $this->saveCallMetadata($project_id, $record, $meta);
@@ -400,6 +406,7 @@ class CallLog extends AbstractExternalModule  {
             if ( $callData['complete'] || $callData['reason']!=$code )
                 continue;
             $callData['complete'] = true; // Don't delete, just comp. Might need info for something
+            $callData['completedBy'] = "REDCap";
         }
         return $this->saveCallMetadata($project_id, $record, $meta);
     }
@@ -446,8 +453,10 @@ class CallLog extends AbstractExternalModule  {
         $meta[$id]["instances"][] = $instance;
         if ( $data['call_left_message'][1] == '1' )
             $meta[$id]["voiceMails"]++;
-        if ( $data['call_outcome'] == '1' )
+        if ( $data['call_outcome'] == '1' ) {
             $meta[$id]['complete'] = true;
+            $meta[$id]['completedBy'] = $this->framework->getUser()->getUsername();
+        }
         $meta[$id]['callStarted'] = '';
         return $this->saveCallMetadata($project_id, $record, $meta);
     }
@@ -1088,6 +1097,7 @@ class CallLog extends AbstractExternalModule  {
         
         // MCV and Scheduled Vists Config for Live Data
         $autoRemoveConfig = $this->loadAutoRemoveConfig();
+        $mcvDayOf = $this->getProjectSetting('show_mcv');
         
         // Large Configs
         $tabs = $this->loadTabConfig();
@@ -1146,32 +1156,34 @@ class CallLog extends AbstractExternalModule  {
                 if ( ($call['template'] == 'new') && $call['expire'] && (date('Y-m-d', strtotime($call['load']."+".$call['expire']." days")) < $today) )
                     continue;
                 
-                // Skip if MCV was created today (A call attempt was already made)
-                if ( ($call['template'] == 'mcv') && (explode(' ', $call['appt'])[0] == $today) )
+                // Skip if MCV was created today (A call attempt was already made). Only use if config allows (mcvDayOf)
+                if ( ($call['template'] == 'mcv') && (explode(' ', $call['appt'])[0] == $today) && !$mcvDayOf )
                     continue;
                 
-                $instanceData = $recordData['repeat_instances'][$callEvent][$this->instrumentLower][end($call['instances'])]; // This could be empty for New Entry calls, but it won't matter.
+                // Gather Instance Level Data
+                // This first line could be empty for New Entry calls, but it won't matter.
+                $instanceData = $recordData['repeat_instances'][$callEvent][$this->instrumentLower][end($call['instances'])]; 
                 $instanceEventData = $recordData[$call['event_id']];
                 $instanceData = array_merge( array_filter( empty($instanceEventData) ? [] : $instanceEventData, array($this,'isNotBlank') ), array_filter($recordData[$callEvent], array($this,'isNotBlank')), array_filter( empty($instanceData) ? [] : $instanceData, array($this,'isNotBlank') ));
                 
-                // Check to see if a call back was request for tomorrow+
+                // Check to see if a call back was request for Today or Tomorrow+
                 $instanceData['_callbackNotToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] > $today);
                 $instanceData['_callbackToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] <= $today);
                 
                 // If no call back will happen today then check for autoremove conditions
                 if ( !$instanceData['_callbackToday'] ) {
                     
-                    // Skip MCV calls if past the autoremove date. Need Instance data
+                    // Skip MCV calls if past the autoremove date. Need Instance data for this
                     if ( ($call['template'] == 'mcv') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
                         continue;
                     
-                    // Skip Scheduled Visit calls if past the autoremove date. Need Instance data
+                    // Skip Scheduled Visit calls if past the autoremove date. Need Instance data for this
                     if ( ($call['template'] == 'visit') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
                         continue;
                 
                 }
                 
-                // set global if any Callback will be shown, done after our last check to skip a call
+                // Set global if any Callback will be shown, done after our last check to skip a call
                 $alwaysShowCallbackCol = $alwaysShowCallbackCol ? true : ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] <= $today);
                 
                 // Check if the call was recently opened
@@ -1234,6 +1246,7 @@ class CallLog extends AbstractExternalModule  {
                 // Make sure we 100% have a call ID (first attempt at a call won't get it from the normal data)
                 $instanceData['_call_id'] = $fullCallID;
                 
+                // This is currently the only issue we report. It was a problem a long time ago but no longer occurs
                 if ( !$instanceData['record_id'] ) {
                     $issues[] = $record . ' - ' . $callID . ' has a call without a record id. Poor save from call log.';
                     continue;
