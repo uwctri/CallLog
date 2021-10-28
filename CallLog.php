@@ -571,11 +571,13 @@ class CallLog extends AbstractExternalModule  {
         $meta = $this->getCallMetadata($project_id, $record);
         if ( empty($meta) )
             return '';
-        $grace = strtotime('-'.$this->startedCallGrace.' minutes');
+        $grace = $this->startedCallGrace; // Minutes of Grace time
         $user = $this->framework->getUser()->getUsername();
         foreach( $meta as $call ) {
-            if ( !$call['complete'] && ($call['callStartedBy'] != $user) && ((time() - strtotime($call['callStarted'])/60) < $grace) )
+            if ( !$call['complete'] && ($call['callStartedBy'] != $user) && 
+                 !empty($call['callStarted']) && ((time() - strtotime($call['callStarted'])/60) < $grace) ) {
                 return $call['callStartedBy'];
+             }
         }
         return '';
     }
