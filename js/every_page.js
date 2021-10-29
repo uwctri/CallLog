@@ -2,6 +2,7 @@ CallLog.defaultDateFormat = 'MM-dd-y';
 CallLog.defaultDateTimeFormat = 'MM-dd-y hh:mma';
 CallLog.html = CallLog.html || {};
 CallLog.fn = CallLog.fn || {};
+CallLog.css = CallLog.css || {};
 
 CallLog.html.callStartedWarning = `
 <div class="alert alert-danger" style="text-align:center" role="alert">
@@ -18,8 +19,8 @@ CallLog.html.callStartedWarning = `
     <br>
 </div>`;
 
-CallLog.hideSaveTipCSS = `<style>#formSaveTip{display:none!important}</style>`;
-CallLog.hideSaveTipButtons = `<style>#formSaveTip .btn-group{display:none!important}</style>`;
+CallLog.css.hideSaveTip = `<style>#formSaveTip{display:none!important}</style>`;
+CallLog.css.hideSaveTipButtons = `<style>#formSaveTip .btn-group{display:none!important}</style>`;
 
 function ArraysEqual(a1, a2) {
     var i = a1.length;
@@ -61,7 +62,7 @@ CallLog.fn.isCallLogNext = function() {
 CallLog.fn.addGoToCallLogButton = function() {
     if (!CallLog.fn.isCallLogNext())
         return;
-    $("head").append(CallLog.hideSaveTipButtons);
+    $("head").append(CallLog.css.hideSaveTipButtons);
     $("#__SUBMITBUTTONS__-div .btn-group").hide();
     let el = $("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
     el.clone(true).off().attr('onclick', 'CallLog.fn.goToCallLog()').prop('id', 'goto-call-log').text('Save & Go To Call Log').insertAfter(el);

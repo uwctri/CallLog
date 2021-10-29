@@ -1,5 +1,6 @@
 CallLog.html = CallLog.html || {};
 CallLog.fn = CallLog.fn || {};
+CallLog.css = CallLog.css || {};
 
 CallLog.html.wrapper = `
 <tr style="border: 1px solid #ddd"><td colspan="2">
@@ -100,7 +101,7 @@ CallLog.html.adhocModal = `
 </div>
 `;
 
-CallLog.optionalCSS = `
+CallLog.css.optional = `
 <style>
     .formHeader {
         background-color: #675186;
@@ -340,7 +341,7 @@ CallLog.fn.buildAdhocMenu = function() {
 }
 
 CallLog.fn.addGoToCallListButton = function() {
-    $("head").append(CallLog.hideSaveTipCSS);
+    $("head").append(CallLog.css.hideSaveTip);
     $("#__SUBMITBUTTONS__-div .btn-group").hide();
     let el = $("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
     el.clone(true).off().attr('onclick', 'CallLog.fn.goToCallList()').prop('id', 'goto-call-list').text('Save & Go To Call List').insertAfter(el);
@@ -357,7 +358,7 @@ $(document).ready(function() {
 
     // Load some Default CSS if none exists 
     if ($('.formHeader').css('text-align') != 'center')
-        $('head').append(CallLog.optionalCSS);
+        $('head').append(CallLog.css.optional);
 
     // Hide a few things for style
     $("#formtop-div").hide();
