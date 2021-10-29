@@ -118,8 +118,6 @@ CallLog.optionalCSS = `
     }
 </style>`;
 
-CallLog.hideSaveTipCSS = `<style>#formSaveTip{display:none!important}</style>`;
-
 // Debug function, show all hidden fields
 CallLog.fn.callAdminEdit = function() {
     $("*[class='@HIDDEN']").show();
@@ -341,6 +339,14 @@ CallLog.fn.buildAdhocMenu = function() {
     });
 }
 
+CallLog.fn.addGoToCallListButton = function() {
+    $("head").append(CallLog.hideSaveTipCSS);
+    $("#__SUBMITBUTTONS__-div .btn-group").hide();
+    let el = $("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
+    el.clone(true).off().attr('onclick', 'CallLog.fn.goToCallList()').prop('id', 'goto-call-list').text('Save & Go To Call List').insertAfter(el);
+    $("#goto-call-list").before('<br>');
+}
+
 $(document).ready(function() {
 
     // Check if there is any metadata to use
@@ -415,11 +421,9 @@ $(document).ready(function() {
         }
     });
 
+    // Show the "Go to Call List" Button if we came from there
     if (getParameterByName('showReturn')) {
-        $("head").append(CallLog.hideSaveTipCSS);
-        setInterval(() => { $("#formSaveTip .btn-group").hide(); }, 100);
-        $("#__SUBMITBUTTONS__-div .btn-group").hide();
-        $("#__SUBMITBUTTONS__-div #submit-btn-saverecord").clone(true).off().attr('onclick', 'CallLog.fn.goToCallList()').prop('id', 'goto-call-list').addClass('ml-1').text('Save & Go To Call List').insertAfter("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
+        CallLog.fn.addGoToCallListButton();
     }
 
     // Select the correct tab based on URL or default
