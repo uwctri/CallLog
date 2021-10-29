@@ -18,6 +18,9 @@ CallLog.html.callStartedWarning = `
     <br>
 </div>`;
 
+CallLog.hideSaveTipCSS = `<style>#formSaveTip{display:none!important}</style>`;
+CallLog.hideSaveTipButtons = `<style>#formSaveTip .btn-group{display:none!important}</style>`;
+
 function ArraysEqual(a1, a2) {
     var i = a1.length;
     while (i--) {
@@ -58,9 +61,10 @@ CallLog.fn.isCallLogNext = function() {
 CallLog.fn.addGoToCallLogButton = function() {
     if (!CallLog.fn.isCallLogNext())
         return;
-    setInterval(() => $("#formSaveTip .btn-group").hide(), 100);
+    $("head").append(CallLog.hideSaveTipButtons);
     $("#__SUBMITBUTTONS__-div .btn-group").hide();
-    $("#__SUBMITBUTTONS__-div #submit-btn-saverecord").clone(true).off().attr('onclick', 'CallLog.fn.goToCallLog()').prop('id', 'goto-call-log').text('Save & Go To Call Log').insertAfter("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
+    let el = $("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
+    el.clone(true).off().attr('onclick', 'CallLog.fn.goToCallLog()').prop('id', 'goto-call-log').text('Save & Go To Call Log').insertAfter(el);
     $("#goto-call-log").before('<br>');
 }
 
