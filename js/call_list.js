@@ -6,6 +6,8 @@ CallLog.colConfig = {};
 CallLog.displayedData = {};
 CallLog.packagedCallData = {};
 
+CallLog.earlyCall5min = 5*60*1000;
+
 CallLog.html.noCallsToday = '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="A provider requested that this subject not be contacted today."></i>';
 CallLog.html.atMaxAttempts = '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="This subject has been called the maximum number of times today."></i>';
 CallLog.html.callBack = '<i class="fas fa-stopwatch mr-1" data-toggle="tooltip" data-placement="left" title="Subject\'s requested callback time"></i>DISPLAYDATE<span class="callbackRequestor" data-toggle="tooltip" data-placement="left" title="Callback set by REQUESTEDBY">LETTER</span>';
@@ -28,8 +30,7 @@ CallLog.fn.projectLog = function(action, call_id, record) {
 
 CallLog.fn.childRowFormat = function(record, call_id, callStarted, childData, notesData, tab) {
         notesData = notesData.split('|||').map(x => x.split('||')).filter(x => x.length > 2);
-        return `<div class="container"><div class="row"><div class="col-4"><div class="row dtChildData"><div class="col-auto">${CallLog.childRows[tab]}</div><div class="col">${childData.map(x => '<div class="row">' + (x || "________") + '</div>').join('')}</div></div><div class="row"><div class="col"><div class="row"><a class="noCallsButton" onclick="CallLog.fn.noCallsToday(${record},\'${call_id}\')">No Calls Today</a>${!callStarted ? '' :
-        `&emsp;<a class="endCallButton" onclick="CallLog.fn.endCall(${record},\'${call_id}\')">End Current Call</a>`}</div></div></div></div><div class="col-8 border-left"><div class="row dtChildNotes"><div class="col">${notesData.map(x => `<div class="row m-2 pb-2 border-bottom"><div class="col-auto"><div class="row">${formatDate(new Date(x[0].split(' ')[0] + "T00:00:00"), CallLog.defaultDateFormat)} ${format_time(x[0].split(' ')[1])}</div><div class="row">${x[1]}</div><div class="row">${x[2]}</div></div><div class="col"><div class="row ml-1">${x[3] == "none" ? "No Notes Taken" : x[3]}</div></div></div>`).join('') || '<div class="text-center mt-4">Call history will display here</div>'}</div></div></div></div></div>`;
+        return `<div class="container"><div class="row"><div class="col-4"><div class="row dtChildData"><div class="col-auto">${CallLog.childRows[tab]}</div><div class="col">${childData.map(x => '<div class="row">' + (x || "________") + '</div>').join('')}</div></div><div class="row"><div class="col"><div class="row"><a class="noCallsButton" onclick="CallLog.fn.noCallsToday(${record},\'${call_id}\')">No Calls Today</a>${!callStarted ? '' : `&emsp;<a class="endCallButton" onclick="CallLog.fn.endCall(${record},\'${call_id}\')">End Current Call</a>`}</div></div></div></div><div class="col-8 border-left"><div class="row dtChildNotes"><div class="col">${notesData.map(x => `<div class="row m-2 pb-2 border-bottom"><div class="col-auto"><div class="row">${formatDate(new Date(x[0].split(' ')[0] + "T00:00:00"), CallLog.defaultDateFormat)} ${format_time(x[0].split(' ')[1])}</div><div class="row">${x[1]}</div><div class="row">${x[2]}</div></div><div class="col"><div class="row ml-1">${x[3] == "none" ? "No Notes Taken" : x[3]}</div></div></div>`).join('') || '<div class="text-center mt-4">Call history will display here</div>'}</div></div></div></div></div>`;
 }
 
 CallLog.fn.createColConfig = function(index, tab_id) {
@@ -212,7 +213,7 @@ CallLog.fn.createColConfig = function(index, tab_id) {
 
 CallLog.fn.callURLclick = function(record, call_id, url, callbackDateTime) {
     event.stopPropagation();
-    if (callbackDateTime && ((new Date(now) - new Date(callbackDateTime)) < (-5 * 1000 * 60))) {
+    if (callbackDateTime && (new Date() < (new Date(callbackDateTime) - CallLog.earlyCall5min)) ) {
         Swal.fire({
             title: 'Calling Early?',
             text: "This subject has a callback scheduled, you may not want to call them now.",
