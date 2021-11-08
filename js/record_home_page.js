@@ -1,4 +1,5 @@
 $(document).ready(function() {
+
     // Prep the styled button
     let callStlye = `<a class="CallLogLink"><i class="fa fa-phone"></i></a>`;
     $('head').append(`<style>.CallLogLink { cursor: pointer; }</style>`)
