@@ -1,46 +1,16 @@
 <?php
 $startTime = microtime(true);
 
-function printToScreen($string) {
-    ?><script>console.log(<?=json_encode($string); ?>);</script><?php
-}
-
-// Load, parse, and pack the Call Data for display
-list($packagedCallData, $tabs, $alwaysShowCallbackCol, $timeTaken, $issues) = $module->loadCallListData(true);
-if ( count($issues) )
-    printToScreen('Issues encountered: ' . json_encode($issues));
+// Load our init tab config, no actual data here
+list($noData, $tabs, $noData, $timeTaken) = $module->loadCallListData(true);
 ?>
 <script>
 CallLog.tabs = <?php echo json_encode($tabs); ?>;
-CallLog.alwaysShowCallbackCol = <?php echo json_encode($alwaysShowCallbackCol); ?>;
-CallLog.reloadData = <?php echo json_encode($module->getURL(__FILE__)); ?>;
-CallLog.cookie = {};
 
 $(document).ready(function() {
     
-    // Custom search options
-    $('.card-body').on('input propertychange paste','.customSearch', function() {
-        let $table = $('.callTable:visible').DataTable();
-        let query = $('.card-body:visible input').val();
-        if ( query.split(' ')[0] == 'regex' )
-            $table.search(query.replace('regex ',''),true,false).draw();
-        else if ( query[0] == '!' )
-            $table.search('^(?!.*'+query.slice(1)+')',true,false).draw();
-        else
-            $table.search(query,false,true).draw();
-    });
-    
-    // Control display of Calls
-    $.fn.dataTable.ext.search.push(
-        function(settings, searchData, index, rowData, counter) {
-            return !(
-                CallLog.hideCalls && (
-                    (rowData['_atMaxAttempts'] && !rowData['_callbackToday']) || rowData['_callbackNotToday'] || rowData['_noCallsToday']
-                )
-            );
-        }
-    );
-    $(".toggleHiddenCalls").on('click', CallLog.fn.toggleHiddenCalls); // Control all toggles at once
+    // Setup search, must happen before table init
+    CallLog.fn.setupSearch();
     
     // Main table build out
     $('.callTable').each( function(index,el) {
@@ -58,64 +28,35 @@ $(document).ready(function() {
         
     });
     
-    // Tabs are built, show the body now
-    $(".card").fadeIn();
-    
-    // Insert custom search box 
+    // Insert search box, must happen after table init
     $('.dataTables_length').after(
             "<div class='dataTables_filter customSearch'><label>Search:<input type='search'></label></div>");
     
-    // Select the first tab on the call list
-    let cookie = Cookies.get('RedcapCallLog');
-    cookie = cookie ? JSON.parse(cookie) : false;
-    if ( cookie[pid] ) {
-        CallLog.cookie = cookie;
-        $(".call-link[data-tabid="+cookie[pid]+"]").click();
-    } else {
-        $(".call-link").first().click();
-    }
+    // Exactly what it looks like
+    CallLog.fn.setupCookies();
+
+    // Everything is built out, show the body now
+    $(".card").fadeIn();
     
-    // Setup cookie for remembering call tab
-    $(".call-link").on('click', function() { 
-        CallLog.cookie[pid] = $(this).data('tabid');
-        Cookies.set('RedcapCallLog',JSON.stringify(CallLog.cookie),{sameSite: 'strict'});
-    });
+    // Enable click to expand for all rows
+    CallLog.fn.setupClickToExpand();
     
-    // Enable click to expand
-    $('.callTable').on('click', '.dataTablesRow', function () {
-        let table = $(this).closest('table').DataTable();
-        let row = table.row( this );
-        if ( row.child.isShown() ) {
-            row.child.hide();
-            $(this).removeClass('shown');
-        } else {
-            let data = row.data()
-            let record = data[CallLog.static.record_id];
-            let call = data['_call_id'];
-            let tab_id = $(this).closest('.tab-pane').prop('id');
-            let notes = data['_callNotes'];
-            let inCall = data['_callStarted'];
-            let cells = table.cells(row,'.expandedInfo').render('display');
-            row.child( CallLog.fn.childRowFormat(record, call, inCall, cells, notes, tab_id), 'dataTableChild' ).show();
-            $(this).next().addClass( $(this).hasClass('even') ? 'even' : 'odd' );
-            $(this).addClass('shown');
-        }
-    });
-    
-    // Enable Tooltips
+    // Enable Tooltips for the call-back column
     $('*[data-toggle="tooltip"]').tooltip();
     
     // Refresh the data occasionally
-    setInterval( CallLog.fn.refreshTableData, 5*60*1000);
+    setInterval(CallLog.fn.refreshTableData, CallLog.pageRefresh);
     
     // Load the initial data
     CallLog.fn.toggleCallBackCol();
     CallLog.fn.refreshTableData();
     $(".dataTables_empty").text('Loading...')
+
+    console.log("Page first loaded in " + <?=json_encode(round(((microtime(true)-$startTime)),5)) ?> + " seconds");
 });
 </script>
-<div class="projhdr"><i class="fas fa-phone"></i> Call List</div>
 
+<div class="projhdr"><i class="fas fa-phone"></i> Call List</div>
 <div class="card" style="display:none">
     <?php if( count($tabs['config']) > 1) {?>
     <div class="card-header tab-header">
@@ -162,6 +103,3 @@ $(document).ready(function() {
     </div>
     <?php } ?>
 </div>
-<?php
-printToScreen('Page First Loaded in '.round(((microtime(true)-$startTime)),5).' seconds');
-?>
