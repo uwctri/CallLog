@@ -1079,9 +1079,6 @@ class CallLog extends AbstractExternalModule  {
     public function loadCallListData($skipDataPack = false) {
         $startTime = microtime(true);
         $project_id = $_GET['pid'];
-
-        // Issue reporting array
-        $issues = [];
         
         // Event IDs
         $callEvent = $this->getProjectSetting("call_log_event");
@@ -1248,16 +1245,10 @@ class CallLog extends AbstractExternalModule  {
                 // Make sure we 100% have a call ID (first attempt at a call won't get it from the normal data)
                 $instanceData['_call_id'] = $fullCallID;
                 
-                // This is currently the only issue we report. It was a problem a long time ago but no longer occurs
-                if ( !$instanceData['record_id'] ) {
-                    $issues[] = $record . ' - ' . $callID . ' has a call without a record id. Poor save from call log.';
-                    continue;
-                }
-                
                 // Pack data - done
                 $packagedCallData[$tabs['call2tabMap'][$callID]][] = $instanceData;
             }
         }
-        return array($packagedCallData, $tabs, $alwaysShowCallbackCol, round(((microtime(true)-$startTime)),5), $issues);
+        return array($packagedCallData, $tabs, $alwaysShowCallbackCol, round(((microtime(true)-$startTime)),5));
     }
 }

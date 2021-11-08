@@ -5,13 +5,91 @@ CallLog.childRows = {};
 CallLog.colConfig = {};
 CallLog.displayedData = {};
 CallLog.packagedCallData = {};
+CallLog.cookie = {};
 
-CallLog.earlyCall5min = 5*60*1000;
+CallLog.alwaysShowCallbackCol = false;
+CallLog.earlyCall = 5 * 60 * 1000; // Grace time on early calling of 5 mins
+CallLog.pageRefresh = 5 * 60 * 1000; // Refresh page every 5 minutes
 
 CallLog.html.noCallsToday = '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="A provider requested that this subject not be contacted today."></i>';
 CallLog.html.atMaxAttempts = '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="This subject has been called the maximum number of times today."></i>';
 CallLog.html.callBack = '<i class="fas fa-stopwatch mr-1" data-toggle="tooltip" data-placement="left" title="Subject\'s requested callback time"></i>DISPLAYDATE<span class="callbackRequestor" data-toggle="tooltip" data-placement="left" title="Callback set by REQUESTEDBY">LETTER</span>';
 CallLog.html.phoneIcon = '<span style="font-size:2em;color:#dc3545;"><i class="fas fa-phone-square-alt" data-toggle="tooltip" data-placement="left" title="This subject may already be in a call."></i></span>'
+
+CallLog.fn.setupSearch = function() {
+
+    // Custom search options for regex and "not" (!)
+    $('.card-body').on('input propertychange paste', '.customSearch', function() {
+
+        let $table = $('.callTable:visible').DataTable();
+        let query = $('.card-body:visible input').val();
+
+        if (query.split(' ')[0] == 'regex') {
+            $table.search(query.replace('regex ', ''), true, false).draw();
+        } else if (query[0] == '!') {
+            $table.search('^(?!.*' + query.slice(1) + ')', true, false).draw();
+        } else {
+            $table.search(query, false, true).draw();
+        }
+    });
+
+    // Additional search filtering for hidden calls 
+    $.fn.dataTable.ext.search.push(
+        (_settings, _searchData, _index, rowData, _counter) => !(
+            CallLog.hideCalls && (
+                (rowData['_atMaxAttempts'] && !rowData['_callbackToday']) || rowData['_callbackNotToday'] || rowData['_noCallsToday']
+            )
+        )
+    );
+
+    // Control all toggles at once
+    $(".toggleHiddenCalls").on('click', function() {
+        CallLog.hideCalls = !CallLog.hideCalls;
+        CallLog.fn.toggleCallBackCol();
+        $('*[data-toggle="tooltip"]').tooltip(); //Enable Tooltips for the info icon
+    });
+}
+
+CallLog.fn.setupCookies = function() {
+
+    // Load cookie - Select the first tab on the call list
+    let cookie = Cookies.get('RedcapCallLog');
+    cookie = cookie ? JSON.parse(cookie) : false;
+    if (cookie[pid]) {
+        CallLog.cookie = cookie;
+        $(".call-link[data-tabid=" + cookie[pid] + "]").click();
+    } else {
+        $(".call-link").first().click();
+    }
+
+    // Setup cookie saveing for remembering call tab
+    $(".call-link").on('click', function() {
+        CallLog.cookie[pid] = $(this).data('tabid');
+        Cookies.set('RedcapCallLog', JSON.stringify(CallLog.cookie), { sameSite: 'strict' });
+    });
+}
+
+CallLog.fn.setupClickToExpand = function() {
+    $('.callTable').on('click', '.dataTablesRow', function() {
+        let table = $(this).closest('table').DataTable();
+        let row = table.row(this);
+        if (row.child.isShown()) {
+            row.child.hide();
+            $(this).removeClass('shown');
+        } else {
+            let data = row.data()
+            let record = data[CallLog.static.record_id];
+            let call = data['_call_id'];
+            let tab_id = $(this).closest('.tab-pane').prop('id');
+            let notes = data['_callNotes'];
+            let inCall = data['_callStarted'];
+            let cells = table.cells(row, '.expandedInfo').render('display');
+            row.child(CallLog.fn.childRowFormat(record, call, inCall, cells, notes, tab_id), 'dataTableChild').show();
+            $(this).next().addClass($(this).hasClass('even') ? 'even' : 'odd');
+            $(this).addClass('shown');
+        }
+    });
+}
 
 CallLog.fn.projectLog = function(action, call_id, record) {
     $.ajax({
@@ -74,49 +152,60 @@ CallLog.fn.createColConfig = function(index, tab_id) {
                 return data;
             }
         } else if (fConfig.validation == 'time') {
-            colConfig.render = (data, type, row, meta) => format_time(data) || fConfig.default;
+            colConfig.render = (data, _type, _row, _meta) => format_time(data) || fConfig.default;
         } else if (["radio", "select"].includes(fConfig.fieldType)) {
-            colConfig.render = (data, type, row, meta) => fConfig.map[data] || fConfig.default;
+            colConfig.render = (data, _type, _row, _meta) => fConfig.map[data] || fConfig.default;
         } else if (["yesno", "truefalse"].includes(fConfig.fieldType)) {
             let map = fConfig.fieldType == 'truefalse' ? ['False', 'True'] : ['No', 'Yes'];
-            colConfig.render = (data, type, row, meta) => map[data] || fConfig.default;
+            colConfig.render = (data, _type, _row, _meta) => map[data] || fConfig.default;
         } else if (fConfig.fieldType == "checkbox") {
-            colConfig.render = (data, type, row, meta) => typeof data == "object" ?
+            colConfig.render = (data, _type, _row, _meta) => typeof data == "object" ?
                 Object.keys(Object.filter(data, x => x == "1")).map(x => fConfig.map[x]).join(', ') || fConfig.default : fConfig.default;
         } else if (fConfig.isFormStatus) {
-            colConfig.render = (data, type, row, meta) => ['Incomplete', 'Unverified', 'Complete'][data];
+            colConfig.render = (data, _type, _row, _meta) => ['Incomplete', 'Unverified', 'Complete'][data];
         } else if (colConfig.data == "call_event_name") {
-            colConfig.render = (data, type, row, meta) => CallLog.eventNameMap[data] || "";
+            colConfig.render = (data, _type, _row, _meta) => CallLog.eventNameMap[data] || "";
         } else if (fConfig.validation == 'phone') {
-            colConfig.render = (data, type, row, meta) => (data && (type === 'filter')) ? data.replace(/[\\(\\)\\-\s]/g, '') : data || "";
+            colConfig.render = (data, type, _row, _meta) => (data && (type === 'filter')) ? data.replace(/[\\(\\)\\-\s]/g, '') : data || "";
         } else if (Object.keys(CallLog.usernameLists).includes(fConfig.field)) {
-            colConfig.render = (data, type, row, meta) => data ? data.includes($("#username-reference").text()) ? CallLog.usernameLists[fConfig.field]['include'] : CallLog.usernameLists[fConfig.field]['exclude'] : "";
+            colConfig.render = (data, _type, _row, _meta) => data ? data.includes($("#username-reference").text()) ? CallLog.usernameLists[fConfig.field]['include'] : CallLog.usernameLists[fConfig.field]['exclude'] : "";
         }
 
         // Build out any links
         if (fConfig.link != "none") {
+
             let url;
-            if (fConfig.link == "home")
-                url = '../DataEntry/record_home.php?pid=' + pid + '&id=RECORD';
-            else if (fConfig.link == "call")
-                url = '../DataEntry/index.php?pid=' + pid + '&id=RECORD&event_id=' + CallLog.events.callLog.id + '&page=' + CallLog.static.instrumentLower + '&instance=INSTANCE&call_id=CALLID&showReturn=1';
-            else if (fConfig.link == "instrument")
-                url = '../DataEntry/index.php?pid=' + pid + '&id=RECORD&event_id=' + fConfig.linkedEvent + '&page=' + fConfig.linkedInstrument;
-            colConfig.createdCell = function(td, cellData, rowData, row, col) {
+            switch (fConfig.link ) {
+                case "home":
+                    url = `../DataEntry/record_home.php?pid=${pid}&id=RECORD`;
+                break;
+                case "call":
+                    url = `../DataEntry/index.php?pid=${pid}&id=RECORD&event_id=${CallLog.events.callLog.id}&page=${CallLog.static.instrumentLower}&instance=INSTANCE&call_id=CALLID&showReturn=1`;
+                break;
+                case "instrument":
+                    url = `../DataEntry/index.php?pid=${pid}&id=RECORD&event_id=${fConfig.linkedEvent}&page=${fConfig.linkedInstrument}`;
+                break;
+            }
+
+            colConfig.createdCell = function(td, cellData, rowData, _row, _col) {
                 let thisURL = url.replace('RECORD', rowData[CallLog.static.record_id]).
                 replace('INSTANCE', rowData['_nextInstance']).
                 replace('CALLID', rowData['_call_id']);
                 let dt = "";
+
                 if (rowData['call_callback_date'] && rowData['call_callback_time']) {
-                    dt = rowData['call_callback_date'] + " " + rowData['call_callback_time'];
-                } else if (rowData['call_callback_date']) {
-                    dt = rowData['call_callback_date'] + " 00:00:00";
-                } else if (rowData['call_callback_time']) {
-                    dt = today + " " + rowData['call_callback_time'];
+                    dt = `${rowData['call_callback_date']} ${rowData['call_callback_time']}`;
+                } 
+                else if (rowData['call_callback_date']) {
+                    dt = `${rowData['call_callback_date']}  00:00:00`;
+                } 
+                else if (rowData['call_callback_time']) {
+                    dt = `${today} ${rowData['call_callback_time']}`;
                 }
+
                 let record = rowData[CallLog.static.record_id];
                 let id = rowData['_call_id'];
-                $(td).html("<a onclick=\"CallLog.fn.callURLclick(" + record + ",'" + id + "','" + thisURL + "','" + dt + "')\">" + cellData + "</a>");
+                $(td).html(`<a onclick='CallLog.fn.callURLclick(${record},"${id}","${thisURL}","${dt}")'>${cellData}</a>`);
             }
         }
 
@@ -124,7 +213,7 @@ CallLog.fn.createColConfig = function(index, tab_id) {
         if (fConfig.expanded) {
             colConfig.visible = false;
             colConfig.className = 'expandedInfo';
-            CallLog.childRows[tab_id] += '<div class="row">' + fConfig.displayName + '</div>';
+            CallLog.childRows[tab_id] += `<div class="row">${fConfig.displayName}</div>`;
         }
 
         //Done
@@ -142,7 +231,7 @@ CallLog.fn.createColConfig = function(index, tab_id) {
         cols.push({
             title: 'Missed Date',
             data: '_appt_dt',
-            render: (data, type, row, meta) =>
+            render: (data, type, _row, _meta) =>
                 (type === 'display' || type === 'filter') ? formatDate(new Date(data), CallLog.defaultDateTimeFormat).toLowerCase() || "Not Specified" : data || "Not Specified"
         });
     }
@@ -153,7 +242,7 @@ CallLog.fn.createColConfig = function(index, tab_id) {
         cols.push({
             title: 'Call on',
             data: '_adhocContactOn',
-            render: function(data, type, row, meta) {
+            render: function(data, type, _row, _meta) {
                 if (type === 'display' || type === 'filter') {
                     let format = data.length <= 10 ? CallLog.defaultDateFormat : CallLog.defaultDateTimeFormat;
                     data = data.length <= 10 ? data + "T00:00" : data;
@@ -178,7 +267,7 @@ CallLog.fn.createColConfig = function(index, tab_id) {
         title: 'Call Back & Info',
         name: 'callbackCol',
         className: 'callbackCol',
-        render: function(data, type, row, meta) {
+        render: function(_data, type, row, _meta) {
             let displayDate = '';
             if (row['call_requested_callback'] && row['call_requested_callback'][1] == '1') {
                 if (row['call_callback_date'])
@@ -213,7 +302,7 @@ CallLog.fn.createColConfig = function(index, tab_id) {
 
 CallLog.fn.callURLclick = function(record, call_id, url, callbackDateTime) {
     event.stopPropagation();
-    if (callbackDateTime && (new Date() < (new Date(callbackDateTime) - CallLog.earlyCall5min)) ) {
+    if (callbackDateTime && (new Date() < (new Date(callbackDateTime) - CallLog.earlyCall)) ) {
         Swal.fire({
             title: 'Calling Early?',
             text: "This subject has a callback scheduled, you may not want to call them now.",
@@ -265,12 +354,6 @@ CallLog.fn.endCall = function(record, call_id) {
     });
 }
 
-CallLog.fn.toggleHiddenCalls = function() {
-    CallLog.hideCalls = !CallLog.hideCalls;
-    CallLog.fn.toggleCallBackCol();
-    $('*[data-toggle="tooltip"]').tooltip(); //Enable Tooltips for the info icon
-}
-
 CallLog.fn.toggleCallBackCol = function() {
     $('.callTable').each(function() {
         $(this).DataTable().column('callbackCol:name').visible(CallLog.alwaysShowCallbackCol || !CallLog.hideCalls);
@@ -296,11 +379,11 @@ CallLog.fn.refreshTableData = function() {
                 });
                 return;
             }
-            let [packagedCallData, tabConfig, alwaysShowCallbackCol, timeTaken, issues] = routerData.data;
+            let [packagedCallData, tabConfig, alwaysShowCallbackCol, timeTaken] = routerData.data;
             CallLog.packagedCallData = packagedCallData;
             CallLog.alwaysShowCallbackCol = alwaysShowCallbackCol;
 
-            $('.callTable').each(function(index, el) {
+            $('.callTable').each(function(_index, el) {
                 let table = $(el).DataTable();
                 let page = table.page.info().page;
                 let tab_id = $(el).closest('.tab-pane').prop('id');
@@ -332,13 +415,13 @@ CallLog.fn.noCallsToday = function(record, call_id) {
             id: call_id
         },
         error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-        success: (data) => CallLog.fn.refreshTableData()
+        success: (_data) => CallLog.fn.refreshTableData()
     });
 }
 
 CallLog.fn.updateDataCache = function(tab_id) {
     CallLog.displayedData[tab_id] = [];
-    let table = $("#" + tab_id + " table").DataTable();
+    let table = $(`#${tab_id}table`).DataTable();
     let headers = CallLog.colConfig[tab_id].map(x => x.data);
     CallLog.displayedData[tab_id] = table.rows().data().toArray().map(x => Object.filterKeys(x, headers));
 }
