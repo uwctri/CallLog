@@ -389,8 +389,9 @@ CallLog.fn.refreshTableData = function() {
                 let tab_id = $(el).closest('.tab-pane').prop('id');
                 table.clear();
                 table.rows.add(CallLog.packagedCallData[tab_id]);
-                if (CallLog.alwaysShowCallbackCol && ArraysEqual(table.order()[0], [1, "asc"]))
-                    table.order([
+                let order = table.order()[0];
+                if (CallLog.alwaysShowCallbackCol && order[0] == 1 && order[1] == "asc")
+                    table.order([ // Order by call back times if previous ordered by record_id
                         [CallLog.colConfig[tab_id].length - 1, "desc"]
                     ]);
                 table.draw();

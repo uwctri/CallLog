@@ -25,7 +25,7 @@ $(document).ready(function() {
     // Handle the CTRI Study Managment Table too
     let src = "";
     let c = $(`#systemManagementTable td:contains(${CallLog.static.instrument})`);
-    if (c) {
+    if (c.length) {
         $(c).find('a, button').hide();
         $(c).find('a').after(callStlye);
         if ($(c).find('button').length) {

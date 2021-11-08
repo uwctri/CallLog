@@ -19,23 +19,12 @@ CallLog.html.callStartedWarning = `
     <br>
 </div>`;
 
-CallLog.css.hideSaveTip = `<style>#formSaveTip{display:none!important}</style>`;
-CallLog.css.hideSaveTipButtons = `<style>#formSaveTip .btn-group{display:none!important}</style>`;
-
-function ArraysEqual(a1, a2) {
-    var i = a1.length;
-    while (i--) {
-        if (a1[i] !== a2[i]) return false;
-    }
-    return true
-}
-
 function to24hr(t) {
     let isPM = t.includes('P');
-    t = t.toLowerCase().replaceAll(/[amp ]/g,'');
+    t = t.toLowerCase().replaceAll(/[amp ]/g, '');
     if (!isPM) return t;
-    let [h,m] = t.split(':');
-    return h==12 ? t : `${parseInt(h)+12}:${m}`;
+    let [h, m] = t.split(':');
+    return h == 12 ? t : `${parseInt(h)+12}:${m}`;
 }
 
 Date.prototype.addDays = (days) => new Date(this.setDate(this.getDate() + days));
@@ -62,7 +51,7 @@ CallLog.fn.isCallLogNext = function() {
 CallLog.fn.addGoToCallLogButton = function() {
     if (!CallLog.fn.isCallLogNext())
         return;
-    $("head").append(CallLog.css.hideSaveTipButtons);
+    $("#formSaveTip .btn-group").addClass('d-none');
     $("#__SUBMITBUTTONS__-div .btn-group").hide();
     let el = $("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
     el.clone(true).off().attr('onclick', 'CallLog.fn.goToCallLog()').prop('id', 'goto-call-log').text('Save & Go To Call Log').insertAfter(el);
@@ -113,7 +102,7 @@ $(document).ready(function() {
     CallLog.fn.formatNavForCalls()
     CallLog.fn.addGoToCallLogButton();
     if (CallLog.recentCaller) {
-        $("#questiontable").before(CallLog.html.callStartedWarning.replace("USERNAME",CallLog.userNameMap[CallLog.recentCaller]));
+        $("#questiontable").before(CallLog.html.callStartedWarning.replace("USERNAME", CallLog.userNameMap[CallLog.recentCaller]));
     }
     CallLog.fn.modifyRequiredPopup();
 });

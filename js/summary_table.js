@@ -109,7 +109,7 @@ CallLog.fn.buildCallSummaryTable = function() {
                     record: getParameterByName('id'),
                     metadata: JSON.stringify(CallLog.metadata)
                 },
-                error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " + errorThrown),
+                error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
                 success: (data) => {
                     // Force page reload
                     window.onbeforeunload = function() {};
@@ -166,7 +166,7 @@ CallLog.fn.buildCallSummaryTable = function() {
                     route: 'callDelete',
                     record: getParameterByName('id')
                 },
-                error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " + errorThrown),
+                error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
                 success: (data) => {
                     let url = new URL(location.href);
                     url.searchParams.set('instance', instance);
@@ -179,7 +179,7 @@ CallLog.fn.buildCallSummaryTable = function() {
 }
 
 $(document).ready(function() {
-    // Don't load here, the "call_log.js" script will call our build
+    // Don't load here, the "call_log.js" script will build
     if (getParameterByName('page') == CallLog.static.instrumentLower)
         return;
     // Build that table
