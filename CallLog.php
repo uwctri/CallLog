@@ -24,12 +24,10 @@ class CallLog extends AbstractExternalModule  {
     public $startedCallGrace = '30';
     
     // CDN Links
-    private $datatablesCSS = "https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css";
-    private $datatablesJS = "https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js";
+    // We also use SweetAlerts and DataTables, but these are apart of Redcap already
     private $flatpickrCSS = "https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css";
     private $flatpickrJS  = "https://cdn.jsdelivr.net/npm/flatpickr";
     private $cookieJS = "https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js";
-    
     
     /////////////////////////////////////////////////
     // REDCap Hooks
@@ -80,7 +78,6 @@ class CallLog extends AbstractExternalModule  {
         // Index of Call List
         if (strpos(PAGE, 'ExternalModules/index.php') !== false && $project_id != NULL) {
             $this->includeCookies();
-            $this->includeDataTables();
             $this->includeCss('css/list.css');
             $this->includeJs('js/call_list.js');
             $this->passArgument('usernameLists', $this->getUserNameListConfig());
@@ -95,7 +92,6 @@ class CallLog extends AbstractExternalModule  {
             $this->passArgument('data', $this->getAllCallData($project_id, $record));
             $this->passArgument('eventNameMap', $this->getEventNameMap());
             $this->passArgument('adhoc', $this->loadAdhocTemplateConfig());
-            $this->includeDataTables();
             $this->includeFlatpickr();
             $this->includeCss('css/log.css');
             $this->includeJs('js/summary_table.js');
@@ -103,7 +99,6 @@ class CallLog extends AbstractExternalModule  {
         } elseif ( in_array($instrument, $summary) ) {
             $this->passArgument('metadata', $this->getCallMetadata($project_id, $record));
             $this->passArgument('data', $this->getAllCallData($project_id, $record));
-            $this->includeDataTables();
             $this->includeCss('css/log.css');
             $this->includeJs('js/summary_table.js');
         }
@@ -482,7 +477,7 @@ class CallLog extends AbstractExternalModule  {
         $meta = $this->getCallMetadata($project_id, $record);
         if ( empty($meta) )
             return;
-        $grace = strtotime('-'.$this->startedCallGrace.' minutes');
+        $grace = strtotime('-'.$this->startedCallGrace.' minutes'); // grace minutes ago
         $now = date("Y-m-d H:i");
         $user = $this->framework->getUser()->getUsername();
         foreach( $meta as $id=>$call ) {
@@ -1043,11 +1038,6 @@ class CallLog extends AbstractExternalModule  {
     
     private function includeCookies() {
         echo '<script type="text/javascript" src="'.$this->cookieJS.'"></script>';
-    }
-    
-    private function includeDataTables() {
-        echo '<link rel="stylesheet" href="'.$this->datatablesCSS.'"/>';
-        echo '<script type="text/javascript" src="'.$this->datatablesJS.'"></script>';
     }
     
     private function includeJs($path) {

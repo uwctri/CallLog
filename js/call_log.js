@@ -1,6 +1,9 @@
 CallLog.html = CallLog.html || {};
 CallLog.fn = CallLog.fn || {};
-CallLog.css = CallLog.css || {};
+
+// Prevent redcap from creating the tooltip on call log
+// Creates too many issues with features
+window.displayFormSaveBtnTooltip = function() {}
 
 CallLog.html.wrapper = `
 <tr style="border: 1px solid #ddd"><td colspan="2">
@@ -101,30 +104,6 @@ CallLog.html.adhocModal = `
 </div>
 `;
 
-CallLog.css.optional = `
-<style>
-    .formHeader {
-        background-color: #675186;
-        color: #FBE5D6;
-        font-weight: normal;
-        font-size: 2.5rem;
-        text-align: center;
-    }
-    .formSxnHeader {
-        background-color: #67B094;
-        color: #f7ecec;
-        font-weight: normal;
-        font-size: 2rem;
-        text-align: center;
-    }
-</style>`;
-
-// Debug function, show all hidden fields
-CallLog.fn.callAdminEdit = function() {
-    $("*[class='@HIDDEN']").show();
-    $("#__SUBMITBUTTONS__-tr").hide();
-}
-
 // Debug function, easily save the metadata after directly editing it
 CallLog.fn.saveMetadata = function() {
     $.ajax({
@@ -135,7 +114,7 @@ CallLog.fn.saveMetadata = function() {
             record: getParameterByName('id'),
             metadata: JSON.stringify(CallLog.metadata)
         },
-        error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " + errorThrown),
+        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
         success: (data) => console.log(data)
     });
 }
@@ -156,7 +135,7 @@ CallLog.fn.saveCalldata = function(instance, dataVar, dataVal, isCheckbox) {
             dataVal: dataVal,
             isCheckbox: isCheckbox
         },
-        error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " + errorThrown),
+        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
         success: (data) => console.log(data)
     });
 }
@@ -328,7 +307,7 @@ CallLog.fn.buildAdhocMenu = function() {
                     notes: $(`#${adhoc.id} textarea[name=notes]`).val(),
                     reporter: CallLog.userNameMap[$("#username-reference").text()]
                 },
-                error: (jqXHR, textStatus, errorThrown) => console.log(textStatus + " " + errorThrown),
+                error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
                 success: function(data) {
                     // Data is thrown out
                     window.onbeforeunload = function() {};
@@ -341,7 +320,6 @@ CallLog.fn.buildAdhocMenu = function() {
 }
 
 CallLog.fn.addGoToCallListButton = function() {
-    $("head").append(CallLog.css.hideSaveTip);
     $("#__SUBMITBUTTONS__-div .btn-group").hide();
     let el = $("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
     el.clone(true).off().attr('onclick', 'CallLog.fn.goToCallList()').prop('id', 'goto-call-list').text('Save & Go To Call List').insertAfter(el);
@@ -357,8 +335,9 @@ $(document).ready(function() {
     }
 
     // Load some Default CSS if none exists 
-    if ($('.formHeader').css('text-align') != 'center')
-        $('head').append(CallLog.css.optional);
+    if ($('.formHeader').css('text-align') != 'center') {
+        $(".formSxnHeader, .formHeader").addClass('optionalCSS');
+    }
 
     // Hide a few things for style
     $("#formtop-div").hide();
