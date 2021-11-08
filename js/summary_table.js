@@ -8,6 +8,7 @@ CallLog.html.callHistoryTable = `
     <table class="callSummaryTable compact" style="width:100%">
     </table>
 </div>`;
+
 CallLog.html.callHistorySettings = `
 <div class="row">
     <div class="col">
@@ -19,6 +20,7 @@ CallLog.html.callHistorySettings = `
     <label class="col-9" for="callToggle">Call Name</label>
     <div class="col-3">Complete</div>
 </div>`;
+
 CallLog.html.callHistoryRow = `
 <div class="row">
     <label class="col-9 text-left" for="callToggle">CALLNAME</label>
