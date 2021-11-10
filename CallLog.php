@@ -1113,11 +1113,8 @@ class CallLog extends AbstractExternalModule  {
             if ( !$this->isInDAG($record) )
                 continue;
             
-            // Check if withdrawn or tmp withdrawn
-            if ( $recordData[$withdraw['event']][$withdraw['var']] )
-                continue; 
-            if ( $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']] && $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']]<$today )
-                continue;
+            // Previously we checked for withdrawn status here, but end-users wanted
+            // subjects to remain on the call list if they had a call back scheduled
             
             $meta = json_decode($recordData[$metaEvent][$this->metadataField],true);
             
@@ -1159,7 +1156,7 @@ class CallLog extends AbstractExternalModule  {
                 $instanceData['_callbackNotToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] > $today);
                 $instanceData['_callbackToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] <= $today);
                 
-                // If no call back will happen today then check for autoremove conditions
+                // If no call back will happen today then check for autoremove and withdrawn conditions
                 if ( !$instanceData['_callbackToday'] ) {
                     
                     // Skip MCV calls if past the autoremove date. Need Instance data for this
@@ -1169,7 +1166,14 @@ class CallLog extends AbstractExternalModule  {
                     // Skip Scheduled Visit calls if past the autoremove date. Need Instance data for this
                     if ( ($call['template'] == 'visit') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
                         continue;
-                
+                    
+                    // Check if withdrawn or tmp withdrawn
+                    // Checking here means that a scheduled call back on any call overrides our flag
+                    if ( $recordData[$withdraw['event']][$withdraw['var']] )
+                        continue; 
+                    if ( $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']] && $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']]<$today )
+                        continue;
+                    
                 }
                 
                 // Set global if any Callback will be shown, done after our last check to skip a call
