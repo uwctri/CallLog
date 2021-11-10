@@ -344,8 +344,10 @@ class CallLog extends AbstractExternalModule  {
         foreach( $config as $i=>$callConfig ) {
             $data = REDCap::getData($project_id,'array',$record,[$callConfig['apptDate'],$callConfig['indicator']])[$record];
             $prevEvent = $orderedEvents[array_search($callConfig['event'], $orderedEvents)-1];
-            // If previous indicator is set (i.e. it was attended) and current event's appt_date is blank, and its not attended then set need to schedule.
-            if ( empty($meta[$callConfig['id']]) && !empty($data[$prevEvent][$callConfig['indicator']]) && empty($data[$callConfig['event']][$callConfig['apptDate']]) && empty($data[$callConfig['event']][$callConfig['indicator']])) {
+            // If previous indicator is set (i.e. it was attended) and current event's appt_date is blank, and its not attended then set need to schedule. Also check that skip is either not configured or that it is not-truthy (i.e. 0 or empty).
+            if ( empty($meta[$callConfig['id']]) && !empty($data[$prevEvent][$callConfig['indicator']]) && empty($data[$callConfig['event']][$callConfig['apptDate']]) && empty($data[$callConfig['event']][$callConfig['indicator']]) && 
+            (empty($callConfig['skip']) || !$data[$callConfig['event']][$callConfig['skip']]) 
+            ) {
                 $meta[$callConfig['id']] = [
                     "template" => 'nts',
                     "event_id" => $callConfig['event'],
