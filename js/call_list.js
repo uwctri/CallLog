@@ -390,7 +390,7 @@ CallLog.fn.refreshTableData = function() {
                 table.clear();
                 table.rows.add(CallLog.packagedCallData[tab_id]);
                 let order = table.order()[0];
-                if (CallLog.alwaysShowCallbackCol && order[0] == 1 && order[1] == "asc")
+                if (CallLog.alwaysShowCallbackCol && order[0] <= 1 && order[1] == "asc")
                     table.order([ // Order by call back times if previous ordered by record_id
                         [CallLog.colConfig[tab_id].length - 1, "desc"]
                     ]);
