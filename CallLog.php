@@ -1156,7 +1156,17 @@ class CallLog extends AbstractExternalModule  {
                 $instanceData['_callbackNotToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] > $today);
                 $instanceData['_callbackToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] <= $today);
                 
-                // If no call back will happen today then check for autoremove and withdrawn conditions
+                // Adhoc call time and reason
+                if ( $call['template'] == 'adhoc' ) {
+                    $instanceData['_adhocReason'] = $adhoc['config'][$callID]['reasons'][$call['reason']];
+                    $instanceData['_adhocContactOn'] = $call['contactOn'];
+                    $instanceData['_adhocToday'] = $call['contactOn'] == "" || explode(' ', $call['contactOn'])[0] <= $today; // Not used currently
+                    $notes = $call['initNotes'] ?  $call['initNotes'] : "No Notes Taken";
+                    if ( $call['reporter'] != "" ) 
+                        $instanceData['_callNotes'] .= $call['reported'].'||'.$call['reporter'].'||'.'&nbsp;'.'||'.$notes.'|||';
+                }
+                
+                // If no call back (or adhoc) will happen today then check for autoremove and withdrawn conditions
                 if ( !$instanceData['_callbackToday'] ) {
                     
                     // Skip MCV calls if past the autoremove date. Need Instance data for this
@@ -1225,15 +1235,6 @@ class CallLog extends AbstractExternalModule  {
                 // Not certain if we actualy need this. Need to investigate
                 if ( $call['template'] == 'mcv' ) {
                     $instanceData['_appt_dt'] = $call['appt'];
-                }
-                
-                // Adhoc call time and reason
-                if ( $call['template'] == 'adhoc' ) {
-                    $instanceData['_adhocReason'] = $adhoc['config'][$callID]['reasons'][$call['reason']];
-                    $instanceData['_adhocContactOn'] = $call['contactOn'];
-                    $notes = $call['initNotes'] ?  $call['initNotes'] : "No Notes Taken";
-                    if ( $call['reporter'] != "" ) 
-                        $instanceData['_callNotes'] .= $call['reported'].'||'.$call['reporter'].'||'.'&nbsp;'.'||'.$notes.'|||';
                 }
                 
                 // Make sure we 100% have a call ID (first attempt at a call won't get it from the normal data)
