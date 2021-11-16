@@ -2,7 +2,6 @@
 
 namespace UWMadison\CallLog;
 use ExternalModules\AbstractExternalModule;
-use ExternalModules\ExternalModules;
 use REDCap;
 use User;
 
@@ -176,6 +175,7 @@ class CallLog extends AbstractExternalModule  {
     
     public function metadataFollowup($project_id, $record) {
         $config = $this->loadCallTemplateConfig()["followup"];
+        $disableRounding = $this->getProjectSetting('disable_rounding');
         if ( empty($config) )
             return;
         $meta = $this->getCallMetadata($project_id, $record);
@@ -191,8 +191,8 @@ class CallLog extends AbstractExternalModule  {
                 $end = $callConfig['days'] + $callConfig['length'];
                 $end = date('Y-m-d', strtotime( $data[$callConfig['event']][$callConfig['field']].' +'.$end.' days'));
                 $meta[$callConfig['id']] = [
-                    "start" => $this->roundDate($start, 'down'),
-                    "end" => $this->roundDate($end, 'up'),
+                    "start" => $disableRounding ? $start : $this->roundDate($start, 'down'),
+                    "end" => $disableRounding ? $end : $this->roundDate($end, 'up'),
                     "template" => 'followup',
                     "event_id" => $callConfig['event'],
                     "event" => $eventMap[$callConfig['event']],
@@ -208,10 +208,10 @@ class CallLog extends AbstractExternalModule  {
             } elseif (!empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "" ) {
                 // Update the start/end dates if the call exists and the anchor isn't blank 
                 $start = date('Y-m-d', strtotime( $data[$callConfig['event']][$callConfig['field']].' +'.$callConfig['days'].' days'));
-                $start = $this->roundDate($start, 'down');
+                $start = $disableRounding ? $start : $this->roundDate($start, 'down');
                 $end = $callConfig['days'] + $callConfig['length'];
                 $end = date('Y-m-d', strtotime( $data[$callConfig['event']][$callConfig['field']].' +'.$end.' days'));
-                $end = $this->roundDate($end, 'up');
+                $end = $disableRounding ? $end : $this->roundDate($end, 'up');
                 if ( ($meta[$callConfig['id']]['start'] != $start) || ($meta[$callConfig['id']]['end'] != $end) ) {
                     $meta[$callConfig['id']]['start'] = $start;
                     $meta[$callConfig['id']]['end'] = $end;
@@ -461,7 +461,10 @@ class CallLog extends AbstractExternalModule  {
     public function metadataNoCallsToday($project_id, $record, $call_id) {
         $meta = $this->getCallMetadata($project_id, $record);
         if ( !empty($meta) && !empty($meta[$call_id]) ) {
-            $meta[$call_id]['noCallsToday'] = date('Y-m-d');
+            if ( !is_array($meta[$call_id]['noCallsToday']) ) {
+                $meta[$call_id]['noCallsToday'] = [];
+            }
+            $meta[$call_id]['noCallsToday'][] = date('Y-m-d');
             return $this->saveCallMetadata($project_id, $record, $meta);
         }
     }
@@ -1184,10 +1187,13 @@ class CallLog extends AbstractExternalModule  {
                 // Check if the call was recently opened
                 $instanceData['_callStarted'] = strtotime($call['callStarted']) > strtotime('-'.$this->startedCallGrace.' minutes');
                 
-                // Check if No Calls Today flag is set
-                if ( $call['noCallsToday'] == $today )
+                // Check if No Calls Today flag is set ( todo - remove the '==', we don't use strings here anymore )
+                if ( $today == $call['noCallsToday'] || in_array($today, $call['noCallsToday']) )
                     $instanceData['_noCallsToday'] = true;
                 
+                // Save the no call history
+                $instanceData['_noCallHistory'] = $call['noCallsToday'];
+
                 // Check if we are at max call attempts for the day
                 // While we are at it, assemble all of the note data too
                 $attempts = $recordData[$callEvent]['call_open_date'] == $today ? 1 : 0;

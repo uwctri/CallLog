@@ -105,15 +105,3 @@ $(document).ready(function() {
     </div>
     <?php } ?>
 </div>
-<template>
-    <i class="noCallsTodayIcon fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="A provider requested that this subject not be contacted today."></i>
-    <i class="maxCallsTodayIcon fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="This subject has been called the maximum number of times today."></i>
-    <div class="callBackIcon">
-        <i class="fas fa-stopwatch mr-1" data-toggle="tooltip" data-placement="left" title="Subject's requested callback time"></i>
-        {{DISPLAYDATE}}
-        <span class="callbackRequestor" data-toggle="tooltip" data-placement="left" title="Callback set by {{REQUESTEDBY}}">{{LETTER}}</span>
-    </div>
-    <span class="phoneIcon" style="font-size:2em;color:#dc3545;">
-        <i class="fas fa-phone-square-alt" data-toggle="tooltip" data-placement="left" title="This subject may already be in a call."></i>
-    </span>
-</template>
