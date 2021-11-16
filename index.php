@@ -9,13 +9,12 @@ CallLog.tabs = <?php echo json_encode($tabs); ?>;
 
 $(document).ready(function() {
     
-    CallLog.template = $($("template").prop('content'));
-
     // Setup search, must happen before table init
     CallLog.fn.setupSearch();
     
     // Main table build out
     $('.callTable').each( function(index,el) {
+        
         let tab_id = $(el).closest('.tab-pane').prop('id');
         CallLog.childRows[tab_id] = "";
         CallLog.colConfig[tab_id] = CallLog.fn.createColConfig(index, tab_id);
