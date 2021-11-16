@@ -1,23 +1,7 @@
 CallLog.defaultDateFormat = 'MM-dd-y';
 CallLog.defaultDateTimeFormat = 'MM-dd-y hh:mma';
-CallLog.html = CallLog.html || {};
 CallLog.fn = CallLog.fn || {};
 CallLog.css = CallLog.css || {};
-
-CallLog.html.callStartedWarning = `
-<div class="alert alert-danger" style="text-align:center" role="alert">
-    <br>
-    <div class="row">
-        <div class="col-1"><i class="fas fa-exclamation-triangle h2 mt-1"></i></div>
-        <div class="col-10 h6">
-            This subject's record was recently opened from the Call List by USERNAME.
-            <br>
-            They may currently be on the phone with the subject.
-        </div>
-        <div class="col-1"><i class="fas fa-exclamation-triangle h2 mt-1"></i></div>
-    </div>
-    <br>
-</div>`;
 
 function to24hr(t) {
     let isPM = t.includes('P');
@@ -98,11 +82,18 @@ CallLog.fn.formatNavForCalls = function() {
     $(a).prev().find('img').hide().after('<i class="fas fa-phone"></i>')
 }
 
+CallLog.fn.loadTemplates = function() {
+    CallLog.templates = {};
+    $.each($("template[id=CallLog]").prop('content').children, (_, el) =>
+        CallLog.templates[$(el).prop('id')] = $(el).prop('outerHTML'));
+}
+
 $(document).ready(function() {
-    CallLog.fn.formatNavForCalls()
+    CallLog.fn.loadTemplates();
+    CallLog.fn.formatNavForCalls();
     CallLog.fn.addGoToCallLogButton();
     if (CallLog.recentCaller) {
-        $("#questiontable").before(CallLog.html.callStartedWarning.replace("USERNAME", CallLog.userNameMap[CallLog.recentCaller]));
+        $("#questiontable").before(CallLog.templates.callStartedWarning.replace("USERNAME", CallLog.userNameMap[CallLog.recentCaller]));
     }
     CallLog.fn.modifyRequiredPopup();
 });

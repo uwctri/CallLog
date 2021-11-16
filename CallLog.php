@@ -26,7 +26,6 @@ class CallLog extends AbstractExternalModule  {
     // We also use SweetAlerts and DataTables, but these are apart of Redcap already
     private $flatpickrCSS = "https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css";
     private $flatpickrJS  = "https://cdn.jsdelivr.net/npm/flatpickr";
-    private $cookieJS = "https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js";
     
     /////////////////////////////////////////////////
     // REDCap Hooks
@@ -61,6 +60,7 @@ class CallLog extends AbstractExternalModule  {
         if ( !defined("USERID") ) //Skip if user isn't logged in.
             return;
         
+        include('templates.php');
         $this->initGlobal();
         $this->includeJs('js/every_page.js');
         
@@ -76,7 +76,7 @@ class CallLog extends AbstractExternalModule  {
         
         // Index of Call List
         if (strpos(PAGE, 'ExternalModules/index.php') !== false && $project_id != NULL) {
-            $this->includeCookies();
+            $this->includeJs('js/cookie.min.js');
             $this->includeCss('css/list.css');
             $this->includeJs('js/call_list.js');
             $this->passArgument('usernameLists', $this->getUserNameListConfig());
@@ -1039,10 +1039,6 @@ class CallLog extends AbstractExternalModule  {
     private function includeFlatpickr() {
         echo '<link rel="stylesheet" href="'.$this->flatpickrCSS.'">';
         echo '<script src="'.$this->flatpickrJS.'"></script>';
-    }
-    
-    private function includeCookies() {
-        echo '<script type="text/javascript" src="'.$this->cookieJS.'"></script>';
     }
     
     private function includeJs($path) {

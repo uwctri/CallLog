@@ -1,4 +1,3 @@
-CallLog.html = CallLog.html || {};
 CallLog.fn = CallLog.fn || {};
 CallLog.hideCalls = true;
 CallLog.childRows = {};
@@ -10,11 +9,6 @@ CallLog.cookie = {};
 CallLog.alwaysShowCallbackCol = false;
 CallLog.earlyCall = 5 * 60 * 1000; // Grace time on early calling of 5 mins
 CallLog.pageRefresh = 5 * 60 * 1000; // Refresh page every 5 minutes
-
-CallLog.html.noCallsToday = '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="A provider requested that this subject not be contacted today."></i>';
-CallLog.html.atMaxAttempts = '<i class="fas fa-info-circle float-left infocircle" data-toggle="tooltip" data-placement="left" title="This subject has been called the maximum number of times today."></i>';
-CallLog.html.callBack = '<i class="fas fa-stopwatch mr-1" data-toggle="tooltip" data-placement="left" title="Subject\'s requested callback time"></i>DISPLAYDATE<span class="callbackRequestor" data-toggle="tooltip" data-placement="left" title="Callback set by REQUESTEDBY">LETTER</span>';
-CallLog.html.phoneIcon = '<span style="font-size:2em;color:#dc3545;"><i class="fas fa-phone-square-alt" data-toggle="tooltip" data-placement="left" title="This subject may already be in a call."></i></span>'
 
 CallLog.fn.setupSearch = function() {
 
@@ -118,7 +112,7 @@ CallLog.fn.createColConfig = function(index, tab_id) {
         data: '_callStarted',
         bSortable: false,
         className: 'callStarted',
-        render: (data) => data ? CallLog.html.phoneIcon : ''
+        render: (data) => data ? CallLog.templates.phoneIcon : ''
     }];
 
     $.each(CallLog.tabs['config'][index]['fields'], function(colIndex, fConfig) {
@@ -270,28 +264,37 @@ CallLog.fn.createColConfig = function(index, tab_id) {
         render: function(_data, type, row, _meta) {
             let displayDate = '';
             if (row['call_requested_callback'] && row['call_requested_callback'][1] == '1') {
-                if (row['call_callback_date'])
+
+                if (row['call_callback_date']) {
                     displayDate += formatDate(new Date(row['call_callback_date'] + 'T00:00:00'), CallLog.defaultDateFormat) + " ";
+                }
+
                 displayDate += row['call_callback_time'] ? format_time(row['call_callback_time']) : "";
-                if (!displayDate)
+                if (!displayDate) {
                     displayDate = "Not specified";
+                }
             }
+
             let requestedBy = row['call_callback_requested_by'] ? row['call_callback_requested_by'] == '1' ? 'Participant' : 'Staff' : ' ';
             if (type === 'display') {
                 let display = '';
-                if (row['_noCallsToday'])
-                    display += CallLog.html.noCallsToday;
-                if (row['_atMaxAttempts'])
-                    display += CallLog.html.atMaxAttempts;
-                if (displayDate)
-                    display += CallLog.html.callBack.replace('DISPLAYDATE', displayDate).replace('REQUESTEDBY', requestedBy).replace('LETTER', requestedBy[0]);
+                if (row['_noCallsToday']) {
+                    display += CallLog.templates.noCallsToday;
+                }
+                if (row['_atMaxAttempts']) {
+                    display += CallLog.templates.atMaxAttempts;
+                }
+                if (displayDate) {
+                    display += CallLog.templates.callBack
+                        .replace('DISPLAYDATE', displayDate)
+                        .replace('REQUESTEDBY', requestedBy)
+                        .replace('LETTER', requestedBy[0]);
+                }
                 return display;
             } else if (type === 'filter') {
-                if (displayDate)
-                    return displayDate;
+                if (displayDate) return displayDate;
             } else {
-                if (displayDate)
-                    return `${row['call_callback_date']} ${row['call_callback_time']}`;
+                if (displayDate) return `${row['call_callback_date']} ${row['call_callback_time']}`;
             }
             return '';
         }
