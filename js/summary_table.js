@@ -1,38 +1,5 @@
-CallLog.html = CallLog.html || {};
 CallLog.fn = CallLog.fn || {};
 CallLog.callSummaryPageSize = 20;
-
-CallLog.html.callClosed = `<br><span style='float:right'><b>Call Log Closed</b></span>`;
-CallLog.html.callHistoryTable = `
-<div class="callHistoryContainer">
-    <table class="callSummaryTable compact" style="width:100%">
-    </table>
-</div>`;
-
-CallLog.html.callHistorySettings = `
-<div class="row">
-    <div class="col">
-        You can toggle the complete flag for all calls on this subject below.
-    </div>
-</div>
-<br>
-<div class="row">
-    <label class="col-9" for="callToggle">Call Name</label>
-    <div class="col-3">Complete</div>
-</div>`;
-
-CallLog.html.callHistoryRow = `
-<div class="row">
-    <label class="col-9 text-left" for="callToggle">CALLNAME</label>
-    <div class="col-3">
-        <label class="switch">
-          <input type="checkbox" data-call="CALLID" class="callMetadataEdit" checked>
-          <span class="slider round"></span>
-        </label>
-    </div>
-</div>`;
-CallLog.html.deleteLog = `<a class="deleteInstance"><i class="fas fa-times"></i></a>`;
-CallLog.html.settingsButton = `<i class="fas fa-ellipsis-v callSummarySettings"></i>`;
 
 CallLog.fn.buildCallSummaryTable = function() {
     // Check if we have anything to actually build
@@ -40,7 +7,7 @@ CallLog.fn.buildCallSummaryTable = function() {
         return;
 
     // Insert the table, lock its location
-    $("#center").append(CallLog.html.callHistoryTable);
+    $("#center").append(CallLog.templates.callHistoryTable);
     $('.callHistoryContainer').css('top', $("#record_id-tr").offset().top);
 
     // Init the DataTable
@@ -71,7 +38,7 @@ CallLog.fn.buildCallSummaryTable = function() {
                 name: m && m['name'] ? m['name'] : (data['call_id'] || "Unknown"),
                 datetime: data['call_open_datetime'],
                 leftMessage: data['call_left_message'][1] == "1" ? 'Yes' : 'No',
-                deleteInstance: allowDelete ? CallLog.html.deleteLog : ''
+                deleteInstance: allowDelete ? CallLog.templates.deleteLog : ''
             };
         })
     });
@@ -80,16 +47,19 @@ CallLog.fn.buildCallSummaryTable = function() {
     $(".callHistoryContainer").css('width', $(".callHistoryContainer").css('width').slice(0, -2) * 1.1)
 
     // Build the "settings" menu, used for un-completing any calls
-    $(".callHistoryContainer .sorting_disabled").html(CallLog.html.settingsButton);
+    $(".callHistoryContainer .sorting_disabled").html(CallLog.templates.settingsButton);
     let callHistroyRows = "";
     $.each(CallLog.metadata, function(k, v) {
-        callHistroyRows += CallLog.html.callHistoryRow.replace('CALLID', k).replace('CALLNAME', v.name).replace('checked', v.complete ? 'checked' : '');
+        callHistroyRows += CallLog.templates.callHistoryRow
+            .replace('CALLID', k)
+            .replace('CALLNAME', v.name)
+            .replace('checked', v.complete ? 'checked' : '');
     });
-    CallLog.html.callHistorySettings += callHistroyRows;
+    CallLog.templates.callHistorySettings += callHistroyRows;
     $(".callSummarySettings").on('click', function() {
         Swal.fire({
             title: 'Call Metadata Settings',
-            html: CallLog.html.callHistorySettings,
+            html: CallLog.templates.callHistorySettings,
             showCancelButton: true,
             focusCancel: true
         }).then((result) => {
@@ -131,7 +101,7 @@ CallLog.fn.buildCallSummaryTable = function() {
         } else {
             let data = CallLog.data[row.data()['instance']];
             let note = data['call_notes'] ? data['call_notes'] : "No Notes Taken";
-            let logClosed = data['call_outcome'] == "1" ? CallLog.html.callClosed : "";
+            let logClosed = data['call_outcome'] == "1" ? CallLog.templates.callClosed : "";
             row.child(`${data['call_open_user_full_name']} - ${note}${logClosed}`, 'dataTableChild').show();
             $(this).next().addClass($(this).hasClass('even') ? 'even' : 'odd');
             $(this).addClass('shown');
