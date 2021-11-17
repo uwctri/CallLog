@@ -31,7 +31,7 @@ switch ( $route ) {
         # Intended to be posted to by an outside script or DET to make a singe new adhoc call on a record
         # url: ExternalModules/?prefix=call_log&page=router&route=newAdhoc&pid=NNN&adhocCode=NNN&record=NNN&type=NNN&fudate=NNN&futime=NNN&reporter=NAME
         # Identical to adhocLoad but via GET, seperated for possible future changes
-        if ( !empty($_POST['type']) ) {
+        if ( !empty($_GET['type']) ) {
             $module->metadataAdhoc( $pid, $record, [
                 'id' => $_GET['type'],
                 'date' => $_GET['fudate'],

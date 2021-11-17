@@ -43,7 +43,7 @@ CallLog.fn.addGoToCallLogButton = function() {
 }
 
 CallLog.fn.modifyRequiredPopup = function() {
-    if (!$("#reqPopup").length || !isCallLogNext())
+    if (!$("#reqPopup").length || !CallLog.fn.isCallLogNext())
         return;
     if (!$("#reqPopup:visible").length) {
         window.requestAnimationFrame(CallLog.fn.modifyRequiredPopup);
