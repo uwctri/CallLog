@@ -92,7 +92,7 @@ CallLog.fn.projectLog = function(action, call_id, record) {
         data: {
             route: 'log',
             action: action,
-            details: `Call ID = ${call_id}`,
+            details: `${action}\nCall ID = ${call_id}`,
             record: record
         },
         error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),

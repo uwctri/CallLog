@@ -11,7 +11,9 @@ function to24hr(t) {
     return h == 12 ? t : `${parseInt(h)+12}:${m}`;
 }
 
-Date.prototype.addDays = (days) => new Date(this.setDate(this.getDate() + days));
+Date.prototype.addDays = function (days) {
+    return new Date( this.setDate(this.getDate() + days) );
+}
 
 Object.filter = (obj, predicate) =>
     Object.keys(obj)

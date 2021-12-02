@@ -24,7 +24,7 @@ switch ( $route ) {
             $sendSuccess = True;
         break;
     case "log":
-        $module->projectLog();
+        $module->ajaxLog();
         $sendDone = True;
         break;
     case "newAdhoc":

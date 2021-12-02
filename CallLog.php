@@ -250,11 +250,13 @@ class CallLog extends AbstractExternalModule  {
                 // Scheduled appt was removed, but a call was made, mark the reminder as complete
                 $meta[$callConfig['id']]["complete"] = true;
                 $meta[$callConfig['id']]["completedBy"] = "REDCap";
+                $this->projectLog("Reminder call {$callConfig['id']} marked as complete, appointment was removed.");
             }
             elseif ( !empty($meta[$callConfig['id']]) && ($data[$callConfig['event']][$callConfig['field']] <= $today) ) {
                 // Appt is today, autocomplete the call so it stops showing up places, we might double set but it doesn't matter
                 $meta[$callConfig['id']]['complete'] = true;
                 $meta[$callConfig['id']]["completedBy"] = "REDCap";
+                $this->projectLog("Reminder call {$callConfig['id']} marked as complete, appointment is today.");
             }
             elseif (!empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "" && 
                     ($meta[$callConfig['id']]['start'] != $newStart || $meta[$callConfig['id']]['end'] != $newEnd)) {
@@ -262,6 +264,7 @@ class CallLog extends AbstractExternalModule  {
                 $meta[$callConfig['id']]['complete'] = false;
                 $meta[$callConfig['id']]['start'] = $newStart;
                 $meta[$callConfig['id']]['end'] = $newEnd;
+                $this->projectLog("Reminder call {$callConfig['id']} marked as incomplete, appointment was rescheduled.");
             }
             elseif (empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != ""  ) {
                 // Scheduled appt exists and the meta doesn't have the call id in it yet
@@ -316,6 +319,7 @@ class CallLog extends AbstractExternalModule  {
                 // Previously we would usent those calls with 0 instances, but this leads to an issue if a mcv is reschedueld on the first try
                 $meta[$idExact]['complete'] = true;
                 $meta[$idExact]["completedBy"] = "REDCap";
+                $this->projectLog("Missed/Cancelled call {$idExact} marked as complete, appointment was rescheduled.");
             }
             
             // Search for similar IDs and complete/remove them. We should only have 1 MCV call per event active on the call log
@@ -327,6 +331,7 @@ class CallLog extends AbstractExternalModule  {
                 else {
                     $callData['complete'] = true;
                     $callData['completedBy'] = "REDCap";
+                    $this->projectLog("Missed/Cancelled call {$callID} marked as complete, call appears to be a duplicate.");
                 }
             }
         }
@@ -363,6 +368,7 @@ class CallLog extends AbstractExternalModule  {
             } elseif ( !empty($meta[$callConfig['id']]) && !empty($data[$callConfig['event']][$callConfig['apptDate']]) ) {
                 $meta[$callConfig['id']]['complete'] = true;
                 $meta[$callConfig['id']]['completedBy'] = "REDCap";
+                $this->projectLog("Need to Schedue call {$callConfig['id']} marked as complete, appointment was reschedueld.");
             }
         }
         return $this->saveCallMetadata($project_id, $record, $meta);
@@ -404,6 +410,7 @@ class CallLog extends AbstractExternalModule  {
                 continue;
             $callData['complete'] = true; // Don't delete, just comp. Might need info for something
             $callData['completedBy'] = "REDCap";
+            $this->projectLog("Adhoc call {$callID} marked as complete via API.");
         }
         return $this->saveCallMetadata($project_id, $record, $meta);
     }
@@ -1057,10 +1064,15 @@ class CallLog extends AbstractExternalModule  {
     // Private Utility Functions
     /////////////////////////////////////////////////
     
-    public function projectLog() {
+    private function projectLog($action) {
+        $sql = null;
+        REDCap::logEvent( "Call Log" , $action, $sql, $_GET['id'], $_GET['event_id'], $_GET['pid']);
+    }
+    
+    public function ajaxLog() {
         $sql = null;
         $event = null;
-        REDCap::logEvent( $_POST['action'] , $_POST['details'], $sql, $_POST['record'], $event, $_GET['pid']);
+        REDCap::logEvent( "Call Log" , $_POST['details'], $sql, $_POST['record'], $event, $_GET['pid']);
     }
     
     public function isNotBlank($string) {
