@@ -1180,11 +1180,11 @@ class CallLog extends AbstractExternalModule  {
                     if ( ($call['template'] == 'visit') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
                         continue;
                     
-                    // Check if withdrawn or tmp withdrawn
+                    // Check if withdrawn or tmp withdrawn (Withdrawn until Tmp date)
                     // Checking here means that a scheduled call back on any call overrides our flag
                     if ( $recordData[$withdraw['event']][$withdraw['var']] )
                         continue; 
-                    if ( $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']] && $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']]<$today )
+                    if ( $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']] && $recordData[$withdraw['tmp']['event']][$withdraw['tmp']['var']]>$today )
                         continue;
                     
                 }
