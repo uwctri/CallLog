@@ -351,7 +351,7 @@ class CallLog extends AbstractExternalModule  {
             $prevEvent = $orderedEvents[array_search($callConfig['event'], $orderedEvents)-1];
             // If previous indicator is set (i.e. it was attended) and current event's appt_date is blank, and its not attended then set need to schedule. Also check that skip is either not configured or that it is not-truthy (i.e. 0 or empty).
             if ( empty($meta[$callConfig['id']]) && !empty($data[$prevEvent][$callConfig['indicator']]) && empty($data[$callConfig['event']][$callConfig['apptDate']]) && empty($data[$callConfig['event']][$callConfig['indicator']]) && 
-            (empty($callConfig['skip']) || !$data[$callConfig['event']][$callConfig['skip']]) 
+            (empty($callConfig['skip']) || (!$data[$callConfig['event']][$callConfig['skip']] && !$data[$prevEvent][$callConfig['skip']]) ) 
             ) {
                 $meta[$callConfig['id']] = [
                     "template" => 'nts',
@@ -1140,7 +1140,7 @@ class CallLog extends AbstractExternalModule  {
                     continue;
                 
                 // Skip when reminders, followups, adhocs aren't in window
-                if ( ($call['template'] == 'reminder' || $call['template'] == 'followup' ) && ($call['start'] > $today) )
+                if ( ($call['template'] == 'reminder' || $call['template'] == 'followup' || $call['template'] == 'adhoc' ) && !empty($call['start']) && ($call['start'] > $today) )
                     continue;
                 
                 // Skip reminder calls day-of or future
