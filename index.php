@@ -7,6 +7,9 @@ list($noData, $tabs, $noData, $timeTaken) = $module->loadCallListData(true);
 <script>
 CallLog.tabs = <?php echo json_encode($tabs); ?>;
 
+// Useful only for debugging
+CallLog.callTemplates = <?php echo json_encode($module->loadCallTemplateConfig()); ?>;
+
 $(document).ready(function() {
     
     // Setup search, must happen before table init

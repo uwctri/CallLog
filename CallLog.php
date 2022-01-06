@@ -692,7 +692,7 @@ class CallLog extends AbstractExternalModule  {
                         "length" => $length,
                         "autoRemove" => $auto
                     ], $commonConfig);
-                } elseif ( !empty($field) && !empty($days) ) {
+                } elseif ( !empty($field) && (!empty($days)|| $days == "0") ) {
                     $includeEvents = array_map('trim', explode(',',$settings["followup_include_events"][$i][0])); 
                     foreach( $includeEvents as $eventName ) {
                         $arr = array_merge([
