@@ -32,7 +32,7 @@ CallLog.fn.buildCallSummaryTable = function() {
         ],
         data: $.map(CallLog.data, function(data, index) {
             let m = CallLog.metadata[data['call_id']];
-            let allowDelete = (Object.keys(CallLog.data)[Object.keys(CallLog.data).length - 1] == index) && (data['call_outcome'] != '1');
+            let allowDelete = (Object.keys(CallLog.data)[Object.keys(CallLog.data).length - 1] == index);
             return {
                 instance: index,
                 name: m && m['name'] ? m['name'] : (data['call_id'] || "Unknown"),
