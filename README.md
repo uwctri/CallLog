@@ -17,6 +17,7 @@ Configuration for this module is extensive and complex. Full documentation will 
 * Custom page for configuration
 * One click deploy of call log instrument to the project
 * Create a solution for customizing the display of the call log button
+* Create a generic solution for call scripts on the call log
 * Create a generic solution to add checkboxes / custom options to the Call Log without breaking or risk breaking other things
 * Switching between tabs on the call log should clear any entered data and display warning about data lost
 * Make window rounding optional for any call type
