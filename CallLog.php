@@ -67,10 +67,12 @@ class CallLog extends AbstractExternalModule  {
         // Record Home Page
         if (PAGE == 'DataEntry/record_home.php' && $_GET['id']) {
             $this->includeJs('js/record_home_page.js');
+            $this->passArgument('debug', $this->getProjectSettings());
         }
         
         // Custom Config page
         if (strpos(PAGE, 'manager/project.php') !== false && $project_id != NULL) {
+            $this->includeCss('css/config.css');
             $this->includeJs('js/config.js');
         }
         
