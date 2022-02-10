@@ -1,0 +1,82 @@
+.callConfig thead {
+    display: none;
+}
+
+.callConfig tr[field=metadata] {
+    display: none;
+}
+
+.callConfig tr[field$=_settings] {
+    display: none;
+}
+
+.callConfig tr[field=withdraw_var] label {
+    display: none;
+}
+
+.callConfig tr[field=withdraw_event] td {
+    padding-top: 1.5rem;
+    padding-bottom: 0.25rem;
+}
+
+.callConfig tr[field=withdraw_var] td {
+    border: none;
+    padding-top: 0.25rem;
+    padding-bottom: 1.5rem;
+}
+
+.callConfig tr[field=withdraw_tmp_var] label {
+    display: none;
+}
+
+.callConfig tr[field=withdraw_tmp_event] td {
+    padding-top: 1.5rem;
+    padding-bottom: 0.25rem;
+}
+.callConfig tr[field=withdraw_tmp_var] td { 
+    border: none;
+    padding-top: 0.25rem;
+    padding-bottom: 1.5rem;
+}
+ 
+.callConfig tr[field=followup_date] label {
+    display: none;
+}
+
+.callConfig tr[field=followup_date] span {
+    display: none;
+}
+
+.callConfig tr[field=followup_event] td { 
+    padding-top: 1.5rem;
+    padding-bottom: 0.25rem;
+}
+
+.callConfig tr[field=followup_date] td { 
+    border: none;
+    padding-top: 0.25rem;
+    padding-bottom: 1.5rem;
+}
+
+.callConfig tr[field=tab_field_link_instrument] label {
+    display: none;
+}
+
+.callConfig tr[field=tab_field_link_instrument] span {
+    display: none;
+}
+
+.callConfig tr[field=tab_field_link_event] td { 
+    padding-top: 1.5rem;
+    padding-bottom: 0.25rem;
+}
+
+.callConfig tr[field=tab_field_link_instrument] td {
+    border: none;
+    padding-top: 0.25rem;
+    padding-bottom: 1.5rem;
+}
+
+.callConfig tr[field^=tab_includes_] {
+    display: none;
+}

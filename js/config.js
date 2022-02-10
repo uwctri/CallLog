@@ -19,46 +19,35 @@ $(document).ready(function() {
             ExternalModules.Settings.prototype.resetConfigInstancesOld = ExternalModules.Settings.prototype.resetConfigInstances;
 
         ExternalModules.Settings.prototype.resetConfigInstances = function() {
+
             ExternalModules.Settings.prototype.resetConfigInstancesOld();
             if ($modal.data('module') !== CallLog.modulePrefix)
                 return;
 
-            // Basic cleanup
-            $modal.find('thead').remove();
-            $modal.find('tr[field=metadata]').hide();
-            $modal.find("tr[field$=_settings]").hide();
+            $modal.addClass('callConfig');
 
             // Hide Bade Phone section's numbering
             $modal.find('tr[field=bad_phone_collection]').first().nextUntil('.sub_end').addBack().find('span').hide();
 
             // Rearrange the Withdraw config
-            $modal.find("tr[field=withdraw_var] label").hide();
-            $modal.find("tr[field=withdraw_event] td").css({ 'padding-top': '1.5rem', 'padding-bottom': '0.25rem' });
-            $modal.find("tr[field=withdraw_var] td").css({ 'border': 'none', 'padding-top': '0.25rem', 'padding-bottom': '1.5rem' });
-            if ($(".withdrawTextLoaded").length == 0)
-                $("tr[field=withdraw_event] td span").first().after(`<span class="withdrawTextLoaded" style="position: absolute;transform: translateY(20px);">Hide all of a subject's calls when this condition is truthy</span>`);
+            if ($(".withdrawTextLoaded").length == 0) {
+                $("tr[field=withdraw_event] td span").first().after(
+                    `<span class="withdrawTextLoaded" style="position: absolute;transform: translateY(20px);">Hide all of a subject's calls when this condition is truthy</span>`
+                );
+            }
 
             // Rearrange the Temporary Withdraw config
-            $modal.find("tr[field=withdraw_tmp_var] label").hide();
-            $modal.find("tr[field=withdraw_tmp_event] td").css({ 'padding-top': '1.5rem', 'padding-bottom': '0.25rem' });
-            $modal.find("tr[field=withdraw_tmp_var] td").css({ 'border': 'none', 'padding-top': '0.25rem', 'padding-bottom': '1.5rem' });
-            if ($(".withdrawTmpTextLoaded").length == 0)
-                $("tr[field=withdraw_tmp_event] td span").first().after(`<span class="withdrawTmpTextLoaded" style="position: absolute;transform: translateY(20px);">Hide all of a subject's calls until this date</span>`);
-
-            // Rearrange the Followup Anchor config
-            $modal.find("tr[field=followup_date] label, tr[field=followup_date] span").hide();
-            $modal.find("tr[field=followup_event] td").css({ 'padding-top': '1.5rem', 'padding-bottom': '0.25rem' });
-            $modal.find("tr[field=followup_date] td").css({ 'border': 'none', 'padding-top': '0.25rem', 'padding-bottom': '1.5rem' });
-
-            // Rearrange the linked instrument configs for url links
-            $modal.find("tr[field=tab_field_link_instrument] label, tr[field=tab_field_link_instrument] span").hide();
-            $modal.find("tr[field=tab_field_link_event] td").css({ 'padding-top': '1.5rem', 'padding-bottom': '0.25rem' });
-            $modal.find("tr[field=tab_field_link_instrument] td").css({ 'border': 'none', 'padding-top': '0.25rem', 'padding-bottom': '1.5rem' });
+            if ($(".withdrawTmpTextLoaded").length == 0) {
+                $("tr[field=withdraw_tmp_event] td span").first().after(
+                    `<span class="withdrawTmpTextLoaded" style="position: absolute;transform: translateY(20px);">Hide all of a subject's calls until this date</span>`
+                );
+            }
 
             // Setup radio buttons to show correct settings
             $modal.find("input[name^=call_template____]").on('click', function() {
-                $(this).closest('tr').nextAll('tr[field=new_settings]').first().nextUntil('.sub_start.sub_parent.repeatable').addBack().hide();
-                $(this).closest('tr').nextAll(`tr[field=${$(this).val()}_settings]`).first().nextUntil('tr[class=sub_end]').addBack().show();
+                let $tr = $(this).closest('tr');
+                $tr.nextAll('tr[field=new_settings]').first().nextUntil('.sub_start.sub_parent.repeatable').addBack().hide();
+                $tr.nextAll(`tr[field=${$(this).val()}_settings]`).first().nextUntil('tr[class=sub_end]').addBack().show();
             });
             $modal.find("input[name^=call_template____]:checked").click()
 
@@ -77,7 +66,6 @@ $(document).ready(function() {
             });
 
             // Hide all the flag fields and set events for them
-            $("tr[field^=tab_includes_]").hide();
             $("input[name^=tab_calls_included____]").on('change', function() {
                 $el = $(this);
                 let localValues = $el.val().split(',').map(x => x.trim());
@@ -101,6 +89,9 @@ $(document).ready(function() {
         // Making sure we are overriding this modules's modal only.
         if ($(this).data('module') !== CallLog.modulePrefix)
             return;
+            
+        $(this).removeClass('callConfig');
+            
         if (typeof ExternalModules.Settings.prototype.resetConfigInstancesOld !== 'undefined')
             ExternalModules.Settings.prototype.resetConfigInstances = ExternalModules.Settings.prototype.resetConfigInstancesOld;
     });
