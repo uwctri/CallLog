@@ -14,6 +14,7 @@ Configuration for this module is extensive and complex. Full documentation will 
 
 ## Feature Requests & Issues
 
+* We collect a history of requests for "No calls today", but don't display that data anywhere.
 * Custom page for configuration. The current one is slow due to styling the amount of config on a typical project
 * One click deploy of call log instrument to the project
 * Create a solution for customizing the display of the call log button
