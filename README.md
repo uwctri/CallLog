@@ -20,6 +20,7 @@ Basic setup:
 
 ## Feature Requests & Issues
 
+* Move remaining HTML in js to templates. This should resolve the very messy notes HTML template string.
 * We collect a history of requests for "No calls today", but don't display that data anywhere.
 * Custom page for configuration. The current one is slow due to styling the amount of config on a typical project
 * One click deploy of call log instrument to the project
