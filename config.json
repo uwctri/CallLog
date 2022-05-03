@@ -2,11 +2,13 @@
     "name": "Call Log",
     "namespace": "UWMadison\\CallLog",
     "description": "A configurable, searchable, call list dashboard for Reminders, Follow ups, Missed Vists and more.",
-    "authors": [{
-        "name": "Adam nunez",
-        "email": "adam.Nunez@ctri.wisc.edu",
-        "institution": "UW Madison - Center for Tobacco Research and Intervention"
-    }],
+    "authors": [
+        {
+            "name": "Adam nunez",
+            "email": "adam.Nunez@ctri.wisc.edu",
+            "institution": "UW Madison - Center for Tobacco Research and Intervention"
+        }
+    ],
     "compatibility": {
         "redcap-version-min": "10.0.0"
     },
@@ -16,7 +18,8 @@
         "redcap_save_record"
     ],
     "links": {
-        "project": [{
+        "project": [
+            {
                 "name": "Call List",
                 "icon": "fas fa-phone",
                 "url": "index.php",
@@ -33,7 +36,8 @@
         "router"
     ],
     "framework-version": 5,
-    "project-settings": [{
+    "project-settings": [
+        {
             "key": "call_summary",
             "name": "<b>Include call summary on</b>",
             "repeatable": true,
@@ -95,7 +99,8 @@
             "key": "bad_phone_collection",
             "name": "<b>Bad Phone Reporting</b>",
             "type": "sub_settings",
-            "sub_settings": [{
+            "sub_settings": [
+                {
                     "key": "bad_phone_event",
                     "name": "<b>Event</b>",
                     "type": "event-list"
@@ -122,7 +127,8 @@
             "name": "<b>Username Lists</b>",
             "type": "sub_settings",
             "repeatable": true,
-            "sub_settings": [{
+            "sub_settings": [
+                {
                     "key": "username_text",
                     "name": "A field listed here can be included on a call tab as a static value depending on if the user is included or excluded from the list. This is useful for suggesting callers for a particular subject. The list of usernames can be constructed via shazam or DET.",
                     "type": "descriptive"
@@ -149,7 +155,8 @@
             "name": "<b>Unique Call Type</b>",
             "type": "sub_settings",
             "repeatable": true,
-            "sub_settings": [{
+            "sub_settings": [
+                {
                     "key": "call_id",
                     "name": "<b>Unique ID</b><br>Short with no spaces, used in metadata and backend",
                     "required": true,
@@ -180,7 +187,8 @@
                     "key": "call_template",
                     "name": "<b>Template</b>",
                     "type": "radio",
-                    "choices": [{
+                    "choices": [
+                        {
                             "value": "new",
                             "name": "New Entry"
                         },
@@ -214,7 +222,8 @@
                     "key": "new_settings",
                     "name": "<b>New Entry Settings</b>",
                     "type": "sub_settings",
-                    "sub_settings": [{
+                    "sub_settings": [
+                        {
                             "key": "new_text",
                             "name": "New Entry calls are added when a record is created. If loading records from an outside source you'll need to configure your import scripts to POST to the newEntryLoad URL.",
                             "type": "descriptive"
@@ -230,7 +239,8 @@
                     "key": "reminder_settings",
                     "name": "<b>Reminder Settings</b>",
                     "type": "sub_settings",
-                    "sub_settings": [{
+                    "sub_settings": [
+                        {
                             "key": "reminder_text",
                             "name": "You will want to configure a custom DET to POST to the scheduleLoad URL to add new reminders to the call list immediately. Reminders are placed on the call log some number of days before the reminder date and are removed ON THE REMINDER DATE. Calls removed in this manner are not marked as completed.",
                             "type": "descriptive"
@@ -266,7 +276,8 @@
                     "key": "followup_settings",
                     "name": "<b>Followup Settings</b>",
                     "type": "sub_settings",
-                    "sub_settings": [{
+                    "sub_settings": [
+                        {
                             "key": "followup_text",
                             "name": "Any tab with a follow up call in it will show the Lower and Upper windows of the call as the last two columns titled 'Start Calling' and 'Complete by'. ",
                             "type": "descriptive"
@@ -307,7 +318,8 @@
                     "key": "mcv_settings",
                     "name": "<b>Missed/Cancelled Visit Settings</b>",
                     "type": "sub_settings",
-                    "sub_settings": [{
+                    "sub_settings": [
+                        {
                             "key": "mcv_text",
                             "name": "You will want to configure a custom DET to POST to the scheduleLoad URL to add new reminders to the call list immediately. Any tab with a Missed/Cancelled visit call will have the Missed Appt Date/Time added as the last column. The missed event can be displayed with 'call_event_name'",
                             "type": "descriptive"
@@ -338,7 +350,8 @@
                     "key": "nts_settings",
                     "name": "<b>Need to Schedule Visit Settings</b>",
                     "type": "sub_settings",
-                    "sub_settings": [{
+                    "sub_settings": [
+                        {
                             "key": "nts_text",
                             "name": "Need to Schedule calls are generated for an event when the previous event is has a truthy indicator, but the current event has no schedulaed date.",
                             "type": "descriptive"
@@ -369,7 +382,8 @@
                     "key": "adhoc_settings",
                     "name": "<b>Ah-hoc Settings</b>",
                     "type": "sub_settings",
-                    "sub_settings": [{
+                    "sub_settings": [
+                        {
                             "key": "adhoc_text",
                             "name": "Ad-hoc calls are added by an end user on the call log screen. Any tab with an adhoc call in it will show the Reason and Preferred call back date as the last two columns.",
                             "type": "descriptive"
@@ -385,7 +399,8 @@
                     "key": "visit_settings",
                     "name": "<b>Schedualed Phone Visit Settings</b>",
                     "type": "sub_settings",
-                    "sub_settings": [{
+                    "sub_settings": [
+                        {
                             "key": "visit_text",
                             "name": "Schedualed Phone Visits are for phone-based encounters that just need a way to record a call log at checkout time. They are not typically used on the call log. ",
                             "type": "descriptive"
@@ -414,7 +429,8 @@
             "name": "<b>Unique Call Tab</b>",
             "type": "sub_settings",
             "repeatable": true,
-            "sub_settings": [{
+            "sub_settings": [
+                {
                     "key": "tab_name",
                     "name": "<b>Tab name</b>",
                     "type": "textbox"
@@ -444,7 +460,8 @@
                     "name": "<b>Element</b>",
                     "type": "sub_settings",
                     "repeatable": true,
-                    "sub_settings": [{
+                    "sub_settings": [
+                        {
                             "key": "tab_field",
                             "name": "<b>Field</b>",
                             "type": "field-list"
@@ -468,7 +485,8 @@
                             "key": "tab_field_link",
                             "name": "<b>Link</b><br>Linking to an instrument isn't possbile on New Entry calls",
                             "type": "radio",
-                            "choices": [{
+                            "choices": [
+                                {
                                     "value": "none",
                                     "name": "None"
                                 },

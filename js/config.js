@@ -1,5 +1,6 @@
-$(document).ready(function() {
-    console.log("Loaded Call Log config")
+$(document).ready(function () {
+    console.log("Loaded Call Log config");
+    CallLog.configInit = false;
 
     if (CallLog.configError) {
         Swal.fire({
@@ -9,8 +10,22 @@ $(document).ready(function() {
         })
     }
 
-    var $modal = $('#external-modules-configure-modal');
-    $modal.on('show.bs.modal', function() {
+    // Setup template buttons to show correct settings
+    $("body").on('click', ".callConfig input[name^=call_template____]", function () {
+        let $tr = $(this).closest('tr');
+        $tr.next().nextUntil('.sub_start.sub_parent.repeatable').addBack().hide();
+        $tr.nextAll(`tr[field=${$(this).val()}_settings]`).first().nextUntil('tr[class=sub_end]').addBack().show();
+    });
+
+    // Setup link buttons to show correct settings for link
+    $("body").on('click', ".callConfig input[name^=tab_field_link____]", function () {
+        let $el = $(this).closest('tr').nextUntil('.sub_end');
+        $(this).val() == "instrument" ? $el.show() : $el.hide();
+    });
+
+    let $modal = $('#external-modules-configure-modal');
+    $modal.on('show.bs.modal', function () {
+
         // Making sure we are overriding this modules's modal only.
         if ($(this).data('module') !== CallLog.modulePrefix)
             return;
@@ -18,13 +33,44 @@ $(document).ready(function() {
         if (typeof ExternalModules.Settings.prototype.resetConfigInstancesOld === 'undefined')
             ExternalModules.Settings.prototype.resetConfigInstancesOld = ExternalModules.Settings.prototype.resetConfigInstances;
 
-        ExternalModules.Settings.prototype.resetConfigInstances = function() {
+        ExternalModules.Settings.prototype.resetConfigInstances = function () {
 
             ExternalModules.Settings.prototype.resetConfigInstancesOld();
             if ($modal.data('module') !== CallLog.modulePrefix)
                 return;
 
             $modal.addClass('callConfig');
+
+            // If nothing is selected on the radio options then default to first option
+            $modal.find("tr[field=call_template], tr[field=tab_field_link]").each(function () {
+                if ($(this).find('input:checked').length == 0)
+                    $(this).find('input').first().click()
+            });
+
+            // Correcting weird col issue
+            $modal.find(".sub_start").each((_, x) => $(x).find('td').last().attr('colspan', '2'));
+
+            // Below operations run only once
+            if (CallLog.configInit)
+                return;
+
+            CallLog.configInit = true;
+            $modal.find("input[name^=call_template____]:checked").click();
+            $modal.find("input[name^=tab_field_link____]:checked").click();
+
+            // Hide all the flag fields and set events for them
+            $("input[name^=tab_calls_included____]").on('change', function () {
+                $el = $(this);
+                let localValues = $el.val().split(',').map(x => x.trim());
+                $.each(['followup', 'mcv', 'adhoc'], function (_, template) {
+                    let followUpNames = $.makeArray($(`input[name^=call_template____][value=${template}]:checked`).closest('tr').map(function () {
+                        return $(this).prevUntil('.sub_start').last().find('input').val()
+                    }))
+                    $el.closest('tr').nextAll("tr[field=tab_includes_" + template + "]").first().find('input').val('');
+                    if (localValues.some(item => followUpNames.includes(item)))
+                        $el.closest('tr').nextAll("tr[field=tab_includes_" + template + "]").first().find('input').val('1');
+                });
+            });
 
             // Hide Bade Phone section's numbering
             $modal.find('tr[field=bad_phone_collection]').first().nextUntil('.sub_end').addBack().find('span').hide();
@@ -42,56 +88,17 @@ $(document).ready(function() {
                     `<span class="withdrawTmpTextLoaded" style="position: absolute;transform: translateY(20px);">Hide all of a subject's calls until this date</span>`
                 );
             }
-
-            // Setup radio buttons to show correct settings
-            $modal.find("input[name^=call_template____]").on('click', function() {
-                let $tr = $(this).closest('tr');
-                $tr.nextAll('tr[field=new_settings]').first().nextUntil('.sub_start.sub_parent.repeatable').addBack().hide();
-                $tr.nextAll(`tr[field=${$(this).val()}_settings]`).first().nextUntil('tr[class=sub_end]').addBack().show();
-            });
-            $modal.find("input[name^=call_template____]:checked").click()
-
-            // Setup radio buttons to show correct settings
-            $modal.find("input[name^=tab_field_link____]").on('click', function() {
-                $(this).closest('tr').nextUntil('.sub_end').hide();
-                if ($(this).val() == "instrument")
-                    $(this).closest('tr').nextUntil('.sub_end').show();
-            });
-            $modal.find("input[name^=tab_field_link____]:checked").click()
-
-            // If nothing is selected on the radio options then default to first option
-            $modal.find("tr[field=call_template], tr[field=tab_field_link]").each(function() {
-                if ($(this).find('input:checked').length == 0)
-                    $(this).find('input').first().click()
-            });
-
-            // Hide all the flag fields and set events for them
-            $("input[name^=tab_calls_included____]").on('change', function() {
-                $el = $(this);
-                let localValues = $el.val().split(',').map(x => x.trim());
-                $.each(['followup', 'mcv', 'adhoc'], function(_, template) {
-                    let followUpNames = $.makeArray($("input[name^=call_template____][value=" + template + "]:checked").closest('tr').map(function() {
-                        return $(this).prevUntil('.sub_start').last().find('input').val()
-                    }))
-                    $el.closest('tr').nextAll("tr[field=tab_includes_" + template + "]").first().find('input').val('');
-                    if (localValues.some(item => followUpNames.includes(item)))
-                        $el.closest('tr').nextAll("tr[field=tab_includes_" + template + "]").first().find('input').val('1');
-                });
-            });
-
-            // Correcting weird col issue
-            $modal.find(".sub_start").each((_, x) => $(x).find('td').last().attr('colspan', '2'));
-
         };
     });
 
-    $modal.on('hide.bs.modal', function() {
+    $modal.on('hide.bs.modal', function () {
         // Making sure we are overriding this modules's modal only.
         if ($(this).data('module') !== CallLog.modulePrefix)
             return;
-            
+
         $(this).removeClass('callConfig');
-            
+        CallLog.configInit = false;
+
         if (typeof ExternalModules.Settings.prototype.resetConfigInstancesOld !== 'undefined')
             ExternalModules.Settings.prototype.resetConfigInstances = ExternalModules.Settings.prototype.resetConfigInstancesOld;
     });
