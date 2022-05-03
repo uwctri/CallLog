@@ -10,10 +10,18 @@ This EM isn't yet available to install via redcap's EM database so you'll need t
 
 ## Configuration
 
-Configuration for this module is extensive and complex. Full documentation will exist to any public release, but this has no current planned date.
+Configuration for this module is extensive and complex. Full documentation will exist on offical public release, but this has no current planned date. 
+
+Basic setup:
+
+* Deploy the instrument csv to the project you want to use the EM on, you will probably want to deploy this instrument to a "Study Management" event. The call log should exist only on one event and be enabled as repeatable.
+* Review the EM config
+* The end user is expected to complete a call log after every attemp to reach a subject. It is recommended that you link end-users to the call log at the end of each event that would make sense. 
 
 ## Feature Requests & Issues
 
+* Move remaining HTML in js to templates. This should resolve the very messy notes HTML template string.
+* We collect a history of requests for "No calls today", but don't display that data anywhere.
 * Custom page for configuration. The current one is slow due to styling the amount of config on a typical project
 * One click deploy of call log instrument to the project
 * Create a solution for customizing the display of the call log button
