@@ -345,6 +345,8 @@ class CallLog extends AbstractExternalModule  {
             return;
         global $Proj;
         $orderedEvents = array_combine(array_map(function($x){return $x['day_offset'];},$Proj->eventInfo),array_keys($Proj->eventInfo));
+        $callLogEvent = $this->getProjectSetting('call_log_event');
+        $metadataEvent = $this->getProjectSetting('metadata_event');
         $meta = $this->getCallMetadata($project_id, $record);
         $eventMap = REDCap::getEventNames(true);
         foreach( $config as $i=>$callConfig ) {
@@ -352,7 +354,7 @@ class CallLog extends AbstractExternalModule  {
             $prevEvent = $orderedEvents[array_search($callConfig['event'], $orderedEvents)-1];
             // If previous indicator is set (i.e. it was attended) and current event's appt_date is blank, and its not attended then set need to schedule. Also check that skip is either not configured or that it is not-truthy (i.e. 0 or empty).
             if ( empty($meta[$callConfig['id']]) && !empty($data[$prevEvent][$callConfig['indicator']]) && empty($data[$callConfig['event']][$callConfig['apptDate']]) && empty($data[$callConfig['event']][$callConfig['indicator']]) && 
-            (empty($callConfig['skip']) || (!$data[$callConfig['event']][$callConfig['skip']] && !$data[$prevEvent][$callConfig['skip']]) ) 
+            (empty($callConfig['skip']) || (!$data[$callConfig['event']][$callConfig['skip']] && !$data[$prevEvent][$callConfig['skip']] && !!$data[$callLogEvent][$callConfig['skip']] && !!$data[$metadataEvent][$callConfig['skip']]) ) 
             ) {
                 $meta[$callConfig['id']] = [
                     "template" => 'nts',
@@ -1141,7 +1143,7 @@ class CallLog extends AbstractExternalModule  {
                     continue;
                 
                 // Skip when reminders, followups, adhocs aren't in window
-                if ( ($call['template'] == 'reminder' || $call['template'] == 'followup' || $call['template'] == 'adhoc' ) && !empty($call['start']) && ($call['start'] > $today) )
+                if ( ($call['template'] == 'reminder' || $call['template'] == 'followup') && !empty($call['start']) && ($call['start'] > $today) )
                     continue;
                 
                 // Skip reminder calls day-of or future
@@ -1222,10 +1224,12 @@ class CallLog extends AbstractExternalModule  {
                 
                 // Add what the next instance should be for possible links
                 $instanceData['_nextInstance'] = 1;
-                if ( !empty($recordData['repeat_instances'][$callEvent][$this->instrumentLower]) )
+                if ( !empty($recordData['repeat_instances'][$callEvent][$this->instrumentLower]) ) {
                     $instanceData['_nextInstance'] = end(array_keys($recordData['repeat_instances'][$callEvent][$this->instrumentLower]))+1;
-                else if ( !empty($recordData[$callEvent]['call_template']) )
+                }
+                else if ( !empty($recordData[$callEvent]['call_template']) ) {
                     $instanceData['_nextInstance'] = 2;
+                }
                 
                 // Add event_id for possible link to instruments
                 $instanceData['_event'] = $call['event_id'];
@@ -1248,7 +1252,7 @@ class CallLog extends AbstractExternalModule  {
                 if ( $call['template'] == 'adhoc' ) {
                     $instanceData['_adhocReason'] = $adhoc['config'][$callID]['reasons'][$call['reason']];
                     $instanceData['_adhocContactOn'] = $call['contactOn'];
-                    $instanceData['_adhocToday'] = $call['contactOn'] == "" || explode(' ', $call['contactOn'])[0] <= $today; // Not used currently
+                    $instanceData['_futureAdhoc'] = $call['contactOn'] == "" || $call['start'] >= $today;
                     $notes = $call['initNotes'] ?  $call['initNotes'] : "No Notes Taken";
                     if ( $call['reporter'] != "" ) 
                         $instanceData['_callNotes'] .= $call['reported'].'||'.$call['reporter'].'||'.'&nbsp;'.'||'.$notes.'|||';

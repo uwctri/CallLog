@@ -31,7 +31,7 @@ CallLog.fn.setupSearch = function() {
     $.fn.dataTable.ext.search.push(
         (_settings, _searchData, _index, rowData, _counter) => !(
             CallLog.hideCalls && (
-                (rowData['_atMaxAttempts'] && !rowData['_callbackToday']) || rowData['_callbackNotToday'] || rowData['_noCallsToday']
+                (rowData['_atMaxAttempts'] && !rowData['_callbackToday']) || rowData['_callbackNotToday'] || rowData['_noCallsToday'] || rowData['_futureAdhoc']
             )
         )
     );
