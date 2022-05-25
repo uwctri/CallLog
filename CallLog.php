@@ -1250,7 +1250,7 @@ class CallLog extends AbstractExternalModule  {
                 
                 // Adhoc call time and reason
                 if ( $call['template'] == 'adhoc' ) {
-                    $instanceData['_adhocReason'] = $adhoc['config'][$callID]['reasons'][$call['reason']];
+                    $instanceData['_adhocReason'] = $adhoc[$callID]['reasons'][$call['reason']];
                     $instanceData['_adhocContactOn'] = $call['contactOn'];
                     $instanceData['_futureAdhoc'] = $call['contactOn'] == "" || $call['start'] >= $today;
                     $notes = $call['initNotes'] ?  $call['initNotes'] : "No Notes Taken";
