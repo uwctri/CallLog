@@ -1176,7 +1176,7 @@ class CallLog extends AbstractExternalModule  {
                 if ( !$instanceData['_callbackToday'] ) {
                     
                     // Skip MCV calls if past the autoremove date. Need Instance data for this
-                    if ( ($call['template'] == 'mcv') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] &&( $instanceData[$autoRemoveConfig[$callID]] < $today) )
+                    if ( ($call['template'] == 'mcv') && $autoRemoveConfig[$callID] && $instanceData[$autoRemoveConfig[$callID]] && !empty($instanceData[$autoRemoveConfig[$callID]]) && ($instanceData[$autoRemoveConfig[$callID]] < $today) )
                         continue;
                     
                     // Skip Scheduled Visit calls if past the autoremove date. Need Instance data for this
@@ -1252,7 +1252,7 @@ class CallLog extends AbstractExternalModule  {
                 if ( $call['template'] == 'adhoc' ) {
                     $instanceData['_adhocReason'] = $adhoc[$callID]['reasons'][$call['reason']];
                     $instanceData['_adhocContactOn'] = $call['contactOn'];
-                    $instanceData['_futureAdhoc'] = $call['contactOn'] == "" || $call['start'] >= $today;
+                    $instanceData['_futureAdhoc'] = $call['start'] > $today;
                     $notes = $call['initNotes'] ?  $call['initNotes'] : "No Notes Taken";
                     if ( $call['reporter'] != "" ) 
                         $instanceData['_callNotes'] .= $call['reported'].'||'.$call['reporter'].'||'.'&nbsp;'.'||'.$notes.'|||';
