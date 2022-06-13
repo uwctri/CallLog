@@ -1,28 +1,38 @@
-$(document).ready(function() {
+CallLog.link = "";
+CallLog.fn.buildCallLogBtn = () => {
 
-    // Prep the styled button
     let callStlye = `<a class="CallLogLink"><i class="fa fa-phone"></i></a>`;
-    $('head').append(`<style>.CallLogLink { cursor: pointer; }</style>`)
-    CallLog.link = "";
-    $("body").on("click",".CallLogLink", () => { location.href = CallLog.link; });
-
-    // Replace Call Log icons with the phone
-    $(`#event_grid_table [data-mlm-name=${CallLog.static.instrumentLower}]`).closest('tr').find('button, a').each(function() {
+    $(`[data-mlm-name=${CallLog.static.instrumentLower}]`).closest('td').find('button, a').each((_, el) => {
         // First instance
-        if ($(this).is('a') && $(this).siblings().length == 0) {
-            CallLog.link = $(this).attr('src') || $(this).prop('href');
+        if ($(el).is('a') && $(el).siblings().length == 1) {
+            CallLog.link = $(el).attr('src') || $(el).prop('href');
         }
         // Any other instance
-        else if ($(this).is('button')) {
-            CallLog.link = $(this).attr('onclick').split(`='`)[1].replace(`';`, '');
+        else if ($(el).is('button')) {
+            CallLog.link = $(el).attr('onclick').split(`='`)[1].replace(`';`, '');
         }
         // Insert the button
         if (CallLog.link) {
-            $(this).after(callStlye);
+            $(el).after(callStlye);
         }
-        $(this).hide();
+        $(el).hide();
     });
-    
+
+    if ($(".CallLogLink").length != 1) {
+        requestAnimationFrame(CallLog.fn.buildCallLogBtn);
+    }
+}
+
+$(document).ready(() => {
+
+    // Prep the styled button
+    $('head').append(`<style>.CallLogLink { cursor: pointer; }</style>`)
+    $("body").on("click", ".CallLogLink", () => { location.href = CallLog.link; });
+
     // Hide the Call Log repeating instrument table
     $(`th.header:contains(${CallLog.static.instrument})`).closest('table').parent().remove();
+
+    // Replace Call Log icons with the phone
+    CallLog.fn.buildCallLogBtn();
 });
+
