@@ -2,25 +2,24 @@ CallLog.link = "";
 CallLog.fn.buildCallLogBtn = () => {
 
     let callStlye = `<a class="CallLogLink"><i class="fa fa-phone"></i></a>`;
-    $(`[data-mlm-name=${CallLog.static.instrumentLower}]`).closest('td').find('button, a').each((_, el) => {
-        // First instance
-        if ($(el).is('a') && $(el).siblings().length == 1) {
-            CallLog.link = $(el).attr('src') || $(el).prop('href');
+    let systemTable = $(`.sysManTable [data-mlm-name=${CallLog.static.instrumentLower}]`).closest('td');
+    let redcapTable = $(`#event_grid_table [data-mlm-name=${CallLog.static.instrumentLower}]`).closest('tr');
+    
+    systemTable.add(redcapTable).find('button, a').each((_, el) => {
+        // First instance, deprioritized
+        if ($(el).is('a') && !CallLog.link ) {
+            CallLog.link = $(el).prop('href');
         }
         // Any other instance
-        else if ($(el).is('button')) {
+        if ($(el).is('button')) {
             CallLog.link = $(el).attr('onclick').split(`='`)[1].replace(`';`, '');
         }
         // Insert the button
-        if (CallLog.link) {
+        if ($(".CallLogLink").length < 1) {
             $(el).after(callStlye);
         }
         $(el).hide();
     });
-
-    if ($(".CallLogLink").length != 1) {
-        requestAnimationFrame(CallLog.fn.buildCallLogBtn);
-    }
 }
 
 $(document).ready(() => {
