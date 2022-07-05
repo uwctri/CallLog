@@ -189,8 +189,11 @@ class CallLog extends AbstractExternalModule  {
             } elseif (empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "" ) {
                 // Anchor is set and the meta doesn't have the call id in it yet
                 $start = date('Y-m-d', strtotime( $data[$callConfig['event']][$callConfig['field']].' +'.$callConfig['days'].' days'));
-                $end = $callConfig['days'] + $callConfig['length'];
-                $end = date('Y-m-d', strtotime( $data[$callConfig['event']][$callConfig['field']].' +'.$end.' days'));
+                $end = $data[$callConfig['event']][$callConfig['end']];
+                if ( empty($end) ) {
+                    $end = $callConfig['days'] + $callConfig['length'];
+                    $end = date('Y-m-d', strtotime( $data[$callConfig['event']][$callConfig['field']].' +'.$end.' days'));
+                }
                 $meta[$callConfig['id']] = [
                     "start" => $disableRounding ? $start : $this->roundDate($start, 'down'),
                     "end" => $disableRounding ? $end : $this->roundDate($end, 'up'),
@@ -687,12 +690,14 @@ class CallLog extends AbstractExternalModule  {
                 $days = (int)$settings["followup_days"][$i][0];
                 $auto = $settings["followup_auto_remove"][$i][0];
                 $length = (int)$settings["followup_length"][$i][0];
+                $end = $settings["followup_end"][$i][0];
                 if ( !empty($field) && !empty($event) && !empty($days) ) {
                     $followupConfig[] = array_merge([
                         "event" => $event,
                         "field" => $field,
                         "days" => $days,
                         "length" => $length,
+                        "end" => $end,
                         "autoRemove" => $auto
                     ], $commonConfig);
                 } elseif ( !empty($field) && (!empty($days)|| $days == "0") ) {
@@ -703,6 +708,7 @@ class CallLog extends AbstractExternalModule  {
                             "field" => $field,
                             "days" => $days,
                             "length" => $length,
+                            "end" => $end,
                             "autoRemove" => $auto
                         ], $commonConfig);
                         $arr['id'] = $arr['id'].'|'.$eventName;

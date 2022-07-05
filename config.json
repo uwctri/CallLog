@@ -308,6 +308,11 @@
                             "type": "textbox"
                         },
                         {
+                            "key": "followup_end",
+                            "name": "<b>Window End</b><br>Optional - If Window Size is blank then this field on the event will be used as the end date",
+                            "type": "field-list"
+                        },
+                        {
                             "key": "followup_auto_remove",
                             "name": "<b>Auto Remove</b><br>Remove the call from the call list and call log once out-of-window. If not checked the 'complete by' date is more of a suggestion or soft-stop",
                             "type": "checkbox"
