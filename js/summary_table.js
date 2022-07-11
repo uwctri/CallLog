@@ -92,7 +92,7 @@ CallLog.fn.buildCallSummaryTable = function() {
     });
 
     // Enable click to expand child row
-    $('.dataTablesRow').on('click', function() {
+    $('body').on('click', '.dataTablesRow',function() {
         let table = $(this).closest('table').DataTable();
         let row = table.row(this);
         if (row.child.isShown()) {
