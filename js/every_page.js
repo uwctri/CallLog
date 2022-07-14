@@ -8,33 +8,33 @@ function to24hr(t) {
     t = t.toLowerCase().replaceAll(/[amp ]/g, '');
     if (!isPM) return t;
     let [h, m] = t.split(':');
-    return h == 12 ? t : `${parseInt(h)+12}:${m}`;
+    return h == 12 ? t : `${parseInt(h) + 12}:${m}`;
 }
 
 Date.prototype.addDays = function (days) {
-    return new Date( this.setDate(this.getDate() + days) );
+    return new Date(this.setDate(this.getDate() + days));
 }
 
 Object.filter = (obj, predicate) =>
     Object.keys(obj)
-    .filter(key => predicate(obj[key]))
-    .reduce((res, key) => (res[key] = obj[key], res), {});
+        .filter(key => predicate(obj[key]))
+        .reduce((res, key) => (res[key] = obj[key], res), {});
 
 Object.filterKeys = (obj, allowedKeys) =>
     Object.keys(obj)
-    .filter(key => (Array.isArray(allowedKeys) ? allowedKeys : [allowedKeys]).includes(key))
-    .reduce((res, key) => {
-        res[key] = obj[key];
-        return res;
-    }, {});
+        .filter(key => (Array.isArray(allowedKeys) ? allowedKeys : [allowedKeys]).includes(key))
+        .reduce((res, key) => {
+            res[key] = obj[key];
+            return res;
+        }, {});
 
-CallLog.fn.isCallLogNext = function() {
-    return $(".form_menu_selected").parent().nextAll().filter(function() {
+CallLog.fn.isCallLogNext = function () {
+    return $(".form_menu_selected").parent().nextAll().filter(function () {
         return $(this).find('a').css('pointer-events') != "none";
     }).first().find('#form\\[call_log\\]').length > 0
 }
 
-CallLog.fn.addGoToCallLogButton = function() {
+CallLog.fn.addGoToCallLogButton = function () {
     if (!CallLog.fn.isCallLogNext())
         return;
     $("#formSaveTip .btn-group").addClass('d-none');
@@ -44,7 +44,7 @@ CallLog.fn.addGoToCallLogButton = function() {
     $("#goto-call-log").before('<br>');
 }
 
-CallLog.fn.modifyRequiredPopup = function() {
+CallLog.fn.modifyRequiredPopup = function () {
     if (!$("#reqPopup").length || !CallLog.fn.isCallLogNext())
         return;
     if (!$("#reqPopup:visible").length) {
@@ -52,25 +52,25 @@ CallLog.fn.modifyRequiredPopup = function() {
         return;
     }
     let $btn = $("#reqPopup").parent().find('.ui-dialog-buttonpane button').first();
-    $btn.off().on('click', function() {
+    $btn.off().on('click', function () {
         window.location.href = $('#form\\[call_log\\]').prop('href');
     });
     $btn.text('Ignore and go to Call Log');
 }
 
-CallLog.fn.goToCallLog = function() {
+CallLog.fn.goToCallLog = function () {
     appendHiddenInputToForm('save-and-redirect', $('#form\\[call_log\\]').prop('href'));
     dataEntrySubmit('submit-btn-savecontinue');
     return false;
 }
 
-CallLog.fn.goToCallList = function() {
+CallLog.fn.goToCallList = function () {
     appendHiddenInputToForm('save-and-redirect', $("#external_modules_panel a:contains('Call List')").prop('href'));
     dataEntrySubmit('submit-btn-savecontinue');
     return false;
 }
 
-CallLog.fn.formatNavForCalls = function() {
+CallLog.fn.formatNavForCalls = function () {
     let a = `#form\\[${CallLog.static.instrumentLower}\\]`;
     if ($(a).next().length) {
         $(a).next().hide();
@@ -84,13 +84,21 @@ CallLog.fn.formatNavForCalls = function() {
     $(a).prev().find('img').hide().after('<i class="fas fa-phone"></i>')
 }
 
-CallLog.fn.loadTemplates = function() {
+CallLog.fn.loadTemplates = function () {
     CallLog.templates = {};
-    $.each($("template[id=CallLog]").prop('content').children, (_, el) =>
-        CallLog.templates[$(el).prop('id')] = $(el).prop('outerHTML'));
+    $.each($("template[id=CallLog]").prop('content').children, (_, el) => {
+        let html = $(el).prop('outerHTML')
+        let id = $(el).prop('id')
+        if (html.startsWith("<table")) {
+            let tmp = html.split("\n")
+            html = tmp.slice(1, tmp.length).join('').replace("</table>", "").replace("<tbody>", "").replace("</tbody>", "")
+        }
+        CallLog.templates[id] = html;
+
+    });
 }
 
-$(document).ready(function() {
+$(document).ready(function () {
     CallLog.fn.loadTemplates();
     CallLog.fn.formatNavForCalls();
     CallLog.fn.addGoToCallLogButton();
