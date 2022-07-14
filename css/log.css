@@ -50,7 +50,6 @@
     flex-direction: row;
     border: 1px solid silver;
     overflow: hidden;
-    xtouch-action: none;
     margin-right: 0.25rem;
 }
 
