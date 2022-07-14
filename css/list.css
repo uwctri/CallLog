@@ -5,23 +5,23 @@
 }
 
 #west {
-    height: min-content!important;
+    height: min-content !important;
 }
 
 
 /* Boot strap corrections */
 
 .nav-link.call-link.active {
-    background-color: #f7f7f7!important;
+    background-color: #f7f7f7 !important;
 }
 
 .call-tab {
     background-color: transparent;
-    margin-bottom: 10px!important;
+    margin-bottom: 10px !important;
 }
 
 .card-header {
-    background-color: #f7f7f7!important;
+    background-color: #f7f7f7 !important;
 }
 
 .card {
@@ -50,7 +50,7 @@
 }
 
 .tab-header {
-    background-color: white!important;
+    background-color: white !important;
     padding-bottom: 0;
 }
 
@@ -61,8 +61,8 @@
 }
 
 .callTable th {
-    border-left: none!important;
-    border-right: none!important;
+    border-left: none !important;
+    border-right: none !important;
 }
 
 .callTable tr.even {
@@ -70,11 +70,11 @@
 }
 
 .callTable tr.odd {
-    background: white!important;
+    background: white !important;
 }
 
 .callTable tbody td {
-    padding-left: 15px!important;
+    padding-left: 15px !important;
 }
 
 .callTable tbody td a {
@@ -82,7 +82,7 @@
 }
 
 .callTable thead th {
-    padding-left: 15px!important;
+    padding-left: 15px !important;
 }
 
 .dataTableChild {
@@ -100,21 +100,21 @@
 
 .callTable tbody td.callbackCol {
     border-left: 1px solid #dee2e6;
-    padding-left: 10px!important;
+    padding-left: 10px !important;
 }
 
 .callTable thead th.callbackCol {
-    padding-left: 10px!important;
+    padding-left: 10px !important;
 }
 
 .callTable tbody td.callStarted {
-    padding-left: 5px!important;
-    padding-right: 5px!important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
 }
 
 .callTable thead th.callStarted {
-    padding-left: 5px!important;
-    padding-right: 5px!important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
 }
 
 .noCallsButton,
@@ -127,11 +127,11 @@
 }
 
 .callTable tbody td.firstDataCol {
-    padding-left: 7px!important;
+    padding-left: 7px !important;
 }
 
 .callTable thead th.firstDataCol {
-    padding-left: 5px!important;
+    padding-left: 5px !important;
 }
 
 .infocircle {
@@ -146,6 +146,6 @@
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-    color: #333!important;
-    background: white!important;
+    color: #333 !important;
+    background: white !important;
 }
