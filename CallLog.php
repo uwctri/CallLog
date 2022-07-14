@@ -24,11 +24,6 @@ class CallLog extends AbstractExternalModule
     // Hard Coded Config
     public $startedCallGrace = '30';
 
-    // CDN Links
-    // We also use SweetAlerts and DataTables, but these are apart of Redcap already
-    private $flatpickrCSS = "https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css";
-    private $flatpickrJS  = "https://cdn.jsdelivr.net/npm/flatpickr";
-
     /////////////////////////////////////////////////
     // REDCap Hooks
     /////////////////////////////////////////////////
@@ -97,7 +92,6 @@ class CallLog extends AbstractExternalModule
             $this->passArgument('data', $this->getAllCallData($project_id, $record));
             $this->passArgument('eventNameMap', $this->getEventNameMap());
             $this->passArgument('adhoc', $this->loadAdhocTemplateConfig());
-            $this->includeFlatpickr();
             $this->includeCss('css/log.css');
             $this->includeJs('js/summary_table.js');
             $this->includeJs('js/call_log.js');
@@ -1116,12 +1110,6 @@ class CallLog extends AbstractExternalModule
             ];
         }
         return $config;
-    }
-
-    private function includeFlatpickr()
-    {
-        echo '<link rel="stylesheet" href="' . $this->flatpickrCSS . '">';
-        echo '<script src="' . $this->flatpickrJS . '"></script>';
     }
 
     private function includeJs($path)
