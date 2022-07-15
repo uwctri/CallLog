@@ -36,6 +36,15 @@
         "router"
     ],
     "framework-version": 5,
+    "crons": [
+        {
+            "cron_name": "call_log_nts_generate",
+            "cron_description": "Runs daily to generate NTS calls",
+            "method": "cronNeedToSchedule",
+            "cron_frequency": "86400",
+            "cron_max_run_time": "600"
+        }
+    ],
     "project-settings": [
         {
             "key": "call_summary",
@@ -358,7 +367,7 @@
                     "sub_settings": [
                         {
                             "key": "nts_text",
-                            "name": "Need to Schedule calls are generated for an event when the previous event is has a truthy indicator, but the current event has no schedulaed date.",
+                            "name": "Need to Schedule calls are generated for an event when the previous event has a truthy indicator, but the current event has no schedulaed date.",
                             "type": "descriptive"
                         },
                         {
@@ -379,6 +388,16 @@
                         {
                             "key": "nts_skip",
                             "name": "<b>Skip NTS if:</b><br>Skip if value is truthy",
+                            "type": "field-list"
+                        },
+                        {
+                            "key": "nts_text_cron",
+                            "name": "As an alternative, or in addition to, the above you can generate an NTS when a call window has started, but the appointment is not schedualed.",
+                            "type": "descriptive"
+                        },
+                        {
+                            "key": "nts_window_start_cron",
+                            "name": "<b>Window Start Date</b>",
                             "type": "field-list"
                         }
                     ]

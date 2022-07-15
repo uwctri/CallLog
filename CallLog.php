@@ -5,6 +5,7 @@ namespace UWMadison\CallLog;
 use ExternalModules\AbstractExternalModule;
 use REDCap;
 use User;
+use Project;
 
 class CallLog extends AbstractExternalModule
 {
@@ -352,6 +353,76 @@ class CallLog extends AbstractExternalModule
             }
         }
         return $this->saveCallMetadata($project_id, $record, $meta);
+    }
+
+    function getRecordIdField($project_id)
+    {
+        $sql = "SELECT field_name FROM redcap_metadata WHERE field_order = 1 AND project_id = ?";
+        $result = $this->query($sql, [$project_id]);
+        $row = $result->fetch_assoc();
+        return $row["field_name"];
+    }
+
+    function cronNeedToSchedule($cronInfo)
+    {
+        global $Proj;
+        $originalPid = $_GET['pid'];
+        $today = Date('Y-m-d');
+
+        foreach ($this->getProjectsWithModuleEnabled() as $localProjectId) {
+            $_GET['pid'] = $localProjectId;
+            $project_id = $localProjectId;
+            define("PROJECT_ID", $project_id);
+            $Proj = new Project($project_id);
+            $project_record_id = $this->getRecordIdField($project_id);
+            $eventMap = REDCap::getEventNames(true);
+
+            $config = $this->loadCallTemplateConfig()["nts"];
+            if (empty($config))
+                continue;
+            foreach ($config as $callConfig) {
+
+                $fields = [$project_record_id, $callConfig['apptDate'], $callConfig['indicator'], $callConfig['skip'], $callConfig["window"]];
+                $project_data = REDCap::getData($project_id, 'array', null, $fields);
+
+                foreach ($project_data as $record => $data) {
+
+                    $meta = $this->getCallMetadata($project_id, $record);
+                    $event = $callConfig['event'];
+                    // Call ID already exists
+                    if ($meta[$callConfig["id"]])
+                        continue;
+                    // Appt is scheuled, bail
+                    if ($data[$event][$callConfig['apptDate']] != "")
+                        continue;
+                    // Skip flag is set
+                    if ($data[$event][$callConfig['skip']])
+                        continue;
+                    // Appt has already been attended
+                    if ($data[$event][$callConfig['indicator']])
+                        continue;
+
+                    if ($data[$event][$callConfig["window"]] >= $today) {
+                        $meta[$callConfig['id']] = [
+                            "template" => 'nts',
+                            "event_id" => $callConfig['event'],
+                            "event" => $eventMap[$callConfig['event']],
+                            "name" => $callConfig['name'],
+                            "instances" => [],
+                            "voiceMails" => 0,
+                            "maxVoiceMails" => $callConfig['maxVoiceMails'],
+                            "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
+                            "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
+                            "complete" => false
+                        ];
+                        $this->projectLog("Need to Schedue call {$callConfig['id']} created during cron");
+                    }
+                }
+            }
+        }
+
+        $_GET['pid'] = $originalPid;
+        return "The \"{$cronInfo['cron_description']}\" cron job completed successfully.";
     }
 
     public function metadataNeedToSchedule($project_id, $record)
@@ -787,6 +858,7 @@ class CallLog extends AbstractExternalModule
                 $indicator = $settings["nts_indicator"][$i][0];
                 $dateField = $settings["nts_date"][$i][0];
                 $skipField = $settings["nts_skip"][$i][0];
+                $window = $settings["nts_window_start_cron"][$i][0];
                 if (!empty($indicator) && !empty($dateField)) {
                     $includeEvents = array_map('trim', explode(',', $settings["nts_include_events"][$i][0]));
                     foreach ($includeEvents as $eventName) {
@@ -794,7 +866,8 @@ class CallLog extends AbstractExternalModule
                             "event" => REDCap::getEventIdFromUniqueEvent($eventName),
                             "indicator" => $indicator,
                             "apptDate" => $dateField,
-                            "skip" => $skipField
+                            "skip" => $skipField,
+                            "window" => $window
                         ], $commonConfig);
                         $arr['id'] = $arr['id'] . '|' . $eventName;
                         $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
