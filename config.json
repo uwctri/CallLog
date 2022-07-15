@@ -42,7 +42,7 @@
             "cron_description": "Runs daily to generate NTS calls",
             "method": "cronNeedToSchedule",
             "cron_frequency": "86400",
-            "cron_max_run_time": "600"
+            "cron_max_run_time": "1800"
         }
     ],
     "project-settings": [
