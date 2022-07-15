@@ -1,13 +1,13 @@
 CallLog.link = "";
 CallLog.fn.buildCallLogBtn = () => {
 
-    let callStlye = `<a class="CallLogLink"><i class="fa fa-phone"></i></a>`;
+    let callIcon = `<a class="CallLogLink"><i class="fa fa-phone"></i></a>`;
     let systemTable = $(`.sysManTable [data-mlm-name=${CallLog.static.instrumentLower}]`).closest('td');
     let redcapTable = $(`#event_grid_table [data-mlm-name=${CallLog.static.instrumentLower}]`).closest('tr');
-    
+
     systemTable.add(redcapTable).find('button, a').each((_, el) => {
         // First instance, deprioritized
-        if ($(el).is('a') && !CallLog.link ) {
+        if ($(el).is('a') && !CallLog.link) {
             CallLog.link = $(el).prop('href');
         }
         // Any other instance
@@ -16,7 +16,7 @@ CallLog.fn.buildCallLogBtn = () => {
         }
         // Insert the button
         if ($(".CallLogLink").length < 1) {
-            $(el).after(callStlye);
+            $(el).after(callIcon);
         }
         $(el).hide();
     });
