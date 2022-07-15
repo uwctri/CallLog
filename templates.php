@@ -110,20 +110,22 @@
         </td>
     </tr>
 
-    <td id="notesRow" class="col-7 notesRow" colspan="2" style="background-color:#f5f5f5">
-        <div class="container">
-            <div class="row mb-3 mt-2 font-weight-bold"> Notes </div>
-            <div class="row panel-container">
-                <div class="panel-left">
-                    <textarea class="notesOld" readonly placeholder="Previous notes will display here"></textarea>
-                </div>
-                <div class="splitter"></div>
-                <div class="panel-right">
-                    <textarea class="notesNew" placeholder="Enter any notes here"></textarea>
+    <table id="notesEntry">
+        <td class="col-7 notesRow" colspan="2" style="background-color:#f5f5f5">
+            <div class="container">
+                <div class="row mb-3 mt-2 font-weight-bold"> Notes </div>
+                <div class="row panel-container">
+                    <div class="panel-left">
+                        <textarea class="notesOld" readonly placeholder="Previous notes will display here"></textarea>
+                    </div>
+                    <div class="splitter"></div>
+                    <div class="panel-right">
+                        <textarea class="notesNew" placeholder="Enter any notes here"></textarea>
+                    </div>
                 </div>
             </div>
-        </div>
-    </td>
+        </td>
+    </table>
 
     <button id="adhocBtn" type="button" class="btn btn-primaryrc btn-sm position-absolute adhocButton" data-toggle="modal" data-target="#MODALID">TEXT</button>
 

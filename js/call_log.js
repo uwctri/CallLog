@@ -138,7 +138,7 @@ CallLog.fn.selectTab = function () {
 
 CallLog.fn.buildNotesArea = function () {
     $("#call_notes-tr td").hide();
-    $("#call_notes-tr").append(CallLog.templates.notesRow);
+    $("#call_notes-tr").append(CallLog.templates.notesEntry);
     $(".panel-left").resizable({
         handleSelector: ".splitter",
         resizeHeight: false,
