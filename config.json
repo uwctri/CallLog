@@ -465,6 +465,11 @@
                     "type": "textbox"
                 },
                 {
+                    "key": "tab_order",
+                    "name": "<b>Tab Order</b>",
+                    "type": "textbox"
+                },
+                {
                     "key": "tab_includes_followup",
                     "name": "<b>Flag set</b><br>Hidden via JS",
                     "type": "textbox"
