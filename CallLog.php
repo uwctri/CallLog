@@ -936,7 +936,13 @@ class CallLog extends AbstractExternalModule
         global $Proj;
         $allFields = [];
         $settings = $this->getProjectSettings();
-        foreach ($settings["tab_name"] as $i => $tab_name) {
+        $orderedTabs = $settings["tab_name"];
+        if ( count(array_filter($settings["tab_order"])) == count($settings["tab_order"]) ) {
+            $orderedTabs = array_combine($settings["tab_order"],$settings["tab_name"]);
+            ksort($orderedTabs);
+        }
+        $i = 0;
+        foreach ($orderedTabs as $order => $tab_name) {
             $calls = $settings["tab_calls_included"][$i];
             $tab_id = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '_', strtolower($tab_name)));
             $tabConfig[$i] = [
@@ -977,6 +983,7 @@ class CallLog extends AbstractExternalModule
                 ];
                 $allFields[] = $field;
             }
+            $i++;
         }
         return [
             'config' => $tabConfig,
