@@ -941,11 +941,11 @@ class CallLog extends AbstractExternalModule
             $orderedTabs = array_combine($settings["tab_order"],$settings["tab_name"]);
             ksort($orderedTabs);
         }
-        $i = 0;
-        foreach ($orderedTabs as $order => $tab_name) {
+        $tabOrder = 0;
+        foreach ($orderedTabs as $i => $tab_name) {
             $calls = $settings["tab_calls_included"][$i];
             $tab_id = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '_', strtolower($tab_name)));
-            $tabConfig[$i] = [
+            $tabConfig[$tabOrder] = [
                 "tab_name" => $tab_name,
                 "included_calls" => $calls,
                 "tab_id" => $tab_id,
@@ -968,7 +968,7 @@ class CallLog extends AbstractExternalModule
                 $default = $default !== "" && !is_null($default) ? $default : "";
                 $expanded =  $settings["tab_field_expanded"][$i][$j];
                 $expanded = $expanded ? true : false;
-                $tabConfig[$i]["fields"][$j] = [
+                $tabConfig[$tabOrder]["fields"][$j] = [
                     "field" => $field,
                     "map" => $this->getDictionaryValuesFor($field),
                     "displayName" => $name,
@@ -983,7 +983,7 @@ class CallLog extends AbstractExternalModule
                 ];
                 $allFields[] = $field;
             }
-            $i++;
+            $tabOrder++;
         }
         return [
             'config' => $tabConfig,
