@@ -36,22 +36,25 @@ class CallLog extends AbstractExternalModule
             $this->reportDisconnectedPhone($project_id, $record);
             $this->metadataUpdateCommon($project_id, $record);
         } else {
+            $triggerForm = $this->getProjectSetting('trigger_save');
+            if (empty($triggerForm) || ($instrument == $triggerForm)) {
+                // Check if we need to set (or remove) a new Follow up call (Checkout visit completed)
+                $this->metadataFollowup($project_id, $record);
+                // Check if we have changed how reminders should be sent
+                $this->metadataReminder($project_id, $record);
+                // Check if we need to set a new Missed/Cancelled call (Checkout issue reported)
+                $this->metadataMissedCancelled($project_id, $record);
+                // Check if we need to set a new Need to Schedule call (Checkout vist completed)
+                $this->metadataNeedToSchedule($project_id, $record);
+            }
             // Check if the Phone issues are resolved
             $this->updateDisconnectedPhone($project_id, $record);
             // Check if we are a New Entry or not
             $this->metadataNewEntry($project_id, $record);
-            // Check if we need to set (or remove) a new Follow up call (Checkout visit completed)
-            $this->metadataFollowup($project_id, $record);
-            // Check if we need to set a new Missed/Cancelled call (Checkout issue reported)
-            $this->metadataMissedCancelled($project_id, $record);
-            // Check if we need to set a new Need to Schedule call (Checkout vist completed)
-            $this->metadataNeedToSchedule($project_id, $record);
             // Check if we need to make a Schedueld Phone Visit call log (Check in was started)
             $this->metadataPhoneVisit($project_id, $record);
             // Check if we need to extend the duration of the call flag
             $this->metadataCallStartedUpdate($project_id, $record);
-            // Check if we have changed how reminders should be sent
-            $this->metadataReminder($project_id, $record);
         }
     }
 
@@ -937,8 +940,8 @@ class CallLog extends AbstractExternalModule
         $allFields = [];
         $settings = $this->getProjectSettings();
         $orderedTabs = $settings["tab_name"];
-        if ( count(array_filter($settings["tab_order"])) == count($settings["tab_order"]) ) {
-            $orderedTabs = array_combine($settings["tab_order"],$settings["tab_name"]);
+        if (count(array_filter($settings["tab_order"])) == count($settings["tab_order"])) {
+            $orderedTabs = array_combine($settings["tab_order"], $settings["tab_name"]);
             ksort($orderedTabs);
         }
         $tabOrder = 0;

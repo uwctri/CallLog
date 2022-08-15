@@ -42,7 +42,7 @@
             "cron_description": "Runs daily to generate NTS calls",
             "method": "cronNeedToSchedule",
             "cron_frequency": "86400",
-            "cron_max_run_time": "1800"
+            "cron_max_run_time": "3600"
         }
     ],
     "project-settings": [
@@ -50,6 +50,11 @@
             "key": "call_summary",
             "name": "<b>Include call summary on</b>",
             "repeatable": true,
+            "type": "form-list"
+        },
+        {
+            "key": "trigger_save",
+            "name": "<b>Trigger Call Log Generation on...</b><br>Fire some call log generation (MCV, NTS, Follow Up, Reminders) only when this form is saved",
             "type": "form-list"
         },
         {
