@@ -1230,9 +1230,18 @@ class CallLog extends AbstractExternalModule
         REDCap::logEvent("Call Log", $_POST['details'], $sql, $_POST['record'], $event, $_GET['pid']);
     }
 
-    public function isNotBlank($string)
+    public function isNotBlank($value)
     {
-        return $string != "";
+        if ( is_array($value) ) {
+            foreach ( $value as $k => $v ) {
+                if ( $v != "" ) {
+                    return True;
+                }
+            }
+            return False;
+        }
+        //assume string
+        return $value != "";
     }
 
     public function loadCallListData($skipDataPack = false)
@@ -1325,7 +1334,11 @@ class CallLog extends AbstractExternalModule
                 // This first line could be empty for New Entry calls, but it won't matter.
                 $instanceData = $recordData['repeat_instances'][$callEvent][$this->instrumentLower][end($call['instances'])];
                 $instanceEventData = $recordData[$call['event_id']];
-                $instanceData = array_merge(array_filter(empty($instanceEventData) ? [] : $instanceEventData, array($this, 'isNotBlank')), array_filter($recordData[$callEvent], array($this, 'isNotBlank')), array_filter(empty($instanceData) ? [] : $instanceData, array($this, 'isNotBlank')));
+                $instanceData = array_merge(
+                    array_filter(empty($instanceEventData) ? [] : $instanceEventData, array($this, 'isNotBlank')), 
+                    array_filter($recordData[$callEvent], array($this, 'isNotBlank')), 
+                    array_filter(empty($instanceData) ? [] : $instanceData, array($this, 'isNotBlank'))
+                );
 
                 // Check to see if a call back was request for Today or Tomorrow+
                 $instanceData['_callbackNotToday'] = ($instanceData['call_requested_callback'][1] == '1' && $instanceData['call_callback_date'] > $today);
