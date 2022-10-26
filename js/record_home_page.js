@@ -6,6 +6,9 @@ CallLog.fn.buildCallLogBtn = () => {
     let redcapTable = $(`#event_grid_table [data-mlm-name=${CallLog.static.instrumentLower}]`).closest('tr');
 
     systemTable.add(redcapTable).find('button, a').each((_, el) => {
+        if ($(el).hasClass("invis")) {
+            return;
+        }
         // First instance, deprioritized
         if ($(el).is('a') && !CallLog.link) {
             CallLog.link = $(el).prop('href');
