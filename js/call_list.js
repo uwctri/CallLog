@@ -8,7 +8,7 @@ CallLog.cookie = {};
 
 CallLog.alwaysShowCallbackCol = false;
 CallLog.earlyCall = 5 * 60 * 1000; // Grace time on early calling of 5 mins
-CallLog.pageRefresh = 5 * 60 * 1000; // Refresh page every 5 minutes
+CallLog.pageRefresh = 1 * 60 * 1000; // Refresh page every 1 minutes
 
 CallLog.fn.setupSearch = function() {
 
