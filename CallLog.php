@@ -195,7 +195,7 @@ class CallLog extends AbstractExternalModule
         $meta = $this->getCallMetadata($project_id, $record);
         $eventMap = REDCap::getEventNames(true);
         foreach ($config as $callConfig) {
-            $data = REDCap::getData($project_id, 'array', $record, $callConfig['field'])[$record];
+            $data = REDCap::getData($project_id, 'array', $record, [$callConfig['field'],$callConfig['end']])[$record];
             if (!empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == "") {
                 //Anchor appt was removed, get rid of followup call too.
                 unset($meta[$callConfig['id']]);
@@ -226,8 +226,11 @@ class CallLog extends AbstractExternalModule
                 // Update the start/end dates if the call exists and the anchor isn't blank 
                 $start = date('Y-m-d', strtotime($data[$callConfig['event']][$callConfig['field']] . ' +' . $callConfig['days'] . ' days'));
                 $start = $disableRounding ? $start : $this->roundDate($start, 'down');
-                $end = $callConfig['days'] + $callConfig['length'];
-                $end = date('Y-m-d', strtotime($data[$callConfig['event']][$callConfig['field']] . ' +' . $end . ' days'));
+                $end = $data[$callConfig['event']][$callConfig['end']];
+                if (empty($end)) {
+                    $end = $callConfig['days'] + $callConfig['length'];
+                    $end = date('Y-m-d', strtotime($data[$callConfig['event']][$callConfig['field']] . ' +' . $end . ' days'));
+                }
                 $end = $disableRounding ? $end : $this->roundDate($end, 'up');
                 if (($meta[$callConfig['id']]['start'] != $start) || ($meta[$callConfig['id']]['end'] != $end)) {
                     $meta[$callConfig['id']]['start'] = $start;
