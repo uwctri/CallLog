@@ -53,12 +53,6 @@
     ],
     "project-settings": [
         {
-            "key": "call_summary",
-            "name": "<b>Include call summary on</b>",
-            "repeatable": true,
-            "type": "form-list"
-        },
-        {
             "key": "trigger_save",
             "name": "<b>Trigger Call Log Generation on...</b><br>Fire some call log generation (MCV, NTS, Follow Up, Reminders) only when this form is saved",
             "type": "form-list"
@@ -77,6 +71,11 @@
             "key": "disable_rounding",
             "name": "<b>Disable Followup Date Rounding</b><br>By default date windows for follow ups are rounded to avoid weekends. You may wish to disable if the exact window is crucial",
             "type": "checkbox"
+        },
+        {
+            "key": "record_label_alias",
+            "name": "<b>Record Label Alias</b>",
+            "type": "textbox"
         },
         {
             "key": "dd_text",
@@ -114,6 +113,12 @@
             "key": "withdraw_tmp_var",
             "name": "<b>Withdraw Field</b>",
             "type": "field-list"
+        },
+        {
+            "key": "call_summary",
+            "name": "<b>Include call summary on</b>",
+            "repeatable": true,
+            "type": "form-list"
         },
         {
             "key": "bad_phone_collection",
@@ -481,6 +486,29 @@
                     "type": "textbox"
                 },
                 {
+                    "key": "tab_link",
+                    "name": "<b>Link</b><br>Linking to an instrument isn't possbile on New Entry calls",
+                    "type": "radio",
+                    "choices": [
+                        {
+                            "value": "none",
+                            "name": "None"
+                        },
+                        {
+                            "value": "home",
+                            "name": "Record Home Page"
+                        },
+                        {
+                            "value": "call",
+                            "name": "New Call Log"
+                        },
+                        {
+                            "value": "instrument",
+                            "name": "Instrument"
+                        }
+                    ]
+                },
+                {
                     "key": "tab_includes_followup",
                     "name": "<b>Flag set</b><br>Hidden via JS",
                     "type": "textbox"
@@ -520,29 +548,6 @@
                             "key": "tab_field_expanded",
                             "name": "<b>Expanded Info</b><br>Display the feild in the expanded info",
                             "type": "checkbox"
-                        },
-                        {
-                            "key": "tab_field_link",
-                            "name": "<b>Link</b><br>Linking to an instrument isn't possbile on New Entry calls",
-                            "type": "radio",
-                            "choices": [
-                                {
-                                    "value": "none",
-                                    "name": "None"
-                                },
-                                {
-                                    "value": "home",
-                                    "name": "Record Home Page"
-                                },
-                                {
-                                    "value": "call",
-                                    "name": "New Call Log"
-                                },
-                                {
-                                    "value": "instrument",
-                                    "name": "Instrument"
-                                }
-                            ]
                         },
                         {
                             "key": "tab_field_link_event",

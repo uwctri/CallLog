@@ -88,6 +88,9 @@ $(document).ready(function () {
                     `<span class="withdrawTmpTextLoaded" style="position: absolute;transform: translateY(20px);">Hide all of a subject's calls until this date</span>`
                 );
             }
+
+            // Remove junk "1" from text field
+            $("tr[field=report_text] span").remove();
         };
     });
 
