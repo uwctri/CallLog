@@ -18,7 +18,7 @@ $(document).ready(function () {
     });
 
     // Setup link buttons to show correct settings for link
-    $("body").on('click', ".callConfig input[name^=tab_field_link____]", function () {
+    $("body").on('click', ".callConfig input[name^=tab_link____]", function () {
         let $el = $(this).closest('tr').nextUntil('.sub_end');
         $(this).val() == "instrument" ? $el.show() : $el.hide();
     });
@@ -42,7 +42,7 @@ $(document).ready(function () {
             $modal.addClass('callConfig');
 
             // If nothing is selected on the radio options then default to first option
-            $modal.find("tr[field=call_template], tr[field=tab_field_link]").each(function () {
+            $modal.find("tr[field=call_template], tr[field=tab_link]").each(function () {
                 if ($(this).find('input:checked').length == 0)
                     $(this).find('input').first().click()
             });
@@ -56,7 +56,7 @@ $(document).ready(function () {
 
             CallLog.configInit = true;
             $modal.find("input[name^=call_template____]:checked").click();
-            $modal.find("input[name^=tab_field_link____]:checked").click();
+            $modal.find("input[name^=tab_link____]:checked").click();
 
             // Hide all the flag fields and set events for them
             $("input[name^=tab_calls_included____]").on('change', function () {

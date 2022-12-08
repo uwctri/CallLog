@@ -949,6 +949,25 @@ class CallLog extends AbstractExternalModule
         $record_id_field = REDCap::getRecordIdField();
         $record_id_label = $this->getFieldLabel($record_id_field);
 
+        // Grab all expanded area info that is the same across tabs
+        $expands = [];
+        foreach ($settings["tab_expands_field"][0] as $i => $field) {
+            $name = $settings["tab_expands_field_name"][0][$i] ?? trim($this->getFieldLabel($field), ":?");
+            $validation = $Proj->metadata[$field]["element_validation_type"] ?? "";
+            $default = $settings["tab_expands_field_default"][0][$i] ?? "";
+            $expands[] = [
+                "field" => $field,
+                "map" => $this->getDictionaryValuesFor($field),
+                "displayName" => trim($name) . ": ",
+                "validation" => $validation,
+                "isFormStatus" => $Proj->isFormStatus($field),
+                "fieldType" => $Proj->metadata[$field]["element_type"],
+                "default" => $default,
+                "expanded" => true
+            ];
+            $allFields[] = $field;
+        }
+
         // Default ordering
         if (count(array_filter($settings["tab_order"])) != count($settings["tab_order"])) {
             $orderMapping = range(0, count($settings["tab_name"]));
@@ -976,37 +995,31 @@ class CallLog extends AbstractExternalModule
                 $call2TabMap[$call] = $tab_id;
             }
 
-            // Setup standard fields
-            $tabConfig[$tabOrder]["fields"] = [
+            // Setup standard & shared fields
+            $tabConfig[$tabOrder]["fields"] = array_merge($expands, [
                 [
                     "field" => $record_id_field,
                     "displayName" => $record_id_label,
                     "validation" => "",
                     "link" => $settings["tab_link"][$i] ?? "home",
+                    "linkedEvent" => $settings["tab_field_link_event"][$i],
+                    "linkedInstrument" => $settings["tab_field_link_instrument"][$i],
                 ]
                 # TODO add Label and Attempt
-            ];
+            ]);
 
             // Setup the tab's config
             foreach ($settings["tab_field"][$i] as $j => $field) {
-                $name = $settings["tab_field_name"][$i][$j];
-                $name = $name ? $name : trim($this->getFieldLabel($field), ":?");
-                $validation = $Proj->metadata[$field]["element_validation_type"];
-                $validation = $validation ? $validation : "";
-                $default = $settings["tab_field_default"][$i][$j];
-                $default = $default !== "" && !is_null($default) ? $default : "";
-                $expanded =  !!$settings["tab_field_expanded"][$i][$j];
+                $name = $settings["tab_field_name"][$i][$j] ?? trim($this->getFieldLabel($field), ":?");
+                $validation = $Proj->metadata[$field]["element_validation_type"] ?? "";
+                $default = $settings["tab_field_default"][$i][$j] ?? "";
                 $tabConfig[$tabOrder]["fields"][] = [
                     "field" => $field,
                     "map" => $this->getDictionaryValuesFor($field),
                     "displayName" => $name,
                     "validation" => $validation,
                     "isFormStatus" => $Proj->isFormStatus($field),
-                    "expanded" => $expanded,
                     "fieldType" => $Proj->metadata[$field]["element_type"],
-                    "link" => $settings["tab_field_link"][$i][$j],
-                    "linkedEvent" => $settings["tab_field_link_event"][$i][$j],
-                    "linkedInstrument" => $settings["tab_field_link_instrument"][$i][$j],
                     "default" => $default
                 ];
                 $allFields[] = $field;
