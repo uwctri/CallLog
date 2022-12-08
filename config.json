@@ -26,6 +26,12 @@
                 "show-header-and-footer": true
             },
             {
+                "name": "Call Metadata Reports",
+                "icon": "fas fa-receipt",
+                "url": "reports.php",
+                "show-header-and-footer": true
+            },
+            {
                 "name": "Router Page",
                 "icon": "gear",
                 "url": "router.php?NOAUTH"
