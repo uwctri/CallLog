@@ -1249,12 +1249,14 @@ class CallLog extends AbstractExternalModule
         return $value != "";
     }
 
-    public function loadAllMetadata($excludeWithdrawn = true)
+    public function loadReportConfig($excludeWithdrawn = true)
     {
         // Constants for data pull
         $project_id = $_GET['pid'];
         $metaEvent = $this->getProjectSetting("metadata_event");
-        $withdraw = [
+        $report_fields = $this->getProjectSetting('report_field')[0];
+        $report_names = $this->getProjectSetting('report_field_name')[0];
+        $withdraw_config = [
             'event' => $this->getProjectSetting("withdraw_event"),
             'var' => $this->getProjectSetting("withdraw_var"),
             'tmp' => [
@@ -1265,8 +1267,8 @@ class CallLog extends AbstractExternalModule
 
         // Prep for getData
         $firstEvent = array_keys(REDCap::getEventNames())[0];
-        $fields = [REDCap::getRecordIdField(), $this->metadataField, $withdraw['var'], $withdraw['tmp']['var']];
-        $events = [$firstEvent, $metaEvent, $withdraw['event'], $withdraw['tmp']['event']];
+        $fields = array_merge([REDCap::getRecordIdField(), $this->metadataField, $withdraw_config['var'], $withdraw_config['tmp']['var']], $report_fields);
+        $events = [$firstEvent, $metaEvent, $withdraw_config['event'], $withdraw_config['tmp']['event']];
         $records = null;
         $data = REDCap::getData($project_id, 'array', $records, $fields, $events);
         $result = [];
@@ -1278,20 +1280,38 @@ class CallLog extends AbstractExternalModule
 
         // Loop to format data
         foreach ($data as $record => $record_data) {
+
+            // Flatten
+            $tmp = [];
             foreach ($record_data as $eventid => $event_data) {
-                $result[$record] = array_merge(array_filter($event_data), $result[$record] ?? []);
+                $tmp = array_merge(array_filter($event_data), $tmp ?? []);
             }
-            $result[$record]['id'] = $record;
-            unset($result[$record][$fields[0]]);
-            if (!empty($result[$record][$withdraw['var']]) || !empty($result[$record][$withdraw['tmp']['var']])) {
-                unset($result[$record]);
+
+            // Check withdrawn
+            $withdraw = !empty($tmp[$withdraw_config['var']]) || !empty($tmp[$withdraw_config['tmp']['var']]);
+            if ($excludeWithdrawn && $withdraw) {
                 continue;
             }
-            if (!empty($result[$record][$this->metadataField])) {
-                $result[$record]['metadata'] = json_decode($result[$record][$this->metadataField], true);
-                unset($result[$record][$this->metadataField]);
+
+            // Load hardcoded data
+            $result[$record]['_id'] = $record;
+            if (!empty($tmp[$this->metadataField])) {
+                $result[$record]['metadata'] = json_decode($tmp[$this->metadataField], true);
             }
-            $result[$record]['label'] = Piping::replaceVariablesInLabel($label, $record);
+            $result[$record]['_label'] = Piping::replaceVariablesInLabel($label, $record);
+
+            // Load custom data
+            foreach ($report_fields as $field) {
+                $result[$record][$field] = $tmp[$field] ?? "";
+            }
+        }
+
+        // Load custom cols
+        foreach ($report_fields as $index => $field) {
+            $result['_cols'][$field] = [
+                'name' => $report_names[$index] ?? $this->getDictionaryLabelFor($field),
+                'map' => $this->getDictionaryValuesFor($field)
+            ];
         }
         return $result;
     }
