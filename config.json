@@ -557,6 +557,37 @@
                     ]
                 }
             ]
+        },
+        {
+            "key": "call_metadata_reports",
+            "name": "<b>Metadata Reports</b>",
+            "type": "sub_settings",
+            "repeatable": false,
+            "sub_settings": [
+                {
+                    "key": "report_text",
+                    "name": "By default reports include record_id, the record label, and data needed for the report. You may include additional data below.",
+                    "type": "descriptive"
+                },
+                {
+                    "key": "report_headers",
+                    "name": "<b>Element</b>",
+                    "type": "sub_settings",
+                    "repeatable": true,
+                    "sub_settings": [
+                        {
+                            "key": "report_field",
+                            "name": "<b>Field</b>",
+                            "type": "field-list"
+                        },
+                        {
+                            "key": "report_field_name",
+                            "name": "<b>Field Name</b><br>Defaults to field label",
+                            "type": "textbox"
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }

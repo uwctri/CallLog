@@ -3,7 +3,7 @@ $module->initializeJavascriptModuleObject();
 ?>
 <link rel="stylesheet" href="<?= $module->getURL('css/reports.css'); ?>">
 <script>
-    <?= $module->getJavascriptModuleObjectName(); ?>.config = <?= json_encode($module->loadAllMetadata()); ?>;
+    <?= $module->getJavascriptModuleObjectName(); ?>.config = <?= json_encode($module->loadReportConfig()); ?>;
 </script>
 
 <div class="projhdr"><i class="fas fa-receipt"></i> Call Metadata Reports</div>
