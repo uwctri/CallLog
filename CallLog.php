@@ -6,6 +6,7 @@ use ExternalModules\AbstractExternalModule;
 use REDCap;
 use User;
 use Project;
+use Piping;
 
 class CallLog extends AbstractExternalModule
 {
@@ -110,7 +111,8 @@ class CallLog extends AbstractExternalModule
 
     public function redcap_module_link_check_display($project_id, $link)
     {
-        return (strpos($link['url'], 'index') !== false) ? true : null;
+        $showLink = (strpos($link['url'], 'index') !== false) || (strpos($link['url'], 'reports') !== false);
+        return $showLink ? true : null;
     }
 
     /////////////////////////////////////////////////
@@ -195,7 +197,7 @@ class CallLog extends AbstractExternalModule
         $meta = $this->getCallMetadata($project_id, $record);
         $eventMap = REDCap::getEventNames(true);
         foreach ($config as $callConfig) {
-            $data = REDCap::getData($project_id, 'array', $record, [$callConfig['field'],$callConfig['end']])[$record];
+            $data = REDCap::getData($project_id, 'array', $record, [$callConfig['field'], $callConfig['end']])[$record];
             if (!empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == "") {
                 //Anchor appt was removed, get rid of followup call too.
                 unset($meta[$callConfig['id']]);
@@ -944,7 +946,7 @@ class CallLog extends AbstractExternalModule
         $settings = $this->getProjectSettings();
         $orderMapping = $settings["tab_order"];
         if (count(array_filter($settings["tab_order"])) != count($settings["tab_order"])) {
-            $orderMapping = range(0,count($settings["tab_name"]));
+            $orderMapping = range(0, count($settings["tab_name"]));
         }
         foreach ($settings["tab_name"] as $i => $tab_name) {
             $tabOrder = $orderMapping[$i];
@@ -989,11 +991,11 @@ class CallLog extends AbstractExternalModule
                 $allFields[] = $field;
             }
         }
-        
+
         // Re-index to be sure we are zero based
         ksort($tabConfig);
-        $tabConfig = array_combine(range(0,count($tabConfig)-1),array_values($tabConfig));
-        
+        $tabConfig = array_combine(range(0, count($tabConfig) - 1), array_values($tabConfig));
+
         return [
             'config' => $tabConfig,
             'call2tabMap' => $call2TabMap,
@@ -1235,9 +1237,9 @@ class CallLog extends AbstractExternalModule
 
     public function isNotBlank($value)
     {
-        if ( is_array($value) ) {
-            foreach ( $value as $k => $v ) {
-                if ( $v != "" ) {
+        if (is_array($value)) {
+            foreach ($value as $k => $v) {
+                if ($v != "") {
                     return True;
                 }
             }
@@ -1245,6 +1247,53 @@ class CallLog extends AbstractExternalModule
         }
         //assume string
         return $value != "";
+    }
+
+    public function loadAllMetadata($excludeWithdrawn = true)
+    {
+        // Constants for data pull
+        $project_id = $_GET['pid'];
+        $metaEvent = $this->getProjectSetting("metadata_event");
+        $withdraw = [
+            'event' => $this->getProjectSetting("withdraw_event"),
+            'var' => $this->getProjectSetting("withdraw_var"),
+            'tmp' => [
+                'event' => $this->getProjectSetting("withdraw_tmp_event"),
+                'var' => $this->getProjectSetting("withdraw_tmp_var")
+            ]
+        ];
+
+        // Prep for getData
+        $firstEvent = array_keys(REDCap::getEventNames())[0];
+        $fields = [REDCap::getRecordIdField(), $this->metadataField, $withdraw['var'], $withdraw['tmp']['var']];
+        $events = [$firstEvent, $metaEvent, $withdraw['event'], $withdraw['tmp']['event']];
+        $records = null;
+        $data = REDCap::getData($project_id, 'array', $records, $fields, $events);
+        $result = [];
+
+        // Pull the record Label
+        $sql = "SELECT custom_record_label FROM redcap_projects WHERE project_id = ?;";
+        $query = db_query($sql, $project_id);
+        $label = array_values(db_fetch_assoc($query))[0];
+
+        // Loop to format data
+        foreach ($data as $record => $record_data) {
+            foreach ($record_data as $eventid => $event_data) {
+                $result[$record] = array_merge(array_filter($event_data), $result[$record] ?? []);
+            }
+            $result[$record]['id'] = $record;
+            unset($result[$record][$fields[0]]);
+            if (!empty($result[$record][$withdraw['var']]) || !empty($result[$record][$withdraw['tmp']['var']])) {
+                unset($result[$record]);
+                continue;
+            }
+            if (!empty($result[$record][$this->metadataField])) {
+                $result[$record]['metadata'] = json_decode($result[$record][$this->metadataField], true);
+                unset($result[$record][$this->metadataField]);
+            }
+            $result[$record]['label'] = Piping::replaceVariablesInLabel($label, $record);
+        }
+        return $result;
     }
 
     public function loadCallListData($skipDataPack = false)
@@ -1338,8 +1387,8 @@ class CallLog extends AbstractExternalModule
                 $instanceData = $recordData['repeat_instances'][$callEvent][$this->instrumentLower][end($call['instances'])];
                 $instanceEventData = $recordData[$call['event_id']];
                 $instanceData = array_merge(
-                    array_filter(empty($instanceEventData) ? [] : $instanceEventData, array($this, 'isNotBlank')), 
-                    array_filter($recordData[$callEvent], array($this, 'isNotBlank')), 
+                    array_filter(empty($instanceEventData) ? [] : $instanceEventData, array($this, 'isNotBlank')),
+                    array_filter($recordData[$callEvent], array($this, 'isNotBlank')),
                     array_filter(empty($instanceData) ? [] : $instanceData, array($this, 'isNotBlank'))
                 );
 

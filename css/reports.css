@@ -1,0 +1,16 @@
+#tableWrapper {
+    margin: 4% 0 0 0;
+    border: 2px #eeeeee solid;
+    border-radius: 10px;
+    width: fit-content;
+    min-width: 100%;
+}
+
+#tableWrapper tr.odd {
+    background: white !important;
+}
+
+.paginate_button:hover {
+    -webkit-text-fill-color: #212529;
+    background: #eeeeee !important;
+}
