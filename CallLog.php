@@ -941,14 +941,23 @@ class CallLog extends AbstractExternalModule
 
     public function loadTabConfig()
     {
+        // Grab setup
         global $Proj;
         $allFields = [];
         $settings = $this->getProjectSettings();
         $orderMapping = $settings["tab_order"];
+        $record_id_field = REDCap::getRecordIdField();
+        $record_id_label = $this->getFieldLabel($record_id_field);
+
+        // Default ordering
         if (count(array_filter($settings["tab_order"])) != count($settings["tab_order"])) {
             $orderMapping = range(0, count($settings["tab_name"]));
         }
+
+        // Loop over all tabs
         foreach ($settings["tab_name"] as $i => $tab_name) {
+
+            // Grap settings for the tab
             $tabOrder = $orderMapping[$i];
             $calls = $settings["tab_calls_included"][$i];
             $tab_id = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '_', strtolower($tab_name)));
@@ -966,16 +975,28 @@ class CallLog extends AbstractExternalModule
             foreach ($calls as $call) {
                 $call2TabMap[$call] = $tab_id;
             }
+
+            // Setup standard fields
+            $tabConfig[$tabOrder]["fields"] = [
+                [
+                    "field" => $record_id_field,
+                    "displayName" => $record_id_label,
+                    "validation" => "",
+                    "link" => $settings["tab_link"][$i] ?? "home",
+                ]
+                # TODO add Label and Attempt
+            ];
+
+            // Setup the tab's config
             foreach ($settings["tab_field"][$i] as $j => $field) {
                 $name = $settings["tab_field_name"][$i][$j];
-                $name = $name ? $name : trim($this->getDictionaryLabelFor($field), ":?");
+                $name = $name ? $name : trim($this->getFieldLabel($field), ":?");
                 $validation = $Proj->metadata[$field]["element_validation_type"];
                 $validation = $validation ? $validation : "";
                 $default = $settings["tab_field_default"][$i][$j];
                 $default = $default !== "" && !is_null($default) ? $default : "";
-                $expanded =  $settings["tab_field_expanded"][$i][$j];
-                $expanded = $expanded ? true : false;
-                $tabConfig[$tabOrder]["fields"][$j] = [
+                $expanded =  !!$settings["tab_field_expanded"][$i][$j];
+                $tabConfig[$tabOrder]["fields"][] = [
                     "field" => $field,
                     "map" => $this->getDictionaryValuesFor($field),
                     "displayName" => $name,
@@ -1093,15 +1114,6 @@ class CallLog extends AbstractExternalModule
         return array_combine(array_column($text, 0), array_column($text, 1));
     }
 
-    private function getDictionaryLabelFor($key)
-    {
-        $label = $this->getDataDictionary("array")[$key]['field_label'];
-        if (empty($label)) {
-            return $key;
-        }
-        return $label;
-    }
-
     private function getDataDictionary($format = 'array')
     {
         if (!array_key_exists($format, $this->_dataDictionary)) {
@@ -1203,6 +1215,14 @@ class CallLog extends AbstractExternalModule
         return $config;
     }
 
+    private function getRecordLabel()
+    {
+        $project_id = $_GET['pid'];
+        $sql = "SELECT custom_record_label FROM redcap_projects WHERE project_id = ?;";
+        $query = db_query($sql, $project_id);
+        return array_values(db_fetch_assoc($query))[0];
+    }
+
     private function includeJs($path)
     {
         echo '<script src="' . $this->getUrl($path) . '"></script>';
@@ -1274,9 +1294,7 @@ class CallLog extends AbstractExternalModule
         $result = [];
 
         // Pull the record Label
-        $sql = "SELECT custom_record_label FROM redcap_projects WHERE project_id = ?;";
-        $query = db_query($sql, $project_id);
-        $label = array_values(db_fetch_assoc($query))[0];
+        $label = $this->getRecordLabel();
 
         // Loop to format data
         foreach ($data as $record => $record_data) {
@@ -1309,7 +1327,7 @@ class CallLog extends AbstractExternalModule
         // Load custom cols
         foreach ($report_fields as $index => $field) {
             $result['_cols'][$field] = [
-                'name' => $report_names[$index] ?? $this->getDictionaryLabelFor($field),
+                'name' => $report_names[$index] ?? $this->getFieldLabel($field),
                 'map' => $this->getDictionaryValuesFor($field)
             ];
         }
