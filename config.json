@@ -471,6 +471,21 @@
             "repeatable": true,
             "sub_settings": [
                 {
+                    "key": "tab_includes_followup",
+                    "name": "<b>Flag set</b><br>Hidden via JS",
+                    "type": "textbox"
+                },
+                {
+                    "key": "tab_includes_mcv",
+                    "name": "<b>Flag set</b><br>Hidden via JS",
+                    "type": "textbox"
+                },
+                {
+                    "key": "tab_includes_adhoc",
+                    "name": "<b>Flag set</b><br>Hidden via JS",
+                    "type": "textbox"
+                },
+                {
                     "key": "tab_name",
                     "name": "<b>Tab name</b>",
                     "type": "textbox"
@@ -509,19 +524,14 @@
                     ]
                 },
                 {
-                    "key": "tab_includes_followup",
-                    "name": "<b>Flag set</b><br>Hidden via JS",
-                    "type": "textbox"
+                    "key": "tab_link_event",
+                    "name": "<b>Linked Instrument</b>",
+                    "type": "event-list"
                 },
                 {
-                    "key": "tab_includes_mcv",
-                    "name": "<b>Flag set</b><br>Hidden via JS",
-                    "type": "textbox"
-                },
-                {
-                    "key": "tab_includes_adhoc",
-                    "name": "<b>Flag set</b><br>Hidden via JS",
-                    "type": "textbox"
+                    "key": "tab_link_instrument",
+                    "name": "<b>Linked Instrument</b>",
+                    "type": "form-list"
                 },
                 {
                     "key": "tab_headers",
@@ -543,21 +553,42 @@
                             "key": "tab_field_default",
                             "name": "<b>Default</b><br>Ignores all formatting rules",
                             "type": "textbox"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "tab_expands_group",
+            "name": "<b>Row Expanded Area</b>",
+            "type": "sub_settings",
+            "repeatable": false,
+            "sub_settings": [
+                {
+                    "key": "tab_expands_text",
+                    "name": "These fields will show up in the expanded info area when a row is clicked along with call log notes. These fields are uniform across all tabs.",
+                    "type": "descriptive"
+                },
+                {
+                    "key": "tab_expands",
+                    "name": "<b>Element</b>",
+                    "type": "sub_settings",
+                    "repeatable": true,
+                    "sub_settings": [
+                        {
+                            "key": "tab_expands_field",
+                            "name": "<b>Field</b>",
+                            "type": "field-list"
                         },
                         {
-                            "key": "tab_field_expanded",
-                            "name": "<b>Expanded Info</b><br>Display the feild in the expanded info",
-                            "type": "checkbox"
+                            "key": "tab_expands_field_name",
+                            "name": "<b>Field Name</b><br>Defaults to field label",
+                            "type": "textbox"
                         },
                         {
-                            "key": "tab_field_link_event",
-                            "name": "<b>Linked Instrument</b>",
-                            "type": "event-list"
-                        },
-                        {
-                            "key": "tab_field_link_instrument",
-                            "name": "<b>Linked Instrument</b>",
-                            "type": "form-list"
+                            "key": "tab_expands_field_default",
+                            "name": "<b>Default</b><br>Ignores all formatting rules",
+                            "type": "textbox"
                         }
                     ]
                 }

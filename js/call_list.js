@@ -166,7 +166,7 @@ CallLog.fn.createColConfig = function (index, tab_id) {
         }
 
         // Build out any links
-        if (fConfig.link != "none") {
+        if (fConfig.link && fConfig.link != "none") {
 
             let url;
             switch (fConfig.link) {
