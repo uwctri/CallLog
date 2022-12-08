@@ -10,10 +10,10 @@ CallLog.alwaysShowCallbackCol = false;
 CallLog.earlyCall = 5 * 60 * 1000; // Grace time on early calling of 5 mins
 CallLog.pageRefresh = 1 * 60 * 1000; // Refresh page every 1 minutes
 
-CallLog.fn.setupSearch = function() {
+CallLog.fn.setupSearch = function () {
 
     // Custom search options for regex and "not" (!)
-    $('.card-body').on('input propertychange paste', '.customSearch', function() {
+    $('.card-body').on('input propertychange paste', '.customSearch', function () {
 
         let $table = $('.callTable:visible').DataTable();
         let query = $('.card-body:visible input').val();
@@ -37,14 +37,14 @@ CallLog.fn.setupSearch = function() {
     );
 
     // Control all toggles at once
-    $(".toggleHiddenCalls").on('click', function() {
+    $(".toggleHiddenCalls").on('click', function () {
         CallLog.hideCalls = !CallLog.hideCalls;
         CallLog.fn.toggleCallBackCol();
         $('*[data-toggle="tooltip"]').tooltip(); //Enable Tooltips for the info icon
     });
 }
 
-CallLog.fn.setupCookies = function() {
+CallLog.fn.setupCookies = function () {
 
     // Load cookie - Select the first tab on the call list
     let cookie = Cookies.get('RedcapCallLog');
@@ -57,14 +57,14 @@ CallLog.fn.setupCookies = function() {
     }
 
     // Setup cookie saveing for remembering call tab
-    $(".call-link").on('click', function() {
+    $(".call-link").on('click', function () {
         CallLog.cookie[pid] = $(this).data('tabid');
         Cookies.set('RedcapCallLog', JSON.stringify(CallLog.cookie), { sameSite: 'strict' });
     });
 }
 
-CallLog.fn.setupClickToExpand = function() {
-    $('.callTable').on('click', '.dataTablesRow', function() {
+CallLog.fn.setupClickToExpand = function () {
+    $('.callTable').on('click', '.dataTablesRow', function () {
         let table = $(this).closest('table').DataTable();
         let row = table.row(this);
         if (row.child.isShown()) {
@@ -85,7 +85,7 @@ CallLog.fn.setupClickToExpand = function() {
     });
 }
 
-CallLog.fn.projectLog = function(action, call_id, record) {
+CallLog.fn.projectLog = function (action, call_id, record) {
     $.ajax({
         method: 'POST',
         url: CallLog.router,
@@ -100,12 +100,12 @@ CallLog.fn.projectLog = function(action, call_id, record) {
     });
 }
 
-CallLog.fn.childRowFormat = function(record, call_id, callStarted, childData, notesData, tab) {
-        notesData = notesData.split('|||').map(x => x.split('||')).filter(x => x.length > 2);
-        return `<div class="container"><div class="row"><div class="col-4"><div class="row dtChildData"><div class="col-auto">${CallLog.childRows[tab]}</div><div class="col">${childData.map(x => '<div class="row">' + (x || "________") + '</div>').join('')}</div></div><div class="row"><div class="col"><div class="row"><a class="noCallsButton" onclick="CallLog.fn.noCallsToday(${record},\'${call_id}\')">No Calls Today</a>${!callStarted ? '' : `&emsp;<a class="endCallButton" onclick="CallLog.fn.endCall(${record},\'${call_id}\')">End Current Call</a>`}</div></div></div></div><div class="col-8 border-left"><div class="row dtChildNotes"><div class="col">${notesData.map(x => `<div class="row m-2 pb-2 border-bottom"><div class="col-auto"><div class="row">${formatDate(new Date(x[0].split(' ')[0] + "T00:00:00"), CallLog.defaultDateFormat)} ${format_time(x[0].split(' ')[1])}</div><div class="row">${x[1]}</div><div class="row">${x[2]}</div></div><div class="col"><div class="row ml-1">${x[3] == "none" ? "No Notes Taken" : x[3]}</div></div></div>`).join('') || '<div class="text-center mt-4">Call history will display here</div>'}</div></div></div></div></div>`;
+CallLog.fn.childRowFormat = function (record, call_id, callStarted, childData, notesData, tab) {
+    notesData = notesData.split('|||').map(x => x.split('||')).filter(x => x.length > 2);
+    return `<div class="container"><div class="row"><div class="col-4"><div class="row dtChildData"><div class="col-auto">${CallLog.childRows[tab]}</div><div class="col">${childData.map(x => '<div class="row">' + (x || "________") + '</div>').join('')}</div></div><div class="row"><div class="col"><div class="row"><a class="noCallsButton" onclick="CallLog.fn.noCallsToday(${record},\'${call_id}\')">No Calls Today</a>${!callStarted ? '' : `&emsp;<a class="endCallButton" onclick="CallLog.fn.endCall(${record},\'${call_id}\')">End Current Call</a>`}</div></div></div></div><div class="col-8 border-left"><div class="row dtChildNotes"><div class="col">${notesData.map(x => `<div class="row m-2 pb-2 border-bottom"><div class="col-auto"><div class="row">${formatDate(new Date(x[0].split(' ')[0] + "T00:00:00"), CallLog.defaultDateFormat)} ${format_time(x[0].split(' ')[1])}</div><div class="row">${x[1]}</div><div class="row">${x[2]}</div></div><div class="col"><div class="row ml-1">${x[3] == "none" ? "No Notes Taken" : x[3]}</div></div></div>`).join('') || '<div class="text-center mt-4">Call history will display here</div>'}</div></div></div></div></div>`;
 }
 
-CallLog.fn.createColConfig = function(index, tab_id) {
+CallLog.fn.createColConfig = function (index, tab_id) {
 
     let cols = [{
         title: '',
@@ -115,7 +115,7 @@ CallLog.fn.createColConfig = function(index, tab_id) {
         render: (data) => data ? CallLog.templates.phoneIcon : ''
     }];
 
-    $.each(CallLog.tabs['config'][index]['fields'], function(colIndex, fConfig) {
+    $.each(CallLog.tabs['config'][index]['fields'], function (colIndex, fConfig) {
 
         // Standard Config for all fields
         let colConfig = {
@@ -132,7 +132,7 @@ CallLog.fn.createColConfig = function(index, tab_id) {
         const dateFormats = ['MM-dd-y', 'y-MM-dd', 'dd-MM-y'];
         let fdate = dateFormats[['_mdy', '_ymd', '_dmy'].map(x => fConfig.validation.includes(x)).indexOf(true)];
         if (fdate) {
-            colConfig.render = function(data, type) {
+            colConfig.render = function (data, type) {
                 if (!data)
                     return fConfig.default;
                 if (type === 'display' || type === 'filter') {
@@ -169,30 +169,31 @@ CallLog.fn.createColConfig = function(index, tab_id) {
         if (fConfig.link != "none") {
 
             let url;
-            switch (fConfig.link ) {
+            switch (fConfig.link) {
+                case "":
                 case "home":
                     url = `../DataEntry/record_home.php?pid=${pid}&id=RECORD`;
-                break;
+                    break;
                 case "call":
                     url = `../DataEntry/index.php?pid=${pid}&id=RECORD&event_id=${CallLog.events.callLog.id}&page=${CallLog.static.instrumentLower}&instance=INSTANCE&call_id=CALLID&showReturn=1`;
-                break;
+                    break;
                 case "instrument":
                     url = `../DataEntry/index.php?pid=${pid}&id=RECORD&event_id=${fConfig.linkedEvent}&page=${fConfig.linkedInstrument}`;
-                break;
+                    break;
             }
 
-            colConfig.createdCell = function(td, cellData, rowData, _row, _col) {
+            colConfig.createdCell = function (td, cellData, rowData, _row, _col) {
                 let thisURL = url.replace('RECORD', rowData[CallLog.static.record_id]).
-                replace('INSTANCE', rowData['_nextInstance']).
-                replace('CALLID', rowData['_call_id']);
+                    replace('INSTANCE', rowData['_nextInstance']).
+                    replace('CALLID', rowData['_call_id']);
                 let dt = "";
 
                 if (rowData['call_callback_date'] && rowData['call_callback_time']) {
                     dt = `${rowData['call_callback_date']} ${rowData['call_callback_time']}`;
-                } 
+                }
                 else if (rowData['call_callback_date']) {
                     dt = `${rowData['call_callback_date']}  00:00:00`;
-                } 
+                }
                 else if (rowData['call_callback_time']) {
                     dt = `${today} ${rowData['call_callback_time']}`;
                 }
@@ -236,7 +237,7 @@ CallLog.fn.createColConfig = function(index, tab_id) {
         cols.push({
             title: 'Call on',
             data: '_adhocContactOn',
-            render: function(data, type, _row, _meta) {
+            render: function (data, type, _row, _meta) {
                 if (type === 'display' || type === 'filter') {
                     let format = data.length <= 10 ? CallLog.defaultDateFormat : CallLog.defaultDateTimeFormat;
                     data = data.length <= 10 ? data + "T00:00" : data;
@@ -261,7 +262,7 @@ CallLog.fn.createColConfig = function(index, tab_id) {
         title: 'Call Back & Info',
         name: 'callbackCol',
         className: 'callbackCol',
-        render: function(_data, type, row, _meta) {
+        render: function (_data, type, row, _meta) {
             let displayDate = '';
             if (row['call_requested_callback'] && row['call_requested_callback'][1] == '1') {
 
@@ -303,9 +304,9 @@ CallLog.fn.createColConfig = function(index, tab_id) {
     return cols;
 }
 
-CallLog.fn.callURLclick = function(record, call_id, url, callbackDateTime) {
+CallLog.fn.callURLclick = function (record, call_id, url, callbackDateTime) {
     event.stopPropagation();
-    if (callbackDateTime && (new Date() < (new Date(callbackDateTime) - CallLog.earlyCall)) ) {
+    if (callbackDateTime && (new Date() < (new Date(callbackDateTime) - CallLog.earlyCall))) {
         Swal.fire({
             title: 'Calling Early?',
             text: "This subject has a callback scheduled, you may not want to call them now.",
@@ -323,7 +324,7 @@ CallLog.fn.callURLclick = function(record, call_id, url, callbackDateTime) {
     }
 }
 
-CallLog.fn.startCall = function(record, call_id, url) {
+CallLog.fn.startCall = function (record, call_id, url) {
     CallLog.fn.projectLog("Started Call", call_id, record);
     $.ajax({
         method: 'POST',
@@ -339,7 +340,7 @@ CallLog.fn.startCall = function(record, call_id, url) {
     });
 }
 
-CallLog.fn.endCall = function(record, call_id) {
+CallLog.fn.endCall = function (record, call_id) {
     $.ajax({
         method: 'POST',
         url: CallLog.router,
@@ -357,14 +358,14 @@ CallLog.fn.endCall = function(record, call_id) {
     });
 }
 
-CallLog.fn.toggleCallBackCol = function() {
-    $('.callTable').each(function() {
+CallLog.fn.toggleCallBackCol = function () {
+    $('.callTable').each(function () {
         $(this).DataTable().column('callbackCol:name').visible(CallLog.alwaysShowCallbackCol || !CallLog.hideCalls);
         $(this).DataTable().draw();
     });
 }
 
-CallLog.fn.refreshTableData = function() {
+CallLog.fn.refreshTableData = function () {
     $.ajax({
         method: 'POST',
         url: CallLog.router,
@@ -386,7 +387,7 @@ CallLog.fn.refreshTableData = function() {
             CallLog.packagedCallData = packagedCallData;
             CallLog.alwaysShowCallbackCol = alwaysShowCallbackCol;
 
-            $('.callTable').each(function(_index, el) {
+            $('.callTable').each(function (_index, el) {
                 let table = $(el).DataTable();
                 let page = table.page.info().page;
                 let tab_id = $(el).closest('.tab-pane').prop('id');
@@ -409,7 +410,7 @@ CallLog.fn.refreshTableData = function() {
     });
 }
 
-CallLog.fn.noCallsToday = function(record, call_id) {
+CallLog.fn.noCallsToday = function (record, call_id) {
     $.ajax({
         method: 'POST',
         url: CallLog.router,
@@ -423,14 +424,14 @@ CallLog.fn.noCallsToday = function(record, call_id) {
     });
 }
 
-CallLog.fn.updateDataCache = function(tab_id) {
+CallLog.fn.updateDataCache = function (tab_id) {
     CallLog.displayedData[tab_id] = [];
     let table = $(`#${tab_id}table`).DataTable();
     let headers = CallLog.colConfig[tab_id].map(x => x.data);
     CallLog.displayedData[tab_id] = table.rows().data().toArray().map(x => Object.filterKeys(x, headers));
 }
 
-CallLog.fn.updateBadges = function(tab_id) {
+CallLog.fn.updateBadges = function (tab_id) {
     if (!CallLog.tabs.showBadges)
         return;
     let badge = 0;
