@@ -221,7 +221,6 @@ class CallLog extends AbstractExternalModule
                     "maxVoiceMails" => $callConfig['maxVoiceMails'],
                     "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                    "autoRemove" => $callConfig['autoRemove'],
                     "complete" => false
                 ];
             } elseif (!empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "") {
@@ -332,8 +331,6 @@ class CallLog extends AbstractExternalModule
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
-                    #"autoRemove" => !empty($autoRemoveField),        No longer recorderd on metadata
-                    #"autoRemoveField" => $callConfig['autoRemove'],
                     "maxVoiceMails" => $callConfig['maxVoiceMails'],
                     "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
@@ -535,8 +532,6 @@ class CallLog extends AbstractExternalModule
                     "event_id" => $callConfig['event'],
                     "event" => $eventMap[$callConfig['event']],
                     "end" => $data[$callConfig['event']][$callConfig['autoRemove']],
-                    #"autoRemove" => !empty($autoRemoveField),        No longer recorderd on metadata
-                    #"autoRemoveField" => $callConfig['autoRemove'],
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
@@ -810,7 +805,6 @@ class CallLog extends AbstractExternalModule
                 $event = $settings["followup_event"][$i][0];
                 $field = $settings["followup_date"][$i][0];
                 $days = (int)$settings["followup_days"][$i][0];
-                $auto = $settings["followup_auto_remove"][$i][0];
                 $length = (int)$settings["followup_length"][$i][0];
                 $end = $settings["followup_end"][$i][0];
                 if (!empty($field) && !empty($event) && !empty($days)) {
@@ -819,8 +813,7 @@ class CallLog extends AbstractExternalModule
                         "field" => $field,
                         "days" => $days,
                         "length" => $length,
-                        "end" => $end,
-                        "autoRemove" => $auto
+                        "end" => $end
                     ], $commonConfig);
                 } elseif (!empty($field) && (!empty($days) || $days == "0")) {
                     $includeEvents = array_map('trim', explode(',', $settings["followup_include_events"][$i][0]));
@@ -830,8 +823,7 @@ class CallLog extends AbstractExternalModule
                             "field" => $field,
                             "days" => $days,
                             "length" => $length,
-                            "end" => $end,
-                            "autoRemove" => $auto
+                            "end" => $end
                         ], $commonConfig);
                         $arr['id'] = $arr['id'] . '|' . $eventName;
                         $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
@@ -844,7 +836,6 @@ class CallLog extends AbstractExternalModule
             elseif ($template == "mcv") {
                 $indicator = $settings["mcv_indicator"][$i][0];
                 $dateField = $settings["mcv_date"][$i][0];
-                $autoField = $settings["mcv_auto_remove"][$i][0];
                 if (!empty($indicator) && !empty($dateField)) {
                     $includeEvents = array_map('trim', explode(',', $settings["mcv_include_events"][$i][0]));
                     foreach ($includeEvents as $eventName) {
@@ -852,7 +843,6 @@ class CallLog extends AbstractExternalModule
                             "event" => REDCap::getEventIdFromUniqueEvent($eventName),
                             "indicator" => $indicator,
                             "apptDate" => $dateField,
-                            "autoRemove" => $autoField
                         ], $commonConfig);
                         $arr['id'] = $arr['id'] . '|' . $eventName;
                         $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
@@ -935,6 +925,8 @@ class CallLog extends AbstractExternalModule
                 $config[$settings["call_id"][$i]] = $settings["mcv_auto_remove"][$i][0];
             if ($template == "visit")
                 $config[$settings["call_id"][$i]] = $settings["visit_auto_remove"][$i][0];
+            if ($template == "followup")
+                $config[$settings["call_id"][$i]] = $settings["followup_auto_remove"][$i][0];
         }
         return $config;
     }
@@ -1422,7 +1414,7 @@ class CallLog extends AbstractExternalModule
                     continue;
 
                 // Skip followups that are flagged for auto remove and are out of window (after the last day)
-                if (($call['template'] == 'followup') && $call['autoRemove'] && ($call['end'] < $today))
+                if (($call['template'] == 'followup') && $autoRemoveConfig[$callID] && ($call['end'] < $today))
                     continue;
 
                 // Skip New (onload) calls that have expire days
