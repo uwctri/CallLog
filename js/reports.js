@@ -30,6 +30,7 @@
         let meta = data[record_id]['metadata'];
         data[record_id]['_open_calls'] ??= 0;
         for (const call_name in meta) {
+            if (!call_name) continue;
             if (meta[call_name]['complete']) continue;
             if (meta[call_name]['start'] > today) continue;
             data[record_id]['_open_calls'] += 1;
