@@ -33,6 +33,7 @@
             if (!call_name) continue;
             if (meta[call_name]['complete']) continue;
             if (meta[call_name]['start'] > today) continue;
+            if (meta[call_name]['end'] < today) continue;
             data[record_id]['_open_calls'] += 1;
         }
         delete data[record_id]['metadata'];
