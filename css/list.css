@@ -13,6 +13,11 @@
 
 .nav-link.call-link.active {
     background-color: #f7f7f7 !important;
+    border-bottom-color: transparent !important;
+}
+
+.nav-link.call-link:hover {
+    border-bottom-color: transparent !important;
 }
 
 .call-tab {
