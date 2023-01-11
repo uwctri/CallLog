@@ -107,12 +107,13 @@
     padding-left: 10px !important;
 }
 
-.callTable tbody td.callStarted {
+.callTable tbody td.leftListIcon {
     padding-left: 5px !important;
     padding-right: 5px !important;
+    text-align: center;
 }
 
-.callTable thead th.callStarted {
+.callTable thead th.leftListIcon {
     padding-left: 5px !important;
     padding-right: 5px !important;
 }
