@@ -16,6 +16,10 @@
         <i class="fas fa-phone-square-alt" data-toggle="tooltip" data-placement="left" title="This subject may already be in a call."></i>
     </span>
 
+    <span id="manyTabIcons" style="font-size:1em;color:#808080">
+        <i class="fas fa-solid fa-users" data-toggle="tooltip" data-placement="left" title="This subject is listed on other call tabs:&#010;LIST"></i>
+    </span>
+
     <!-- Every Record Page -->
 
     <div id="callStartedWarning" class="alert alert-danger" style="text-align:center" role="alert">

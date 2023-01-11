@@ -111,8 +111,14 @@ CallLog.fn.createColConfig = function (index, tab_id) {
         title: '',
         data: '_callStarted',
         bSortable: false,
-        className: 'callStarted',
-        render: (data) => data ? CallLog.templates.phoneIcon : ''
+        className: 'leftListIcon',
+        render: (data, type, row, meta) => {
+            const record = row['record_id'];
+            if (CallLog.activeCallCache.includes(record)) return CallLog.templates.phoneIcon;
+            const multi = CallLog.multiTabCache[record];
+            if (multi) return CallLog.templates.manyTabIcons.replace('LIST', multi.map(el => CallLog.tabs.tabNameMap[el]).join('&#013;'));
+            return "";
+        }
     }];
 
     $.each(CallLog.tabs['config'][index]['fields'], function (colIndex, fConfig) {
@@ -386,6 +392,18 @@ CallLog.fn.refreshTableData = function () {
             let [packagedCallData, tabConfig, alwaysShowCallbackCol, timeTaken] = routerData.data;
             CallLog.packagedCallData = packagedCallData;
             CallLog.alwaysShowCallbackCol = alwaysShowCallbackCol;
+
+            // Keep track of users in multiple tabs
+            CallLog.multiTabCache = {};
+            CallLog.activeCallCache = [];
+            $.each(CallLog.packagedCallData, (tab, data) => {
+                data.forEach((el) => {
+                    CallLog.multiTabCache[el.record_id] ||= [];
+                    CallLog.multiTabCache[el.record_id].push(tab);
+                    if (el._callStarted) CallLog.activeCallCache.push(el.record_id);
+                });
+            });
+            CallLog.multiTabCache = Object.fromEntries(Object.entries(CallLog.multiTabCache).filter((el) => el[1].length > 1));
 
             $('.callTable').each(function (_index, el) {
                 let table = $(el).DataTable();
