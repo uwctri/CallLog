@@ -342,7 +342,11 @@ CallLog.fn.startCall = function (record, call_id, url) {
             user: $("#username-reference").text()
         },
         error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-        success: () => window.location = url
+        success: () => {
+            window.location = url;
+            // window.open(url, "_blank")
+            // TODO update call started icon
+        }
     });
 }
 
