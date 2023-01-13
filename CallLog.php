@@ -669,23 +669,6 @@ class CallLog extends AbstractExternalModule
     // Utlties and Config Loading
     /////////////////////////////////////////////////
 
-    public function isInDAG($record)
-    {
-        $user_id = defined('USERID') ? USERID : false;
-        if (!$user_id)
-            return false;
-        $user = REDCap::getUserRights($user_id)[$user_id];
-        $super = $user['user_rights'] && $user['data_access_groups'];
-        if ($super)
-            return true;
-        $user_group = $user['group_id'] ? $user['group_id'] : "";
-        $record_group_name = reset(REDCap::getData($user['project_id'], 'array', $record, 'redcap_data_access_group', NULL, NULL, FALSE, TRUE)[$record])['redcap_data_access_group'];
-        $all_group_names = REDCap::getGroupNames(true);
-        if ($all_group_names[$user_group] == $record_group_name)
-            return true;
-        return $user_group == ""; # allow users without DAG restrictions access to all data
-    }
-
     public function recentCallStarted($project_id, $record)
     {
         $meta = $this->getCallMetadata($project_id, $record);
@@ -1373,7 +1356,7 @@ class CallLog extends AbstractExternalModule
         foreach ($tabs['config'] as $tab)
             $packagedCallData[$tab["tab_id"]] = [];
 
-        // Construct the needed feilds (This is needed to save time. Loading all data takes several seconds, this is sub 1sec)
+        // Construct the needed feilds (This is needed to save time. Loading all data takes a while)
         $fields = array_merge(
             [
                 REDCap::getRecordIdField(), $this->metadataField, $withdraw['var'], $withdraw['tmp']['var'],
@@ -1384,13 +1367,12 @@ class CallLog extends AbstractExternalModule
         );
 
         // Main Loop
-        $records = $skipDataPack ? '-1' : null;
-        $dataLoad = REDCap::getData($project_id, 'array', $records, $fields);
+        $user_id = USERID ?? null;
+        $records = $skipDataPack || empty($user_id) ? '-1' : null;
+        $events = null;
+        $group = REDCap::getUserRights($user_id)[$user_id]['group_id'];
+        $dataLoad = REDCap::getData($project_id, 'array', $records, $fields, $events, $group);
         foreach ($dataLoad as $record => $recordData) {
-
-            // Check if the dag is empty or if it matches the User's DAG
-            if (!$this->isInDAG($record))
-                continue;
 
             // Previously we checked for withdrawn status here, but end-users wanted
             // subjects to remain on the call list if they had a call back scheduled
