@@ -179,16 +179,6 @@
                     "type": "textbox"
                 },
                 {
-                    "key": "max_voice_mails",
-                    "name": "<b>Maximum Messages to Leave</b><br>Leave blank if no max",
-                    "type": "textbox"
-                },
-                {
-                    "key": "max_voice_mails_per_week",
-                    "name": "<b>Maximum Messages per Week</b><br>Leave blank if no max",
-                    "type": "textbox"
-                },
-                {
                     "key": "hide_after_attempts",
                     "name": "<b>Hide after N attempts</b><br>Remove from call list for remainder of day",
                     "type": "textbox"

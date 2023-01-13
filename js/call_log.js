@@ -103,26 +103,6 @@ CallLog.fn.updateCallNotes = function (callID) {
     });
 }
 
-CallLog.fn.getWeekNumber = function (d) {
-    d = typeof d == 'object' ? d : new Date(d);
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-    return [d.getUTCFullYear(), weekNo];
-}
-
-CallLog.fn.getLeaveMessage = function (callID) {
-    let meta = CallLog.metadata[callID]
-    if (meta.voiceMails >= meta.maxVoiceMails)
-        return 'No';
-    if (meta.maxVMperWeek >= meta.voiceMails)
-        return 'Yes';
-    let thisWeek = CallLog.fn.getWeekNumber(new Date())[1];
-    return CallLog.metadata[callID].instances.map(
-        x => CallLog.fn.getWeekNumber(CallLog.data[x]['call_open_date']) == thisWeek).filter(x => x).length >= meta.maxVMperWeek ? 'No' : 'Yes';
-}
-
 CallLog.fn.selectTab = function () {
     if ($("input[name=call_id]").val() != "")
         return;
@@ -276,7 +256,6 @@ $(document).ready(function () {
         let id = $(this).data('call-id');
         let call = CallLog.metadata[id];
         $("#CallLogCurrentCall").text(call.name);
-        $("#CallLogLeaveAMessage").text(CallLog.fn.getLeaveMessage(id));
         $("#CallLogPreviousTime").text(call.instances.length == 0 ? 'None' : CallLog.fn.getPreviousCalldatetime(id));
         $("input[name=call_attempt]").val(call.instances.length + 1).blur();
         $("input[name=call_id]").val(id).blur();
