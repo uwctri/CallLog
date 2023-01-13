@@ -28,13 +28,8 @@
             {
                 "name": "Call Metadata Reports",
                 "icon": "fas fa-receipt",
-                "url": "reports.php",
+                "url": "index.php?metaReport",
                 "show-header-and-footer": true
-            },
-            {
-                "name": "Router Page",
-                "icon": "gear",
-                "url": "router.php?NOAUTH"
             }
         ]
     },
@@ -53,14 +48,14 @@
     ],
     "project-settings": [
         {
+            "key": "intro_text",
+            "name": "Settings such as 'call scripts' (for reminder calls) and 'tasks remaining' must be edited directly in the data dictionary. Further customization of the call log should be kept minimal with mostly additions. Reporting disconnected phone numbers can be hidden if not used, as can call backs, and remaining tasks.",
+            "type": "descriptive"
+        },
+        {
             "key": "trigger_save",
             "name": "<b>Trigger Call Log Generation on...</b><br>Fire some call log generation (MCV, NTS, Follow Up, Reminders) only when this form is saved",
             "type": "form-list"
-        },
-        {
-            "key": "show_badges",
-            "name": "<b>Call Reminder Badges</b><br>Show a badge with a count of the number of calls that include the user's full name in the row",
-            "type": "checkbox"
         },
         {
             "key": "show_mcv",
@@ -68,19 +63,9 @@
             "type": "checkbox"
         },
         {
-            "key": "disable_rounding",
-            "name": "<b>Disable Followup Date Rounding</b><br>By default date windows for follow ups are rounded to avoid weekends. You may wish to disable if the exact window is crucial",
-            "type": "checkbox"
-        },
-        {
             "key": "record_label_alias",
             "name": "<b>Record Label Alias</b>",
             "type": "textbox"
-        },
-        {
-            "key": "dd_text",
-            "name": "Settings such as 'call scripts' (for reminder calls) and 'tasks remaining' must be edited directly in the data dictionary. Further customization of the call log should be kept minimal with mostly additions. Reporting disconnected phone numbers can be hidden if not used, as can call backs, and remaining tasks.",
-            "type": "descriptive"
         },
         {
             "key": "call_log_event",

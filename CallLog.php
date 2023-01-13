@@ -30,66 +30,47 @@ class CallLog extends AbstractExternalModule
     // REDCap Hooks
     /////////////////////////////////////////////////
 
-    public function redcap_save_record($project_id, $record, $instrument, $event_id, $group_id, $hash, $response, $instance)
+    public function redcap_save_record($project_id, $record, $instrument)
     {
         if ($instrument == $this->instrumentLower) {
-            // Update any metadata info that needs it
             $this->reportDisconnectedPhone($project_id, $record);
             $this->metadataUpdateCommon($project_id, $record);
         } else {
             $triggerForm = $this->getProjectSetting('trigger_save');
             if (empty($triggerForm) || ($instrument == $triggerForm)) {
-                // Check if we need to set (or remove) a new Follow up call (Checkout visit completed)
                 $this->metadataFollowup($project_id, $record);
-                // Check if we have changed how reminders should be sent
                 $this->metadataReminder($project_id, $record);
-                // Check if we need to set a new Missed/Cancelled call (Checkout issue reported)
                 $this->metadataMissedCancelled($project_id, $record);
-                // Check if we need to set a new Need to Schedule call (Checkout vist completed)
                 $this->metadataNeedToSchedule($project_id, $record);
             }
-            // Check if the Phone issues are resolved
             $this->updateDisconnectedPhone($project_id, $record);
-            // Check if we are a New Entry or not
             $this->metadataNewEntry($project_id, $record);
-            // Check if we need to make a Schedueld Phone Visit call log (Check in was started)
             $this->metadataPhoneVisit($project_id, $record);
-            // Check if we need to extend the duration of the call flag
             $this->metadataCallStartedUpdate($project_id, $record);
         }
     }
 
     public function redcap_every_page_top($project_id)
     {
-        if (!defined("USERID")) //Skip if user isn't logged in.
-            return;
+        if (!defined("USERID")) return;
 
         include('templates.php');
         $this->initGlobal();
         $this->includeJs('js/every_page.js');
 
         // Record Home Page
-        if (PAGE == 'DataEntry/record_home.php' && $_GET['id']) {
+        if ($this->isPage('DataEntry/record_home.php') && $_GET['id']) {
             $this->includeJs('js/record_home_page.js');
         }
 
         // Custom Config page
-        if (strpos(PAGE, 'manager/project.php') !== false && $project_id != NULL) {
+        if ($this->isPage('ExternalModules/manager/project.php') && $project_id) {
             $this->includeCss('css/config.css');
             $this->includeJs('js/config.js');
         }
-
-        // Index of Call List
-        if (strpos(PAGE, 'ExternalModules/index.php') !== false && $project_id != NULL) {
-            $this->includeJs('js/cookie.min.js');
-            $this->includeCss('css/list.css');
-            $this->includeJs('js/call_list.js');
-            $this->passArgument('usernameLists', $this->getUserNameListConfig());
-            $this->passArgument('eventNameMap', $this->getEventNameMap());
-        }
     }
 
-    public function redcap_data_entry_form($project_id, $record, $instrument, $event_id, $group_id, $repeat_instance)
+    public function redcap_data_entry_form($project_id, $record, $instrument)
     {
         $summary = $this->getProjectSetting('call_summary');
         if ($instrument == $this->instrumentLower) {
@@ -107,12 +88,6 @@ class CallLog extends AbstractExternalModule
             $this->includeJs('js/summary_table.js');
         }
         $this->passArgument('recentCaller', $this->recentCallStarted($project_id, $record));
-    }
-
-    public function redcap_module_link_check_display($project_id, $link)
-    {
-        $showLink = (strpos($link['url'], 'index') !== false) || (strpos($link['url'], 'reports') !== false);
-        return $showLink ? true : null;
     }
 
     /////////////////////////////////////////////////
@@ -191,7 +166,6 @@ class CallLog extends AbstractExternalModule
     public function metadataFollowup($project_id, $record)
     {
         $config = $this->loadCallTemplateConfig()["followup"];
-        $disableRounding = $this->getProjectSetting('disable_rounding');
         if (empty($config))
             return;
         $meta = $this->getCallMetadata($project_id, $record);
@@ -210,8 +184,8 @@ class CallLog extends AbstractExternalModule
                     $end = date('Y-m-d', strtotime($data[$callConfig['event']][$callConfig['field']] . ' +' . $end . ' days'));
                 }
                 $meta[$callConfig['id']] = [
-                    "start" => $disableRounding ? $start : $this->roundDate($start, 'down'),
-                    "end" => $disableRounding ? $end : $this->roundDate($end, 'up'),
+                    "start" => $start,
+                    "end" => $end,
                     "template" => 'followup',
                     "event_id" => $callConfig['event'],
                     "event" => $eventMap[$callConfig['event']],
@@ -226,13 +200,11 @@ class CallLog extends AbstractExternalModule
             } elseif (!empty($meta[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "") {
                 // Update the start/end dates if the call exists and the anchor isn't blank 
                 $start = date('Y-m-d', strtotime($data[$callConfig['event']][$callConfig['field']] . ' +' . $callConfig['days'] . ' days'));
-                $start = $disableRounding ? $start : $this->roundDate($start, 'down');
                 $end = $data[$callConfig['event']][$callConfig['end']];
                 if (empty($end)) {
                     $end = $callConfig['days'] + $callConfig['length'];
                     $end = date('Y-m-d', strtotime($data[$callConfig['event']][$callConfig['field']] . ' +' . $end . ' days'));
                 }
-                $end = $disableRounding ? $end : $this->roundDate($end, 'up');
                 if (($meta[$callConfig['id']]['start'] != $start) || ($meta[$callConfig['id']]['end'] != $end)) {
                     $meta[$callConfig['id']]['start'] = $start;
                     $meta[$callConfig['id']]['end'] = $end;
@@ -1009,7 +981,6 @@ class CallLog extends AbstractExternalModule
             'config' => $tabConfig,
             'call2tabMap' => $call2TabMap,
             'tabNameMap' => $tabNameMap,
-            'showBadges' => $settings["show_badges"],
             'allFields' => $allFields
         ];
     }
@@ -1069,24 +1040,7 @@ class CallLog extends AbstractExternalModule
         return $days;
     }
 
-    private function roundDate($date, $round)
-    {
-        $day = Date("l", strtotime($date));
-        if ($day == "Saturday" && $round == "up") {
-            $date = date('Y-m-d', strtotime($date . ' +2 days'));
-        } elseif ($day == "Saturday" && $round == "down") {
-            $date = date('Y-m-d', strtotime($date . ' -1 days'));
-        } elseif ($day == "Sunday" && $round == "up") {
-            $date = date('Y-m-d', strtotime($date . ' +1 days'));
-        } elseif ($day == "Sunday" && $round == "down") {
-            $date = date('Y-m-d', strtotime($date . ' -2 days'));
-        } else {
-            $date = date('Y-m-d', strtotime($date));
-        }
-        return $date;
-    }
-
-    private function getEventNameMap()
+    public function getEventNameMap()
     {
         $eventNames = array_values(REDCap::getEventNames());
         foreach (array_values(REDCap::getEventNames(true)) as $i => $unique)
@@ -1189,7 +1143,7 @@ class CallLog extends AbstractExternalModule
         echo "<script>var " . $this->module_global . " = " . json_encode($data) . ";</script>";
     }
 
-    private function getUserNameListConfig()
+    public function getUserNameListConfig()
     {
         $config = [];
         $include = $this->getProjectSetting('username_include');

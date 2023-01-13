@@ -454,8 +454,6 @@ CallLog.fn.updateDataCache = function (tab_id) {
 }
 
 CallLog.fn.updateBadges = function (tab_id) {
-    if (!CallLog.tabs.showBadges)
-        return;
     let badge = 0;
     let user = $("#impersonate-user-select").val() || CallLog.user;
     CallLog.displayedData[tab_id].forEach(x => Object.values(x).includes(CallLog.userNameMap[user]) && badge++);
