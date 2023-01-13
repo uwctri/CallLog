@@ -1,14 +1,51 @@
 <?php
+// *************************
+// Metadata Report Page
+if (isset($_GET['metaReport'])) {
+    $module->initializeJavascriptModuleObject();
+?>
+    <link rel="stylesheet" href="<?= $module->getURL('css/reports.css'); ?>">
+    <script>
+        <?= $module->getJavascriptModuleObjectName(); ?>.config = <?= json_encode($module->loadReportConfig()); ?>;
+    </script>
+
+    <div class="projhdr"><i class="fas fa-receipt"></i> Call Metadata Reports</div>
+    <div class="container float-left" style="max-width:800px">
+        <div class="row p-2">
+            <p>This simple reports shows all open calls per record for easy QA. Withdrawn subjects are excluded.</p>
+        </div>
+        <div id="tableWrapper" class="row p-2">
+            <div class="col-12">
+                <table style="width:100%" class="table"></table>
+            </div>
+        </div>
+    </div>
+    <script src="<?= $module->getURL('js/reports.js'); ?>"></script>
+
+<?php
+    return;
+}
+// *************************
+// Full Call List Page
+?>
+<link rel="stylesheet" href="<?= $module->getURL('css/list.css'); ?>">
+<script src="<?= $module->getURL('js/cookie.min.js'); ?>"></script>
+<script src="<?= $module->getURL('js/call_list.js'); ?>"></script>
+<script>
+    CallLog.usernameLists = <?= json_encode($module->getUserNameListConfig()); ?>;
+    CallLog.eventNameMap = <?= json_encode($module->getEventNameMap()); ?>;
+</script>
+<?php
 $startTime = microtime(true);
 
 // Load our init tab config, no actual data here
 list($noData, $tabs, $noData, $timeTaken) = $module->loadCallListData(true);
 ?>
 <script>
-    CallLog.tabs = <?php echo json_encode($tabs); ?>;
+    CallLog.tabs = <?= json_encode($tabs); ?>;
 
     // Useful only for debugging
-    CallLog.callTemplates = <?php echo json_encode($module->loadCallTemplateConfig()); ?>;
+    CallLog.callTemplates = <?= json_encode($module->loadCallTemplateConfig()); ?>;
 
     $(document).ready(function() {
 
