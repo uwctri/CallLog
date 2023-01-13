@@ -1,0 +1,31 @@
+Variable / Field Name,Form Name,Section Header,Field Type,Field Label,"Choices, Calculations, OR Slider Labels",Field Note,Text Validation Type OR Show Slider Number,Text Validation Min,Text Validation Max,Identifier?,Branching Logic (Show field only if...),Required Field?,Custom Alignment,Question Number (surveys only),Matrix Group Name,Matrix Ranking?,Field Annotation
+call_template,call_log,,dropdown,Call Template,"new, New Entry | reminder, Reminder | followup, Follow Up | mcv, Missed/Cancelled Visit | nts, Need to Schedule | adhoc, Ad-hoc",Use this to show/hide any scripts for the call (Reminders),,,,,,,,,,, @HIDDEN
+call_id,call_log,,text,Call ID,,,,,,,,,,,,, @HIDDEN
+call_event_name,call_log,,text,Call Event,,Use this to show/hide any scripts for the call (Reminders),,,,,,,,,,, @HIDDEN
+call_attempt,call_log,,text,Call Attempt,,,,,,,,,,,,, @HIDDEN
+call_open_date,call_log,,text,,,,date_mdy,,,,,,,,,, @HIDDEN @TODAY
+call_open_time,call_log,,text,,,,time,,,,,,,,,, @HIDDEN @NOW
+call_open_datetime,call_log,,text,,,,datetime_mdy,,,,,,,,,, @NOW @HIDDEN
+call_open_user,call_log,,text,,,,,,,,,,,,,, @HIDDEN @USERNAME
+call_open_user_full_name,call_log,,text,,,,,,,,,,,,,," @HIDDEN @DEFAULT=""[user-fullname]"""
+call_hdr_title,call_log,,descriptive,"<div class=""formHeader ""><i class=""fa fa-phone""></i> Call Log</div>",,,,,,,,,,,,,
+call_hdr_user_info,call_log,,descriptive,<center> User Details Area </center>,,,,,,,,,,,,,
+call_hdr_details,call_log,,descriptive,"<div class = ""formSxnHeader""> Call Details </div>",,,,,,,,,,,,,
+call_hdr_call_info_table,call_log,,descriptive,"<table class=""CallLogDetailTable""> <tbody> <tr> <td>Current Call:</td><td colspan=""3"" id=""CallLogCurrentCall""></td><td></td></tr><tr> <tr> <td>Current Caller:</td><td colspan=""2"">[call_open_user_full_name]</td><td>Current Call Time:</td><td id=""CallLogCurrentTime""></td></tr><tr> <td>Attempt Number:</td><td>[call_attempt]</td><td></td><td>Previous Call Time:</td><td id=""CallLogPreviousTime""></td></tr></tbody></table>",,,,,,,,,,,,,
+call_hdr_script,call_log,,descriptive,"<div class = ""formSxnHeader""> Call Script </div>",,,,,,,"[call_template] = ""reminder""",,,,,,
+call_custom_reminder_script,call_log,,descriptive,<center> Placeholder for Reminder Script </center>,,,,,,,"[call_template] = ""reminder""",,,,,,
+call_hdr_outcome,call_log,,descriptive,"<div class = ""formSxnHeader""> Outcome </div>",,,,,,,,,,,,,
+call_answered,call_log,,checkbox,Subject Answered phone,"1,",,,,,,,,,,,,
+call_disconnected,call_log,,checkbox,Phone Disconnected / Not in Service,"1,",,,,,,,,,,,,
+call_text_disconnect,call_log,,descriptive,"
+<div class=""alert alert-warning"" style=""border-color:#856404!important;""><div class=""container text-center"">Please explain the issue in the call notes below, be sure to include which number(s) has the issue.</div></div>",,,,,,,"[call_disconnected(1)] = ""1""",,,,,,
+call_left_message,call_log,,checkbox,Left a Message,"1,",,,,,,"[call_answered(1)]<>""1""",,,,,,
+call_requested_callback,call_log,,checkbox,Set Callback,"1,",,,,,,,,,,,,
+call_callback_requested_by,call_log,,radio,Callback Requested by,"1, Participant | 2, Staff",,,,,,"[call_requested_callback(1)]=""1""",,,,,,
+call_callback_date,call_log,,text,Callback Date,,,date_mdy,,,,"[call_requested_callback(1)]=""1""",,,,,, @TOMORROWBUTTON
+call_callback_time,call_log,,text,Callback Time,,,time,,,,"[call_requested_callback(1)]=""1""",,,,,, @HIDEBUTTON
+call_outcome,call_log,,radio,Call Log Outcome,"1, All Call Log Tasks Completed | 0, Call Log Incomplete",,,,,,,y,,,,,
+call_task_remaining,call_log,,checkbox,Task(s) Remaining,"1, Example Task 1 | 2, Example Task 2 | 3, Example Task 3",,,,,,"[call_outcome] = ""0""",,,,,,
+call_notes,call_log,,notes,Call Notes,,,,,,,,,LV,,,,
+call_hdr_end,call_log,,descriptive,<div class='formHeader '>End Of Call Log</div>,,,,,,,,,,,,,
+call_metadata,call_log_metadata,,notes,Metadata,,,,,,,,,,,,,

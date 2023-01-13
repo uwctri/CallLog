@@ -154,8 +154,6 @@ class CallLog extends AbstractExternalModule
                 "instances" => [],
                 "voiceMails" => 0,
                 "expire" => $callConfig['expire'],
-                "maxVoiceMails" => $callConfig['maxVoiceMails'],
-                "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                 "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
                 "complete" => false
             ];
@@ -192,8 +190,6 @@ class CallLog extends AbstractExternalModule
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
-                    "maxVoiceMails" => $callConfig['maxVoiceMails'],
-                    "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
                     "complete" => false
                 ];
@@ -273,8 +269,6 @@ class CallLog extends AbstractExternalModule
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
-                    "maxVoiceMails" => $callConfig['maxVoiceMails'],
-                    "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
                     "complete" => false
                 ];
@@ -303,8 +297,6 @@ class CallLog extends AbstractExternalModule
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
-                    "maxVoiceMails" => $callConfig['maxVoiceMails'],
-                    "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
                     "complete" => false
                 ];
@@ -387,8 +379,6 @@ class CallLog extends AbstractExternalModule
                             "name" => $callConfig['name'],
                             "instances" => [],
                             "voiceMails" => 0,
-                            "maxVoiceMails" => $callConfig['maxVoiceMails'],
-                            "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                             "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
                             "complete" => false
                         ];
@@ -430,8 +420,6 @@ class CallLog extends AbstractExternalModule
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
-                    "maxVoiceMails" => $callConfig['maxVoiceMails'],
-                    "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
                     "complete" => false
                 ];
@@ -468,8 +456,6 @@ class CallLog extends AbstractExternalModule
             "name" => $config['name'] . ' - ' . $config['reasons'][$payload['reason']],
             "instances" => [],
             "voiceMails" => 0,
-            "maxVoiceMails" => $config['maxVoiceMails'],
-            "maxVMperWeek" => $config['maxVoiceMailsPerWeek'],
             "hideAfterAttempt" => $config['hideAfterAttempt'],
             "complete" => false
         ];
@@ -507,8 +493,6 @@ class CallLog extends AbstractExternalModule
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
-                    "maxVoiceMails" => $callConfig['maxVoiceMails'],
-                    "maxVMperWeek" => $callConfig['maxVoiceMailsPerWeek'],
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
                     "complete" => false
                 ];
@@ -715,14 +699,10 @@ class CallLog extends AbstractExternalModule
         $visitConfig = [];
         $settings = $this->getProjectSettings();
         foreach ($settings["call_template"] as $i => $template) {
-            $max = $settings["max_voice_mails"][$i];
-            $maxWeek = $settings["max_voice_mails_per_week"][$i];
             $hide = $settings["hide_after_attempts"][$i];
             $commonConfig = [
                 "id" => $settings["call_id"][$i],
                 "name" => $settings["call_name"][$i],
-                "maxVoiceMails" => $max ? (int)$max : 9999,
-                "maxVoiceMailsPerWeek" => $maxWeek ? (int)$maxWeek : 9999,
                 "hideAfterAttempt" => $hide ? (int)$hide : 9999
             ];
 
