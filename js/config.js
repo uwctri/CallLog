@@ -2,14 +2,6 @@ $(document).ready(function () {
     console.log("Loaded Call Log config");
     CallLog.configInit = false;
 
-    if (CallLog.configError) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Call Log config Issue',
-            text: 'The Call Log instrument used by the Call Log External Module is either missing or not marked as a repeatable instrument. Please invesitage and resovle.',
-        })
-    }
-
     // Setup template buttons to show correct settings
     $("body").on('click', ".callConfig input[name^=call_template____]", function () {
         let $tr = $(this).closest('tr');

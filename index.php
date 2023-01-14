@@ -43,11 +43,15 @@ list($noData, $tabs, $noData, $timeTaken) = $module->loadCallListData(true);
 ?>
 <script>
     CallLog.tabs = <?= json_encode($tabs); ?>;
-
-    // Useful only for debugging
-    CallLog.callTemplates = <?= json_encode($module->loadCallTemplateConfig()); ?>;
-
     $(document).ready(function() {
+        if (CallLog.configError) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Call Log config Issue',
+                text: 'The Call Log External Module requries the Call Long, and Call Metadata instruments to exist on one event and the former to be enable as a repeatable instrument. Please invesitage and resovle.',
+            });
+            return;
+        }
 
         // Setup search, must happen before table init
         CallLog.fn.setupSearch();
