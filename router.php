@@ -124,7 +124,8 @@ switch ($route) {
     case "setCallStarted":
         # This page is posted to by the call list to flag a call as in progress
         if (!empty($_POST['id']) && !empty($_POST['user'])) {
-            $module->metadataCallStarted($pid, $record, $_POST['id'], $_POST['user']);
+            $metadata = $module->getCallMetadata($project_id, $_POST['id']);
+            $module->metadataCallStarted($pid, $record, $metadata, $_POST['id'], $_POST['user']);
             $sendDone = True;
         }
         break;
