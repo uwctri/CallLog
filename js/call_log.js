@@ -44,8 +44,7 @@ CallLog.fn.saveCalldata = function (instance, dataVar, dataVal, isCheckbox) {
 // Debug function, give yourself a few extra days for that call
 CallLog.fn.UpdateCallTypeEndDates = function (call_type, days) {
     $.each(CallLog.metadata, function (callid, data) {
-        if (!callid.includes(call_type))
-            return;
+        if (!callid.includes(call_type)) return;
         CallLog.metadata[callid]['end'] = formatDate((new Date(CallLog.metadata[callid]['start'] + "T00:00").addDays(days)), 'y-MM-dd');
     });
 }
