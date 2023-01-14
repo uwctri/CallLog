@@ -21,7 +21,6 @@
             data: field
         });
     }
-    //
 
     for (const record_id in data) {
         if (record_id.startsWith('_')) continue;
