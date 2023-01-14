@@ -69,6 +69,9 @@ list($noData, $tabs, $noData, $timeTaken) = $module->loadCallListData(true);
                     [25, 50, 100, -1],
                     [25, 50, 100, "All"]
                 ],
+                language: {
+                    emptyTable: "No calls to display"
+                },
                 columns: CallLog.colConfig[tab_id],
                 createdRow: (row, data, index) => $(row).addClass('dataTablesRow'),
                 sDom: 'ltpi'
@@ -88,9 +91,6 @@ list($noData, $tabs, $noData, $timeTaken) = $module->loadCallListData(true);
 
         // Enable click to expand for all rows
         CallLog.fn.setupClickToExpand();
-
-        // Enable Tooltips for the call-back column
-        $('*[data-toggle="tooltip"]').tooltip();
 
         // Refresh the data occasionally
         setInterval(CallLog.fn.refreshTableData, CallLog.pageRefresh);

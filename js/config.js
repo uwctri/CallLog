@@ -19,8 +19,7 @@ $(document).ready(function () {
     $modal.on('show.bs.modal', function () {
 
         // Making sure we are overriding this modules's modal only.
-        if ($(this).data('module') !== CallLog.modulePrefix)
-            return;
+        if ($(this).data('module') !== CallLog.modulePrefix) return;
 
         if (typeof ExternalModules.Settings.prototype.resetConfigInstancesOld === 'undefined')
             ExternalModules.Settings.prototype.resetConfigInstancesOld = ExternalModules.Settings.prototype.resetConfigInstances;
@@ -28,8 +27,7 @@ $(document).ready(function () {
         ExternalModules.Settings.prototype.resetConfigInstances = function () {
 
             ExternalModules.Settings.prototype.resetConfigInstancesOld();
-            if ($modal.data('module') !== CallLog.modulePrefix)
-                return;
+            if ($modal.data('module') !== CallLog.modulePrefix) return;
 
             $modal.addClass('callConfig');
 
@@ -43,8 +41,7 @@ $(document).ready(function () {
             $modal.find(".sub_start").each((_, x) => $(x).find('td').last().attr('colspan', '2'));
 
             // Below operations run only once
-            if (CallLog.configInit)
-                return;
+            if (CallLog.configInit) return;
 
             CallLog.configInit = true;
             $modal.find("input[name^=call_template____]:checked").click();
@@ -88,8 +85,7 @@ $(document).ready(function () {
 
     $modal.on('hide.bs.modal', function () {
         // Making sure we are overriding this modules's modal only.
-        if ($(this).data('module') !== CallLog.modulePrefix)
-            return;
+        if ($(this).data('module') !== CallLog.modulePrefix) return;
 
         $(this).removeClass('callConfig');
         CallLog.configInit = false;

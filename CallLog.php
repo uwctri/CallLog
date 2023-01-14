@@ -4,7 +4,6 @@ namespace UWMadison\CallLog;
 
 use ExternalModules\AbstractExternalModule;
 use REDCap;
-use User;
 use Project;
 use Piping;
 use Design;

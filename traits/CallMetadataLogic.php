@@ -221,19 +221,18 @@ trait CallMetadataLogic
         $eventMap = REDCap::getEventNames(true);
         foreach ($config as $i => $callConfig) {
             $data = REDCap::getData($project_id, 'array', $record, $callConfig['indicator'])[$record];
-            if (empty($meta[$callConfig['id']]) && !empty($data[$callConfig['event']][$callConfig['indicator']])) {
-                $meta[$callConfig['id']] = [
-                    "template" => 'visit',
-                    "event_id" => $callConfig['event'],
-                    "event" => $eventMap[$callConfig['event']],
-                    "end" => $data[$callConfig['event']][$callConfig['autoRemove']],
-                    "name" => $callConfig['name'],
-                    "instances" => [],
-                    "voiceMails" => 0,
-                    "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                    "complete" => false
-                ];
-            }
+            if (!empty($meta[$callConfig['id']]) || empty($data[$callConfig['event']][$callConfig['indicator']])) continue;
+            $meta[$callConfig['id']] = [
+                "template" => 'visit',
+                "event_id" => $callConfig['event'],
+                "event" => $eventMap[$callConfig['event']],
+                "end" => $data[$callConfig['event']][$callConfig['autoRemove']],
+                "name" => $callConfig['name'],
+                "instances" => [],
+                "voiceMails" => 0,
+                "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
+                "complete" => false
+            ];
         }
         return $this->saveCallMetadata($project_id, $record, $meta);
     }
@@ -241,14 +240,12 @@ trait CallMetadataLogic
     public function metadataUpdateCommon($project_id, $record)
     {
         $meta = $this->getCallMetadata($project_id, $record);
-        if (empty($meta))
-            return; // We don't make the 1st metadata entry here.
+        if (empty($meta)) return; // We don't make the 1st metadata entry here.
         $data = $this->getAllCallData($project_id, $record);
         $instance = end(array_keys($data));
         $data = end($data); // get the data of the newest instance only
         $id = $data['call_id'];
-        if (in_array($instance, $meta[$id]["instances"]))
-            return;
+        if (in_array($instance, $meta[$id]["instances"])) return;
         $meta[$id]["instances"][] = $instance;
         if ($data['call_left_message'][1] == '1')
             $meta[$id]["voiceMails"]++;

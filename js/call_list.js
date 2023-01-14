@@ -427,6 +427,10 @@ CallLog.fn.refreshTableData = function () {
             });
 
             CallLog.fn.toggleCallBackCol();
+
+            // Enable Tooltips for the call-back column
+            $('*[data-toggle="tooltip"]').tooltip();
+
             console.log(`Refreshed data in ${timeTaken} seconds`);
         }
     });
