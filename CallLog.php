@@ -1009,8 +1009,8 @@ class CallLog extends AbstractExternalModule
             $sliced = array_slice($arr, 1, count($arr) - 1, true);
             return array($arr[0] => implode(', ', $sliced));
         }, $split);
-        array_walk_recursive($mapped, function ($a) use (&$return) {
-            $return[] = $a;
+        array_walk_recursive($mapped, function ($v, $k) use (&$return) {
+            $return[$k] = $v;
         });
         return $return;
     }
