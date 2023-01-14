@@ -10,8 +10,12 @@ use Piping;
 use Design;
 use Metadata;
 
+require_once 'traits/CallMetadataLogic.php';
+
 class CallLog extends AbstractExternalModule
 {
+    use CallMetadataLogic;
+
     private $module_global = 'CallLog';
 
     // Hard Coded Data Dictionary Values
@@ -23,10 +27,6 @@ class CallLog extends AbstractExternalModule
     // Hard Coded Config
     public $startedCallGrace = '30'; # mins to start a call early
     public $holidays = ['12-25', '12-24', '12-31', '07-04', '01-01']; # Fixed holidays
-
-    /////////////////////////////////////////////////
-    // REDCap Hooks
-    /////////////////////////////////////////////////
 
     public function redcap_save_record($project_id, $record, $instrument)
     {
@@ -47,7 +47,7 @@ class CallLog extends AbstractExternalModule
         $this->updateDisconnectedPhone($project_id, $record);
         $this->metadataNewEntry($project_id, $record, $metadata, $config['new']);
         $this->metadataPhoneVisit($project_id, $record, $metadata, $config['visit']);
-        $this->metadataCallStartedUpdate($project_id, $record);
+        $this->metadataCallStarted($project_id, $record, $metadata);
     }
 
     public function redcap_every_page_top($project_id)
@@ -126,187 +126,6 @@ class CallLog extends AbstractExternalModule
         REDCap::saveData($project_id, 'array', $write, 'overwrite');
     }
 
-    /////////////////////////////////////////////////
-    // Metadata Updating / Creation
-    /////////////////////////////////////////////////
-
-    public function metadataNewEntry($project_id, $record, $metadata, $config)
-    {
-        // Also envoked via URL post for bulk load scripts
-        // Can't be a new call if metadata already exists
-        if (!empty($metadata)) return;
-        foreach ($config as $callConfig) {
-            // Don't re-create call
-            if (!empty($metadata[$callConfig['id']])) continue;
-            $metadata[$callConfig['id']] = [
-                "template" => 'new',
-                "event" => '', //None for new entry calls
-                "event_id" => '',
-                "name" => $callConfig['name'],
-                "load" => date("Y-m-d H:i"),
-                "instances" => [],
-                "voiceMails" => 0,
-                "expire" => $callConfig['expire'],
-                "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                "complete" => false
-            ];
-        }
-        return $this->saveCallMetadata($project_id, $record, $metadata);
-    }
-
-    public function metadataFollowup($project_id, $record, $metadata, $config)
-    {
-        if (empty($config)) return;
-        $eventMap = REDCap::getEventNames(true);
-        foreach ($config as $callConfig) {
-            $data = REDCap::getData($project_id, 'array', $record, [$callConfig['field'], $callConfig['end']])[$record];
-            if (!empty($metadata[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == "") {
-                //Anchor appt was removed, get rid of followup call too.
-                unset($metadata[$callConfig['id']]);
-            } elseif (empty($metadata[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "") {
-                // Anchor is set and the meta doesn't have the call id in it yet
-                $start = date('Y-m-d', strtotime($data[$callConfig['event']][$callConfig['field']] . ' +' . $callConfig['days'] . ' days'));
-                $end = $data[$callConfig['event']][$callConfig['end']];
-                if (empty($end)) {
-                    $end = $callConfig['days'] + $callConfig['length'];
-                    $end = date('Y-m-d', strtotime($data[$callConfig['event']][$callConfig['field']] . ' +' . $end . ' days'));
-                }
-                $metadata[$callConfig['id']] = [
-                    "start" => $start,
-                    "end" => $end,
-                    "template" => 'followup',
-                    "event_id" => $callConfig['event'],
-                    "event" => $eventMap[$callConfig['event']],
-                    "name" => $callConfig['name'],
-                    "instances" => [],
-                    "voiceMails" => 0,
-                    "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                    "complete" => false
-                ];
-            } elseif (!empty($metadata[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "") {
-                // Update the start/end dates if the call exists and the anchor isn't blank 
-                $start = date('Y-m-d', strtotime($data[$callConfig['event']][$callConfig['field']] . ' +' . $callConfig['days'] . ' days'));
-                $end = $data[$callConfig['event']][$callConfig['end']];
-                if (empty($end)) {
-                    $end = $callConfig['days'] + $callConfig['length'];
-                    $end = date('Y-m-d', strtotime($data[$callConfig['event']][$callConfig['field']] . ' +' . $end . ' days'));
-                }
-                if (($metadata[$callConfig['id']]['start'] != $start) || ($metadata[$callConfig['id']]['end'] != $end)) {
-                    $metadata[$callConfig['id']]['start'] = $start;
-                    $metadata[$callConfig['id']]['end'] = $end;
-                }
-            }
-        }
-        return $this->saveCallMetadata($project_id, $record, $metadata);
-    }
-
-    public function metadataReminder($project_id, $record, $metadata, $config)
-    {
-        if (empty($config)) return;
-        $eventMap = REDCap::getEventNames(true);
-        $today = date('Y-m-d');
-        foreach ($config as $callConfig) {
-            $data = REDCap::getData($project_id, 'array', $record, [$callConfig['field'], $callConfig['removeVar']])[$record];
-            if (
-                !empty($metadata[$callConfig['id']]) && count($metadata[$callConfig['id']]['instances']) == 0 &&
-                $data[$callConfig['removeEvent']][$callConfig['removeVar']]
-            ) {
-                // Alt flag was set and we haven't recorded calls. Delete the metadata
-                unset($metadata[$callConfig['id']]);
-                continue;
-            }
-            if ($data[$callConfig['removeEvent']][$callConfig['removeVar']])
-                continue;
-            $newStart = $this->dateMath($data[$callConfig['event']][$callConfig['field']], '-', $callConfig['days']);
-            $newEnd = $this->dateMath($data[$callConfig['event']][$callConfig['field']], '+', $callConfig['days'] == 0 ? 365 : 0);
-            if (
-                !empty($metadata[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == ""
-                && count($metadata[$callConfig['id']]['instances']) == 0
-            ) {
-                // Scheduled appt was removed and no call was made, get rid of reminder call too.
-                unset($metadata[$callConfig['id']]);
-            } elseif (!empty($metadata[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == "") {
-                // Scheduled appt was removed, but a call was made, mark the reminder as complete
-                $metadata[$callConfig['id']]["complete"] = true;
-                $metadata[$callConfig['id']]["completedBy"] = "REDCap";
-                $this->projectLog("Reminder call {$callConfig['id']} marked as complete, appointment was removed.");
-            } elseif (!empty($metadata[$callConfig['id']]) && ($data[$callConfig['event']][$callConfig['field']] <= $today)) {
-                // Appt is today, autocomplete the call so it stops showing up places, we might double set but it doesn't matter
-                $metadata[$callConfig['id']]['complete'] = true;
-                $metadata[$callConfig['id']]["completedBy"] = "REDCap";
-                $this->projectLog("Reminder call {$callConfig['id']} marked as complete, appointment is today.");
-            } elseif (
-                !empty($metadata[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "" &&
-                ($metadata[$callConfig['id']]['start'] != $newStart || $metadata[$callConfig['id']]['end'] != $newEnd)
-            ) {
-                // Scheduled appt exists, the meta has the call id, but the dates don't match (re-shchedule occured)
-                $metadata[$callConfig['id']]['complete'] = false;
-                $metadata[$callConfig['id']]['start'] = $newStart;
-                $metadata[$callConfig['id']]['end'] = $newEnd;
-                $this->projectLog("Reminder call {$callConfig['id']} marked as incomplete, appointment was rescheduled.");
-            } elseif (empty($metadata[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] != "") {
-                // Scheduled appt exists and the meta doesn't have the call id in it yet
-                $metadata[$callConfig['id']] = [
-                    "start" => $newStart,
-                    "end" => $newEnd,
-                    "template" => 'reminder',
-                    "event_id" => $callConfig['event'],
-                    "event" => $eventMap[$callConfig['event']],
-                    "name" => $callConfig['name'],
-                    "instances" => [],
-                    "voiceMails" => 0,
-                    "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                    "complete" => false
-                ];
-            }
-        }
-        return $this->saveCallMetadata($project_id, $record, $metadata);
-    }
-
-    public function metadataMissedCancelled($project_id, $record, $metadata, $config)
-    {
-        if (empty($config)) return;
-        $eventMap = REDCap::getEventNames(true);
-        foreach ($config as $callConfig) {
-            $data = REDCap::getData($project_id, 'array', $record, [$callConfig['apptDate'], $callConfig['indicator']])[$record][$callConfig['event']];
-            $idExact = $callConfig['id'] . '||' . $data[$callConfig['apptDate']];
-            if (empty($metadata[$idExact]) && !empty($data[$callConfig['apptDate']]) && !empty($data[$callConfig['indicator']])) {
-                // Appt is set, Indicator is set, and metadata is missing, write it.
-                $metadata[$idExact] = [
-                    "appt" => $data[$callConfig['apptDate']],
-                    "template" => 'mcv',
-                    "event_id" => $callConfig['event'],
-                    "event" => $eventMap[$callConfig['event']],
-                    "name" => $callConfig['name'],
-                    "instances" => [],
-                    "voiceMails" => 0,
-                    "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                    "complete" => false
-                ];
-            } elseif (!empty($metadata[$idExact]) && !empty($data[$callConfig['apptDate']]) && empty($data[$callConfig['indicator']])) {
-                // The visit has been reschedueld for the exact previous time, or maybe user error
-                // Previously we would usent those calls with 0 instances, but this leads to an issue if a mcv is reschedueld on the first try
-                $metadata[$idExact]['complete'] = true;
-                $metadata[$idExact]["completedBy"] = "REDCap";
-                $this->projectLog("Missed/Cancelled call {$idExact} marked as complete, appointment was rescheduled.");
-            }
-
-            // Search for similar IDs and complete/remove them. We should only have 1 MCV call per event active on the call log
-            foreach ($metadata as $callID => $callData) {
-                if ($callID == $idExact || $callData['complete'] || $callData['template'] != "mcv" || $callData['event'] != $callConfig['event'])
-                    continue;
-                if (count($callData["instances"]) == 0)
-                    unset($metadata[$callID]);
-                else {
-                    $callData['complete'] = true;
-                    $callData['completedBy'] = "REDCap";
-                    $this->projectLog("Missed/Cancelled call {$callID} marked as complete, call appears to be a duplicate.");
-                }
-            }
-        }
-        return $this->saveCallMetadata($project_id, $record, $metadata);
-    }
-
     private function deployInstruments($project_id)
     {
         // Check if deployed
@@ -357,6 +176,7 @@ class CallLog extends AbstractExternalModule
         $today = Date('Y-m-d');
 
         foreach ($this->getProjectsWithModuleEnabled() as $project_id) {
+            $_GET['pid'] = $project_id;
             $Proj = new Project($project_id);
             $project_record_id = $this->getRecordIdField($project_id);
             $eventMap = REDCap::getEventNames(true);
@@ -405,43 +225,6 @@ class CallLog extends AbstractExternalModule
         return "The \"{$cronInfo['cron_description']}\" cron job completed successfully.";
     }
 
-    public function metadataNeedToSchedule($project_id, $record, $metadata, $config)
-    {
-        if (empty($config)) return;
-        global $Proj;
-        $orderedEvents = array_combine(array_map(function ($x) {
-            return $x['day_offset'];
-        }, $Proj->eventInfo), array_keys($Proj->eventInfo));
-        $callLogEvent = $this->getEventOfInstrument('call_log');
-        $metadataEvent = $this->getEventOfInstrument('call_log_metadata');
-        $eventMap = REDCap::getEventNames(true);
-        foreach ($config as $i => $callConfig) {
-            $data = REDCap::getData($project_id, 'array', $record, [$callConfig['apptDate'], $callConfig['indicator'], $callConfig['skip']])[$record];
-            $prevEvent = $orderedEvents[array_search($callConfig['event'], $orderedEvents) - 1];
-            // If previous indicator is set (i.e. it was attended) and current event's appt_date is blank, and its not attended then set need to schedule. Also check that skip is either not configured or that it is not-truthy (i.e. 0 or empty).
-            if (
-                empty($metadata[$callConfig['id']]) && !empty($data[$prevEvent][$callConfig['indicator']]) && empty($data[$callConfig['event']][$callConfig['apptDate']]) && empty($data[$callConfig['event']][$callConfig['indicator']]) &&
-                (empty($callConfig['skip']) || (!$data[$callConfig['event']][$callConfig['skip']] && !$data[$prevEvent][$callConfig['skip']] && !$data[$callLogEvent][$callConfig['skip']] && !$data[$metadataEvent][$callConfig['skip']]))
-            ) {
-                $metadata[$callConfig['id']] = [
-                    "template" => 'nts',
-                    "event_id" => $callConfig['event'],
-                    "event" => $eventMap[$callConfig['event']],
-                    "name" => $callConfig['name'],
-                    "instances" => [],
-                    "voiceMails" => 0,
-                    "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                    "complete" => false
-                ];
-            } elseif (!empty($metadata[$callConfig['id']]) && !empty($data[$callConfig['event']][$callConfig['apptDate']])) {
-                $metadata[$callConfig['id']]['complete'] = true;
-                $metadata[$callConfig['id']]['completedBy'] = "REDCap";
-                $this->projectLog("Need to Schedue call {$callConfig['id']} marked as complete, appointment was reschedueld.");
-            }
-        }
-        return $this->saveCallMetadata($project_id, $record, $metadata);
-    }
-
     public function metadataAdhoc($project_id, $record, $payload)
     {
         $config = $this->loadCallTemplateConfig()["adhoc"];
@@ -485,51 +268,6 @@ class CallLog extends AbstractExternalModule
         return $this->saveCallMetadata($project_id, $record, $meta);
     }
 
-    public function metadataPhoneVisit($project_id, $record, $metadata, $config)
-    {
-        if (empty($config)) return;
-        $eventMap = REDCap::getEventNames(true);
-        foreach ($config as $i => $callConfig) {
-            $data = REDCap::getData($project_id, 'array', $record, $callConfig['indicator'])[$record];
-            if (empty($meta[$callConfig['id']]) && !empty($data[$callConfig['event']][$callConfig['indicator']])) {
-                $meta[$callConfig['id']] = [
-                    "template" => 'visit',
-                    "event_id" => $callConfig['event'],
-                    "event" => $eventMap[$callConfig['event']],
-                    "end" => $data[$callConfig['event']][$callConfig['autoRemove']],
-                    "name" => $callConfig['name'],
-                    "instances" => [],
-                    "voiceMails" => 0,
-                    "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                    "complete" => false
-                ];
-            }
-        }
-        return $this->saveCallMetadata($project_id, $record, $meta);
-    }
-
-    public function metadataUpdateCommon($project_id, $record)
-    {
-        $meta = $this->getCallMetadata($project_id, $record);
-        if (empty($meta))
-            return; // We don't make the 1st metadata entry here.
-        $data = $this->getAllCallData($project_id, $record);
-        $instance = end(array_keys($data));
-        $data = end($data); // get the data of the newest instance only
-        $id = $data['call_id'];
-        if (in_array($instance, $meta[$id]["instances"]))
-            return;
-        $meta[$id]["instances"][] = $instance;
-        if ($data['call_left_message'][1] == '1')
-            $meta[$id]["voiceMails"]++;
-        if ($data['call_outcome'] == '1') {
-            $meta[$id]['complete'] = true;
-            $meta[$id]['completedBy'] = $this->framework->getUser()->getUsername();
-        }
-        $meta[$id]['callStarted'] = '';
-        return $this->saveCallMetadata($project_id, $record, $meta);
-    }
-
     public function metadataNoCallsToday($project_id, $record, $call_id)
     {
         $meta = $this->getCallMetadata($project_id, $record);
@@ -542,29 +280,23 @@ class CallLog extends AbstractExternalModule
         }
     }
 
-    public function metadataCallStarted($project_id, $record, $call_id, $user)
+    public function metadataCallStarted($project_id, $record, $metadata, $call_id = null, $user = null)
     {
-        $meta = $this->getCallMetadata($project_id, $record);
-        if (!empty($meta) && !empty($meta[$call_id])) {
-            $meta[$call_id]['callStarted'] = date("Y-m-d H:i");
-            $meta[$call_id]['callStartedBy'] = $user;
-            return $this->saveCallMetadata($project_id, $record, $meta);
+        if (empty($metadata)) return;
+        if ($call_id && $user) {
+            $metadata[$call_id]['callStarted'] = date("Y-m-d H:i");
+            $metadata[$call_id]['callStartedBy'] = $user;
+            return $this->saveCallMetadata($project_id, $record, $metadata);
         }
-    }
-
-    public function metadataCallStartedUpdate($project_id, $record)
-    {
-        $meta = $this->getCallMetadata($project_id, $record);
-        if (empty($meta))
-            return;
+        // Update progress for ongoing call
         $grace = strtotime('-' . $this->startedCallGrace . ' minutes'); // grace minutes ago
         $now = date("Y-m-d H:i");
         $user = $this->framework->getUser()->getUsername();
-        foreach ($meta as $id => $call) {
+        foreach ($metadata as $id => $call) {
             if (!$call['complete'] && ($call['callStartedBy'] == $user) && (strtotime($call['callStarted']) > $grace))
-                $meta[$id]['callStarted'] = $now;
+                $metadata[$id]['callStarted'] = $now;
         }
-        return $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
     public function metadataCallEnded($project_id, $record, $call_id)
@@ -575,10 +307,6 @@ class CallLog extends AbstractExternalModule
             return $this->saveCallMetadata($project_id, $record, $meta);
         }
     }
-
-    /////////////////////////////////////////////////
-    // Get, Save, and delete Data
-    /////////////////////////////////////////////////
 
     public function deleteLastCallInstance($project_id, $record)
     {
@@ -625,15 +353,10 @@ class CallLog extends AbstractExternalModule
         return REDCap::saveData($project_id, 'array', [$record => [$this->getEventOfInstrument('call_log_metadata') => [$this->metadataField => json_encode($data)]]]);
     }
 
-    /////////////////////////////////////////////////
-    // Utlties and Config Loading
-    /////////////////////////////////////////////////
-
     public function recentCallStarted($project_id, $record)
     {
         $meta = $this->getCallMetadata($project_id, $record);
-        if (empty($meta))
-            return '';
+        if (empty($meta)) return '';
         $grace = $this->startedCallGrace; // Minutes of Grace time
         $user = $this->framework->getUser()->getUsername();
         foreach ($meta as $call) {
@@ -963,7 +686,7 @@ class CallLog extends AbstractExternalModule
     }
 
     /////////////////////////////////////////////////
-    // Private Utility Functions
+    // Utility Functions
     /////////////////////////////////////////////////
 
     private function dateMath($date, $operation, $days)
@@ -1081,10 +804,6 @@ class CallLog extends AbstractExternalModule
     {
         echo "<script>" . $this->module_global . "." . $name . " = " . json_encode($value) . ";</script>";
     }
-
-    /////////////////////////////////////////////////
-    // Private Utility Functions
-    /////////////////////////////////////////////////
 
     private function projectLog($action)
     {
