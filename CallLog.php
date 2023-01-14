@@ -90,10 +90,6 @@ class CallLog extends AbstractExternalModule
         $this->passArgument('recentCaller', $this->recentCallStarted($project_id, $record));
     }
 
-    /////////////////////////////////////////////////
-    // Issue Reporting
-    /////////////////////////////////////////////////
-
     public function reportDisconnectedPhone($project_id, $record)
     {
         $config = $this->loadBadPhoneConfig();
@@ -398,11 +394,9 @@ class CallLog extends AbstractExternalModule
     {
         $settings = $this->getProjectSettings();
         foreach ($settings["call_template"] as $i => $template) {
-            if ($template != "adhoc")
-                continue;
+            if ($template != "adhoc") continue;
             $reasons = $settings["adhoc_reason"][$i][0];
-            if (empty($reasons))
-                continue;
+            if (empty($reasons)) continue;
             $config[$settings["call_id"][$i]] = [
                 "id" => $settings["call_id"][$i],
                 "name" => $settings["call_name"][$i],
@@ -744,16 +738,7 @@ class CallLog extends AbstractExternalModule
         $meta_event = $this->getEventOfInstrument('call_log_metadata');
         $data = array(
             "modulePrefix" => $this->PREFIX,
-            "events" => [
-                "callLog" => [
-                    "name" => REDCap::getEventNames(true, false, $call_event),
-                    "id" => $call_event
-                ],
-                "metadata" => [
-                    "name" => REDCap::getEventNames(true, false, $meta_event),
-                    "id" => $meta_event
-                ],
-            ],
+            "callLogEvent" => $call_event,
             "user" => USERID,
             "userNameMap" => $this->getUserNameMap(),
             "static" => [
