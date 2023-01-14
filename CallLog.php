@@ -20,13 +20,9 @@ class CallLog extends AbstractExternalModule
     public $instrumentMeta = "call_log_metadata";
     public $metadataField = "call_metadata";
 
-    // Cache for functions
-    private $_dataDictionary = [];
-    private $_callTemplateConfig = [];
-    private $_callData = [];
-
     // Hard Coded Config
-    public $startedCallGrace = '30';
+    public $startedCallGrace = '30'; # mins to start a call early
+    public $holidays = ['12-25', '12-24', '12-31', '07-04', '01-01']; # Fixed holidays
 
     /////////////////////////////////////////////////
     // REDCap Hooks
@@ -34,13 +30,13 @@ class CallLog extends AbstractExternalModule
 
     public function redcap_save_record($project_id, $record, $instrument)
     {
-        $metadata = $this->getCallMetadata($project_id, $record);
-        $config = $this->loadCallTemplateConfig();
         if ($instrument == $this->instrumentLower) {
             $this->reportDisconnectedPhone($project_id, $record);
             $this->metadataUpdateCommon($project_id, $record);
             return;
         }
+        $metadata = $this->getCallMetadata($project_id, $record);
+        $config = $this->loadCallTemplateConfig();
         $triggerForm = $this->getProjectSetting('trigger_save');
         if (empty($triggerForm) || ($instrument == $triggerForm)) {
             $this->metadataFollowup($project_id, $record, $metadata, $config['followup']);
@@ -612,13 +608,10 @@ class CallLog extends AbstractExternalModule
 
     public function getAllCallData($project_id, $record)
     {
-        if (empty($_callData[$record])) {
-            $event = $this->getEventOfInstrument('call_log');
-            $data = REDCap::getData($project_id, 'array', $record, null, $event);
-            $_callData[$record] = $data[$record]['repeat_instances'][$event][$this->instrumentLower];
-            $_callData[$record] = empty($_callData[$record]) ? [1 => $data[$record][$event]] : $_callData[$record];
-        }
-        return $_callData[$record];
+        $event = $this->getEventOfInstrument('call_log');
+        $data = REDCap::getData($project_id, 'array', $record, null, $event);
+        $callData = $data[$record]['repeat_instances'][$event][$this->instrumentLower];
+        return empty($callData) ? [1 => $data[$record][$event]] : $callData;
     }
 
     public function getCallMetadata($project_id, $record)
@@ -698,8 +691,6 @@ class CallLog extends AbstractExternalModule
 
     public function loadCallTemplateConfig()
     {
-        if (!empty($this->_callTemplateConfig))
-            return $this->_callTemplateConfig;
         $eventNameMap = $this->getEventNameMap();
         $newEntryConfig = [];
         $reminderConfig = [];
@@ -729,20 +720,19 @@ class CallLog extends AbstractExternalModule
             // Load Reminder Config
             elseif ($template == "reminder") {
                 $field = $settings["reminder_variable"][$i][0];
-                if (!empty($field)) {
-                    $includeEvents = array_map('trim', explode(',', $settings["reminder_include_events"][$i][0]));
-                    foreach ($includeEvents as $eventName) {
-                        $arr = array_merge([
-                            "event" => REDCap::getEventIdFromUniqueEvent($eventName),
-                            "field" => $field,
-                            "days" => (int)$settings["reminder_days"][$i][0],
-                            "removeEvent" => $settings["reminder_remove_event"][$i][0],
-                            "removeVar" => $settings["reminder_remove_var"][$i][0]
-                        ], $commonConfig);
-                        $arr['id'] = $arr['id'] . '|' . $eventName;
-                        $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
-                        $reminderConfig[] = $arr;
-                    }
+                if (empty($field)) continue;
+                $includeEvents = array_map('trim', explode(',', $settings["reminder_include_events"][$i][0]));
+                foreach ($includeEvents as $eventName) {
+                    $arr = array_merge([
+                        "event" => REDCap::getEventIdFromUniqueEvent($eventName),
+                        "field" => $field,
+                        "days" => (int)$settings["reminder_days"][$i][0],
+                        "removeEvent" => $settings["reminder_remove_event"][$i][0],
+                        "removeVar" => $settings["reminder_remove_var"][$i][0]
+                    ], $commonConfig);
+                    $arr['id'] = $arr['id'] . '|' . $eventName;
+                    $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
+                    $reminderConfig[] = $arr;
                 }
             }
 
@@ -782,18 +772,17 @@ class CallLog extends AbstractExternalModule
             elseif ($template == "mcv") {
                 $indicator = $settings["mcv_indicator"][$i][0];
                 $dateField = $settings["mcv_date"][$i][0];
-                if (!empty($indicator) && !empty($dateField)) {
-                    $includeEvents = array_map('trim', explode(',', $settings["mcv_include_events"][$i][0]));
-                    foreach ($includeEvents as $eventName) {
-                        $arr = array_merge([
-                            "event" => REDCap::getEventIdFromUniqueEvent($eventName),
-                            "indicator" => $indicator,
-                            "apptDate" => $dateField,
-                        ], $commonConfig);
-                        $arr['id'] = $arr['id'] . '|' . $eventName;
-                        $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
-                        $mcvConfig[] = $arr;
-                    }
+                if (empty($indicator) || empty($dateField)) continue;
+                $includeEvents = array_map('trim', explode(',', $settings["mcv_include_events"][$i][0]));
+                foreach ($includeEvents as $eventName) {
+                    $arr = array_merge([
+                        "event" => REDCap::getEventIdFromUniqueEvent($eventName),
+                        "indicator" => $indicator,
+                        "apptDate" => $dateField,
+                    ], $commonConfig);
+                    $arr['id'] = $arr['id'] . '|' . $eventName;
+                    $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
+                    $mcvConfig[] = $arr;
                 }
             }
 
@@ -803,54 +792,51 @@ class CallLog extends AbstractExternalModule
                 $dateField = $settings["nts_date"][$i][0];
                 $skipField = $settings["nts_skip"][$i][0];
                 $window = $settings["nts_window_start_cron"][$i][0];
-                if (!empty($indicator) && !empty($dateField)) {
-                    $includeEvents = array_map('trim', explode(',', $settings["nts_include_events"][$i][0]));
-                    foreach ($includeEvents as $eventName) {
-                        $arr = array_merge([
-                            "event" => REDCap::getEventIdFromUniqueEvent($eventName),
-                            "indicator" => $indicator,
-                            "apptDate" => $dateField,
-                            "skip" => $skipField,
-                            "window" => $window
-                        ], $commonConfig);
-                        $arr['id'] = $arr['id'] . '|' . $eventName;
-                        $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
-                        $ntsConfig[] = $arr;
-                    }
+                if (empty($indicator) || empty($dateField)) continue;
+                $includeEvents = array_map('trim', explode(',', $settings["nts_include_events"][$i][0]));
+                foreach ($includeEvents as $eventName) {
+                    $arr = array_merge([
+                        "event" => REDCap::getEventIdFromUniqueEvent($eventName),
+                        "indicator" => $indicator,
+                        "apptDate" => $dateField,
+                        "skip" => $skipField,
+                        "window" => $window
+                    ], $commonConfig);
+                    $arr['id'] = $arr['id'] . '|' . $eventName;
+                    $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
+                    $ntsConfig[] = $arr;
                 }
             }
 
             // Load Adhoc Visit Config
             elseif ($template == "adhoc") {
                 $reasons = $settings["adhoc_reason"][$i][0];
-                if (!empty($reasons)) {
-                    $arr = array_merge([
-                        "reasons" => $this->explodeCodedValueText($reasons),
-                    ], $commonConfig);
-                    $adhocConfig[] = $arr;
-                }
+                if (empty($reasons)) continue;
+                $arr = array_merge([
+                    "reasons" => $this->explodeCodedValueText($reasons),
+                ], $commonConfig);
+                $adhocConfig[] = $arr;
             }
 
             // Load Scheduled Phone Visit Config
             elseif ($template == "visit") {
                 $indicator = $settings["visit_indicator"][$i][0];
                 $autoField = $settings["visit_auto_remove"][$i][0];
-                if (!empty($indicator)) {
-                    $includeEvents = array_map('trim', explode(',', $settings["visit_include_events"][$i][0]));
-                    foreach ($includeEvents as $eventName) {
-                        $arr = array_merge([
-                            "event" => REDCap::getEventIdFromUniqueEvent($eventName),
-                            "indicator" => $indicator,
-                            "autoRemove" => $autoField
-                        ], $commonConfig);
-                        $arr['id'] = $arr['id'] . '|' . $eventName;
-                        $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
-                        $visitConfig[] = $arr;
-                    }
+                if (empty($indicator)) continue;
+                $includeEvents = array_map('trim', explode(',', $settings["visit_include_events"][$i][0]));
+                foreach ($includeEvents as $eventName) {
+                    $arr = array_merge([
+                        "event" => REDCap::getEventIdFromUniqueEvent($eventName),
+                        "indicator" => $indicator,
+                        "autoRemove" => $autoField
+                    ], $commonConfig);
+                    $arr['id'] = $arr['id'] . '|' . $eventName;
+                    $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
+                    $visitConfig[] = $arr;
                 }
             }
         }
-        $this->_callTemplateConfig = [
+        return [
             "new" => $newEntryConfig,
             "reminder" => $reminderConfig,
             "followup" => $followupConfig,
@@ -859,7 +845,6 @@ class CallLog extends AbstractExternalModule
             "adhoc" => $adhocConfig,
             "visit" => $visitConfig
         ];
-        return $this->_callTemplateConfig;
     }
 
     public function loadAutoRemoveConfig()
@@ -983,53 +968,19 @@ class CallLog extends AbstractExternalModule
 
     private function dateMath($date, $operation, $days)
     {
-        $oldDate = date('Y-m-d', strtotime($date));
-        $date = date('Y-m-d', strtotime($date . ' ' . $operation . $days . ' days'));
-        if ($days > 5) {
-            $day = Date("l", strtotime($date));
-            if ($day == "Saturday" && $operation == "+") {
-                $date = date('Y-m-d', strtotime($date . ' +2 days'));
-            } elseif ($day == "Saturday" && $operation == "-") {
-                $date = date('Y-m-d', strtotime($date . ' -1 days'));
-            } elseif ($day == "Sunday" && $operation == "+") {
-                $date = date('Y-m-d', strtotime($date . ' +1 days'));
-            } elseif ($day == "Sunday" && $operation == "-") {
-                $date = date('Y-m-d', strtotime($date . ' -2 days'));
-            } else {
-                $date = date('Y-m-d', strtotime($date));
-            }
-        } else { // Make sure its Business days
-            while ($this->number_of_working_days($oldDate, $date) < $days) {
-                $date = date('Y-m-d', strtotime($date . ' ' . $operation . '1 day'));
-            }
-        }
-        return $date;
-    }
-
-    private function number_of_working_days($from, $to)
-    {
-        $workingDays = [1, 2, 3, 4, 5]; # date format = N (1 = Monday, ...)
-        $holidays = ['*-12-25', '*-12-24', '*-12-31', '*-07-04', '*-01-01']; # Fixed holidays
-
-        if ($from > $to) {
-            $_to = $to;
-            $to = $from;
-            $from = $_to;
-        }
-
-        $from = new \DateTime($from);
-        $to = new \DateTime($to);
-        $interval = new \DateInterval('P1D');
-        $periods = new \DatePeriod($from, $interval, $to);
-
-        $days = 0;
-        foreach ($periods as $period) {
-            if (!in_array($period->format('N'), $workingDays)) continue;
-            if (in_array($period->format('Y-m-d'), $holidays)) continue;
-            if (in_array($period->format('*-m-d'), $holidays)) continue;
-            $days++;
-        }
-        return $days;
+        $date = date('Y-m-d', strtotime("$date {$operation}{$days} days"));
+        if ($days > 5) return $date;
+        // If sooner than 5 days then make sure its not starting on Weekend/Holiday
+        $day = date("l", strtotime($date));
+        $logic = [
+            "Saturday+" => "+2",
+            "Saturday-" => "-1",
+            "Sunday+" => "+1",
+            "Sunday-" => "-2",
+        ][$day . $operation] ?? "+0";
+        $date = date('Y-m-d', strtotime("$date $logic days"));
+        $holidayOffset = in_array(date('m-d', strtotime($date)), $this->holidays) ? "1" : "0";
+        return date('Y-m-d', strtotime("$date {$operation}{$holidayOffset} days"));
     }
 
     public function getEventNameMap()
@@ -1048,59 +999,26 @@ class CallLog extends AbstractExternalModule
         return array_combine(array_column($text, 0), array_column($text, 1));
     }
 
-    private function getDataDictionary($format = 'array')
-    {
-        if (!array_key_exists($format, $this->_dataDictionary)) {
-            $this->_dataDictionary[$format] = \REDCap::getDataDictionary($format);
-        }
-        return $this->_dataDictionary[$format];
-    }
-
     private function getDictionaryValuesFor($key, $dataDictionary = null)
     {
         $dataDictionary = $dataDictionary ?? REDCap::getDataDictionary('array');
-        $dd = $this->getDataDictionary()[$key]['select_choices_or_calculations'];
-        $split = explode('|', $dd);
+        $dataDictionary = $dataDictionary[$key]['select_choices_or_calculations'];
+        $split = explode('|', $dataDictionary);
         $mapped = array_map(function ($value) {
             $arr = explode(', ', trim($value));
             $sliced = array_slice($arr, 1, count($arr) - 1, true);
             return array($arr[0] => implode(', ', $sliced));
         }, $split);
-        return $this->array_flatten($mapped);
-    }
-
-    private function array_flatten($array)
-    {
-        $return = [];
-        foreach ($array as $key => $value) {
-            if (is_array($value)) {
-                $return = $return + $this->array_flatten($value);
-            } else {
-                $return[$key] = $value;
-            }
-        }
+        array_walk_recursive($mapped, function ($a) use (&$return) {
+            $return[] = $a;
+        });
         return $return;
     }
 
     private function initGlobal()
     {
-        $project_error = false;
         $call_event = $this->getEventOfInstrument('call_log');
         $meta_event = $this->getEventOfInstrument('call_log_metadata');
-        if ($call_event) {
-            $tmp = $this->instrumentLower;
-            $sql = "SELECT * FROM redcap_events_repeat WHERE event_id = $call_event AND form_name = '$tmp';";
-            $results = db_query($sql);
-            if ($results && $results !== false && db_num_rows($results)) {
-                $table = [];
-                while ($row = db_fetch_assoc($results)) {
-                    $table[] = $row;
-                }
-                if (count($table) != 1) {
-                    $project_error = true;
-                }
-            }
-        }
         $data = array(
             "modulePrefix" => $this->PREFIX,
             "events" => [
@@ -1121,7 +1039,7 @@ class CallLog extends AbstractExternalModule
                 "instrumentMetadata" => $this->instrumentMeta,
                 "record_id" => REDCap::getRecordIdField()
             ],
-            "configError" => $project_error,
+            "configError" => !($call_event && $meta_event),
             "router" => $this->getURL('router.php')
         );
         echo "<script>var " . $this->module_global . " = " . json_encode($data) . ";</script>";
@@ -1183,16 +1101,11 @@ class CallLog extends AbstractExternalModule
 
     public function isNotBlank($value)
     {
-        if (is_array($value)) {
-            foreach ($value as $k => $v) {
-                if ($v != "") {
-                    return True;
-                }
-            }
-            return False;
+        if (!is_array($value)) return $value != "";
+        foreach ($value as $k => $v) {
+            if ($v != "") return True;
         }
-        //assume string
-        return $value != "";
+        return False;
     }
 
     public function loadReportConfig($excludeWithdrawn = true)

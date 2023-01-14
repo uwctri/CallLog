@@ -10,13 +10,13 @@ This EM isn't yet available to install via redcap's EM database so you'll need t
 
 ## Configuration
 
-Configuration for this module is extensive and complex. Full documentation will exist on offical public release, but this has no current planned date. 
+Configuration for this module is extensive and complex. Full documentation will exist on offical public release, but this has no current planned date.
 
 Basic setup:
 
 * Deploy the instrument csv to the project you want to use the EM on, you will probably want to deploy this instrument to a "Study Management" event. The call log should exist only on one event and be enabled as repeatable.
 * Review the EM config
-* The end user is expected to complete a call log after every attemp to reach a subject. It is recommended that you link end-users to the call log at the end of each event that would make sense. 
+* The end user is expected to complete a call log after every attemp to reach a subject. It is recommended that you link end-users to the call log at the end of each event that would make sense.
 
 ## Feature Requests & Issues
 
@@ -25,14 +25,11 @@ Basic setup:
 * Custom page for configuration. The current one is slow due to styling the amount of config on a typical project
 * One click deploy of call log instrument to the project
 * Create a solution for customizing the display of the call log button
-* Create a generic solution for call scripts on the call log
-* Create a generic solution to add checkboxes / custom options to the Call Log without breaking or risk breaking other things
 * Switching between tabs on the call log should clear any entered data and display warning about data lost
-* Make window rounding optional for any call type
 * Currently we allow for the scheduled call backs to override the withdrawn status of subjects. Switch this to a toggle feature with default on.
-* Currently many configs are copied to the metadata of a call. Could we instead load the config and refrence it via template name to avoid this bloat? That would mean a potiental re-pull of data and recalculation of ranges. 
+* Currently many configs are copied to the metadata of a call. Could we instead load the config and refrence it via template name to avoid this bloat? That would mean a potiental re-pull of data and recalculation of ranges.
 
 * Nice to Have
-    * Consolidated call back tabs or area to aggregate calls across multiple projects.
-    * Consider showing if a call back was set in the call summary table
-    * Statistics page
+  * Consolidated call back tabs or area to aggregate calls across multiple projects.
+  * Consider showing if a call back was set in the call summary table
+  * Statistics page
