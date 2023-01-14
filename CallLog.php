@@ -11,10 +11,12 @@ use Design;
 use Metadata;
 
 require_once 'traits/CallMetadataLogic.php';
+require_once 'traits/Utility.php';
 
 class CallLog extends AbstractExternalModule
 {
     use CallMetadataLogic;
+    use Utility;
 
     private $module_global = 'CallLog';
 
@@ -26,6 +28,7 @@ class CallLog extends AbstractExternalModule
 
     // Hard Coded Config
     public $startedCallGrace = '30'; # mins to start a call early
+    public $dateMathCutoff = 5; # Date+/- less than N days will avoid weekends/holidays
     public $holidays = ['12-25', '12-24', '12-31', '07-04', '01-01']; # Fixed holidays
 
     public function redcap_save_record($project_id, $record, $instrument)
@@ -146,26 +149,6 @@ class CallLog extends AbstractExternalModule
         db_query("SET AUTOCOMMIT=1");
     }
 
-    function getEventOfInstrument($instrument)
-    {
-        $events = [];
-        $validEvents = array_keys(REDCap::getEventNames());
-        $sql = "SELECT event_id FROM redcap_events_forms WHERE form_name = ?";
-        $result = $this->query($sql, [$instrument]);
-        while ($row = $result->fetch_assoc()) {
-            $events[] = $row['event_id'];
-        }
-        return reset(array_intersect($events, $validEvents));
-    }
-
-    function getRecordIdField($project_id)
-    {
-        $sql = "SELECT field_name FROM redcap_metadata WHERE field_order = 1 AND project_id = ?";
-        $result = $this->query($sql, [$project_id]);
-        $row = $result->fetch_assoc();
-        return $row["field_name"];
-    }
-
     function cronNeedToSchedule($cronInfo)
     {
         global $Proj;
@@ -236,7 +219,7 @@ class CallLog extends AbstractExternalModule
             "start" => $payload['date'],
             "contactOn" => trim($payload['date'] . " " . $payload['time']),
             "reported" => $reported,
-            "reporter" => $payload['reporter'],
+            "reporter" => $this->getUserNameMap($project_id)[$payload['reporter']],
             "reason" => $payload['reason'],
             "initNotes" => $payload['notes'],
             "template" => 'adhoc',
@@ -364,13 +347,6 @@ class CallLog extends AbstractExternalModule
             }
         }
         return '';
-    }
-
-    private function getUserNameMap()
-    {
-        return array_map(function ($x) {
-            return substr(explode('(', $x)[1], 0, -1);
-        }, User::getUsernames(null, true));
     }
 
     public function loadBadPhoneConfig()
@@ -679,59 +655,6 @@ class CallLog extends AbstractExternalModule
         ];
     }
 
-    /////////////////////////////////////////////////
-    // Utility Functions
-    /////////////////////////////////////////////////
-
-    private function dateMath($date, $operation, $days)
-    {
-        $date = date('Y-m-d', strtotime("$date {$operation}{$days} days"));
-        if ($days > 5) return $date;
-        // If sooner than 5 days then make sure its not starting on Weekend/Holiday
-        $day = date("l", strtotime($date));
-        $logic = [
-            "Saturday+" => "+2",
-            "Saturday-" => "-1",
-            "Sunday+" => "+1",
-            "Sunday-" => "-2",
-        ][$day . $operation] ?? "+0";
-        $date = date('Y-m-d', strtotime("$date $logic days"));
-        $holidayOffset = in_array(date('m-d', strtotime($date)), $this->holidays) ? "1" : "0";
-        return date('Y-m-d', strtotime("$date {$operation}{$holidayOffset} days"));
-    }
-
-    public function getEventNameMap()
-    {
-        $eventNames = array_values(REDCap::getEventNames());
-        foreach (array_values(REDCap::getEventNames(true)) as $i => $unique)
-            $eventMap[$unique] = $eventNames[$i];
-        return $eventMap;
-    }
-
-    private function explodeCodedValueText($text)
-    {
-        $text = array_map(function ($line) {
-            return array_map('trim', explode(',', $line));
-        }, explode("\n", $text));
-        return array_combine(array_column($text, 0), array_column($text, 1));
-    }
-
-    private function getDictionaryValuesFor($key, $dataDictionary = null)
-    {
-        $dataDictionary = $dataDictionary ?? REDCap::getDataDictionary('array');
-        $dataDictionary = $dataDictionary[$key]['select_choices_or_calculations'];
-        $split = explode('|', $dataDictionary);
-        $mapped = array_map(function ($value) {
-            $arr = explode(', ', trim($value));
-            $sliced = array_slice($arr, 1, count($arr) - 1, true);
-            return array($arr[0] => implode(', ', $sliced));
-        }, $split);
-        array_walk_recursive($mapped, function ($v, $k) use (&$return) {
-            $return[$k] = $v;
-        });
-        return $return;
-    }
-
     private function initGlobal()
     {
         $call_event = $this->getEventOfInstrument('call_log');
@@ -767,29 +690,6 @@ class CallLog extends AbstractExternalModule
         return $config;
     }
 
-    private function getRecordLabel()
-    {
-        $project_id = $_GET['pid'];
-        $sql = "SELECT custom_record_label FROM redcap_projects WHERE project_id = ?;";
-        $query = db_query($sql, $project_id);
-        return array_values(db_fetch_assoc($query))[0];
-    }
-
-    private function includeJs($path)
-    {
-        echo '<script src="' . $this->getUrl($path) . '"></script>';
-    }
-
-    private function includeCss($path)
-    {
-        echo '<link rel="stylesheet" href="' . $this->getUrl($path) . '"/>';
-    }
-
-    private function passArgument($name, $value)
-    {
-        echo "<script>" . $this->module_global . "." . $name . " = " . json_encode($value) . ";</script>";
-    }
-
     private function projectLog($action)
     {
         $sql = null;
@@ -801,15 +701,6 @@ class CallLog extends AbstractExternalModule
         $sql = null;
         $event = null;
         REDCap::logEvent("Call Log", $_POST['details'], $sql, $_POST['record'], $event, $_GET['pid']);
-    }
-
-    public function isNotBlank($value)
-    {
-        if (!is_array($value)) return $value != "";
-        foreach ($value as $k => $v) {
-            if ($v != "") return True;
-        }
-        return False;
     }
 
     public function loadReportConfig($excludeWithdrawn = true)
@@ -837,7 +728,7 @@ class CallLog extends AbstractExternalModule
         $result = [];
 
         // Pull the record Label
-        $label = $this->getRecordLabel();
+        $label = $this->getRecordLabel($project_id);
 
         // Loop to format data
         foreach ($data as $record => $record_data) {
