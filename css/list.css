@@ -39,6 +39,14 @@
     border-radius: 4px;
 }
 
+/* Tooltips */
+.ui-tooltip {
+    white-space: pre-line;
+}
+
+.ui-tooltip-content {
+    white-space: pre-line;
+}
 
 /* Call Badges */
 

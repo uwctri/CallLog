@@ -116,7 +116,7 @@ CallLog.fn.createColConfig = function (index, tab_id) {
             const record = row['record_id'];
             if (CallLog.activeCallCache.includes(record)) return CallLog.templates.phoneIcon;
             const multi = CallLog.multiTabCache[record];
-            if (multi) return CallLog.templates.manyTabIcons.replace('LIST', multi.map(el => CallLog.tabs.tabNameMap[el]).join('&#013;'));
+            if (multi) return CallLog.templates.manyTabIcons.replace('LIST', multi.map(el => CallLog.tabs.tabNameMap[el]).join('&#010;'));
             return "";
         }
     }];
