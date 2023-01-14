@@ -63,23 +63,6 @@
             "type": "checkbox"
         },
         {
-            "key": "record_label_alias",
-            "name": "<b>Record Label Alias</b>",
-            "type": "textbox"
-        },
-        {
-            "key": "call_log_event",
-            "name": "<b>Call Log Instrument's Event</b><br>There should be only one",
-            "required": true,
-            "type": "event-list"
-        },
-        {
-            "key": "metadata_event",
-            "name": "<b>Metadata Instrument's Event</b>",
-            "required": true,
-            "type": "event-list"
-        },
-        {
             "key": "withdraw_event",
             "name": "<b>Withdraw Condition</b>",
             "type": "event-list"
