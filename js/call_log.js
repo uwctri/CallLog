@@ -179,7 +179,7 @@ CallLog.fn.buildAdhocMenu = function () {
                     time: to24hr($(`#${adhoc.id} input[name=callTime]`).val()),
                     reason: $(`#${adhoc.id} select[name=reason]`).val(),
                     notes: $(`#${adhoc.id} textarea[name=notes]`).val(),
-                    reporter: CallLog.userNameMap[$("#username-reference").text()]
+                    reporter: CallLog.user
                 },
                 error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
                 success: function (data) {
