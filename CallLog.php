@@ -260,7 +260,6 @@ class CallLog extends AbstractExternalModule
             $_GET['pid'] = $project_id;
             $Proj = new Project($project_id);
             $project_record_id = $this->getRecordIdField($project_id);
-            $eventMap = REDCap::getEventNames(true);
 
             $config = $this->loadCallTemplateConfig()["nts"];
             if (empty($config))
@@ -291,7 +290,6 @@ class CallLog extends AbstractExternalModule
                         $meta[$callConfig['id']] = [
                             "template" => 'nts',
                             "event_id" => $callConfig['event'],
-                            "event" => $eventMap[$callConfig['event']],
                             "name" => $callConfig['name'],
                             "instances" => [],
                             "voiceMails" => 0,
