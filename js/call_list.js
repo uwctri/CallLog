@@ -380,7 +380,7 @@ CallLog.fn.refreshTableData = function () {
         method: 'POST',
         url: CallLog.router,
         data: {
-            route: 'dataLoad'
+            route: 'getData'
         },
         error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
         success: (routerData) => {

@@ -20,35 +20,6 @@ CallLog.fn.saveMetadata = function () {
     });
 }
 
-// Debug function, easily upate data on an older log
-CallLog.fn.saveCalldata = function (instance, dataVar, dataVal, isCheckbox) {
-    isCheckbox = !!isCheckbox;
-    if (isCheckbox)
-        dataVal = JSON.stringify(dataVal);
-    $.ajax({
-        method: 'POST',
-        url: CallLog.router,
-        data: {
-            route: 'calldataSave',
-            record: getParameterByName('id'),
-            instance: instance,
-            dataVar: dataVar,
-            dataVal: dataVal,
-            isCheckbox: isCheckbox
-        },
-        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-        success: (data) => console.log(data)
-    });
-}
-
-// Debug function, give yourself a few extra days for that call
-CallLog.fn.UpdateCallTypeEndDates = function (call_type, days) {
-    $.each(CallLog.metadata, function (callid, data) {
-        if (!callid.includes(call_type)) return;
-        CallLog.metadata[callid]['end'] = formatDate((new Date(CallLog.metadata[callid]['start'] + "T00:00").addDays(days)), 'y-MM-dd');
-    });
-}
-
 // Fetch the last known contact time for a given call id
 CallLog.fn.getPreviousCalldatetime = function (callID) {
     if (!CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances))
@@ -96,8 +67,7 @@ CallLog.fn.updateCallNotes = function (callID) {
     $('.notesOld').val("")
     $('.notesNew').val($('textarea[name=call_notes]').val());
     $.each(CallLog.fn.getPreviousCallNotes(callID), function () {
-        if (this.text == "")
-            return;
+        if (this.text == "") return;
         $('.notesOld').val(`${this.dt} ${this.user}: ${this.text} \n\n${$('.notesOld').val()}`.trim());
     });
 }
