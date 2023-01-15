@@ -34,9 +34,13 @@
         ]
     },
     "no-auth-pages": [
-        "router"
+        "router",
+        "api"
     ],
-    "framework-version": 5,
+    "no-csrf-pages": [
+        "api"
+    ],
+    "framework-version": 7,
     "crons": [
         {
             "cron_name": "call_log_nts_generate",

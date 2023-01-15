@@ -44,7 +44,7 @@ CallLog.fn.setupSearch = function () {
 }
 
 CallLog.fn.setupLocalSettings = function () {
-    let key = `ExternalModules.UWMadison.CallLog.${pid}`;
+    const key = `ExternalModules.UWMadison.CallLog.${pid}`;
     // Setup localStorage saving 
     $(".call-link").on('click', (el) => {
         let tab = $(el.currentTarget).data('tabid');
