@@ -92,6 +92,104 @@ class CallLog extends AbstractExternalModule
         $this->passArgument('recentCaller', $this->recentCallStarted($project_id, $record));
     }
 
+    public function redcap_module_ajax($action, $payload, $project_id, $record, $instrument, $event_id, $repeat_instance, $survey_hash, $response_id, $survey_queue_hash, $page, $page_full, $user_id, $group_id)
+    {
+        // TODO this isn't used currently
+        // TODO port over "logs" action to normal log method
+
+        $callListData = false;
+        $saveResult = [];
+        $metadata = $this->getCallMetadata($project_id, $record);
+        $config = $this->loadCallTemplateConfig();
+
+        switch ($action) {
+            case "getData":
+                // Load for the Call List
+                $callListData = $this->loadCallListData();
+                break;
+            case "newAdhoc":
+                # Intended to be posted to by an outside script or DET to make a singe new adhoc call on a record
+                # API url: ExternalModules/?prefix=call_log&page=router&route=newAdhoc&pid=NNN&adhocCode=NNN&record=NNN&type=NNN&fudate=NNN&futime=NNN&reporter=NAME
+                # Identical to adhocLoad but via GET, seperated for possible future changes
+                if (empty($_GET['type'])) break;
+                $saveResult = $this->metadataAdhoc($project_id, $record, [
+                    'id' => $_GET['type'],
+                    'date' => $_GET['fudate'],
+                    'time' => $_GET['futime'],
+                    'reason' => $_GET['adhocCode'],
+                    'reporter' => $_GET['reporter']
+                ]);
+                break;
+            case "adhocLoad":
+                # Posted to by the call log to save a new adhoc call
+                if (empty($_POST['id'])) break;
+                $saveResult = $this->metadataAdhoc($project_id, $record, [
+                    'id' => $_POST['id'],
+                    'date' => $_POST['date'],
+                    'time' => $_POST['time'],
+                    'reason' => $_POST['reason'],
+                    'notes' => $_POST['notes'],
+                    'reporter' => $_POST['reporter']
+                ]);
+                break;
+            case "adhocResolve":
+                # Intended to be posted to by an outside script or DET to resolve an existing adhoc call on a record(s)
+                # API url: /ExternalModules/?prefix=call_log&page=router&route=adhocResolve&pid=NNN&adhocCode=NNN&recordList=NNN
+                if (empty($_GET['adhocCode'])) break;
+                foreach (explode(',', $record) as $rcrd) {
+                    $this->resolveAdhoc($project_id, trim($rcrd), $_GET['adhocCode'], $metadata);
+                }
+                break;
+            case "callDelete":
+                # Delete instance of log from the summary table on call log
+                $this->deleteLastCallInstance($project_id, $record, $metadata);
+                break;
+            case "metadataSave":
+                # Posted to by the call log to save the record's data via the console.
+                # This is useful for debugging and resolving enduser issues.
+                if (empty($_POST['metadata'])) break;
+                $saveResult = $this->saveCallMetadata($project_id, $record, json_decode($_POST['metadata'], true));
+                break;
+            case "newEntryLoad":
+                # This page is intended to be posted to by an outside script to load New Entry calls for any number of records
+                # API url: /ExternalModules/?prefix=call_log&page=router&route=newEntryLoad&pid=NNN&recordList=NNN
+                foreach (explode(',', $record) as $rcrd) {
+                    $this->metadataNewEntry($project_id, trim($rcrd), $metadata, $config['new']);
+                }
+                break;
+            case "scheduleLoad":
+                # This page is intended to be posted to by an outside script after scheduling occurs. 
+                # API url: /ExternalModules/?prefix=call_log&page=router&route=scheduleLoad&pid=NNN&recordList=NNN
+                foreach (explode(',', $record) as $rcrd) {
+                    $this->metadataReminder($project_id, trim($rcrd), $metadata, $config['reminder']);
+                    $this->metadataMissedCancelled($project_id, trim($rcrd), $metadata, $config['mcv']);
+                    $this->metadataNeedToSchedule($project_id, trim($rcrd), $metadata, $config['nts']);
+                }
+                break;
+            case "setCallEnded":
+                # This page is posted to by the call list to flag a call as no longer in progress
+                if (empty($_POST['id']) || empty($metadata)) break;
+                $saveResult = $this->metadataCallEnded($project_id, $record, $metadata, $_POST['id']);
+                break;
+            case "setCallStarted":
+                # This page is posted to by the call list to flag a call as in progress
+                if (empty($_POST['id']) || empty($_POST['user']) || empty($metadata)) break;
+                $saveResult = $this->metadataCallStarted($project_id, $record, $metadata, $_POST['id'], $_POST['user']);
+                break;
+            case "setNoCallsToday":
+                # This page is posted to by the call list to flag a call as "no calls today"
+                if (empty($_POST['id'])) break;
+                $saveResult = $this->metadataNoCallsToday($project_id, $record, $metadata, $_POST['id']);
+                break;
+        }
+
+        return  array_merge([
+            "text" => "Action '$action' was completed successfully",
+            "success" => true,
+            "data" => $callListData
+        ], $saveResult);
+    }
+
     public function reportDisconnectedPhone($project_id, $record)
     {
         $config = $this->loadBadPhoneConfig();
@@ -233,29 +331,26 @@ class CallLog extends AbstractExternalModule
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
-    public function resolveAdhoc($project_id, $record, $code)
+    public function resolveAdhoc($project_id, $record, $code, $metadata)
     {
-        $meta = $this->getCallMetadata($project_id, $record);
-        foreach ($meta as $callID => $callData) {
-            if ($callData['complete'] || $callData['reason'] != $code)
-                continue;
+        foreach ($metadata as $callID => $callData) {
+            if ($callData['complete'] || $callData['reason'] != $code) continue;
             $callData['complete'] = true; // Don't delete, just comp. Might need info for something
             $callData['completedBy'] = "REDCap";
             $this->projectLog("Adhoc call {$callID} marked as complete via API.");
         }
-        return $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
-    public function metadataNoCallsToday($project_id, $record, $call_id)
+    public function metadataNoCallsToday($project_id, $record, $metadata, $call_id)
     {
-        $meta = $this->getCallMetadata($project_id, $record);
-        if (!empty($meta) && !empty($meta[$call_id])) {
-            if (!is_array($meta[$call_id]['noCallsToday'])) {
-                $meta[$call_id]['noCallsToday'] = [];
+        if (!empty($metadata[$call_id])) {
+            if (!is_array($metadata[$call_id]['noCallsToday'])) {
+                $metadata[$call_id]['noCallsToday'] = [];
             }
-            $meta[$call_id]['noCallsToday'][] = date('Y-m-d');
-            return $this->saveCallMetadata($project_id, $record, $meta);
+            $metadata[$call_id]['noCallsToday'][] = date('Y-m-d');
         }
+        return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
     public function metadataCallStarted($project_id, $record, $metadata, $call_id = null, $user = null)
@@ -277,34 +372,31 @@ class CallLog extends AbstractExternalModule
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
-    public function metadataCallEnded($project_id, $record, $call_id)
+    public function metadataCallEnded($project_id, $record, $metadata, $call_id)
     {
-        $meta = $this->getCallMetadata($project_id, $record);
-        if (!empty($meta) && !empty($meta[$call_id])) {
+        if (!empty($meta[$call_id]))
             $meta[$call_id]['callStarted'] = '';
-            return $this->saveCallMetadata($project_id, $record, $meta);
-        }
+        return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
-    public function deleteLastCallInstance($project_id, $record)
+    public function deleteLastCallInstance($project_id, $record, $metadata)
     {
-        $meta = $this->getCallMetadata($project_id, $record);
-        $data = REDCap::getData($project_id, 'array', $record);
         $event = $this->getEventOfInstrument('call_log');
+        $data = REDCap::getData($project_id, 'array', $record, null, $event);
         $instance = end(array_keys($data[$record]['repeat_instances'][$event][$this->instrumentLower]));
         $instance = $instance ? $instance : '1';
         $instanceText = $instance != '1' ? ' AND instance= ' . $instance : ' AND isnull(instance)';
-        foreach ($meta as $index => $call) {
-            $tmp = $meta[$index]['instances'];
-            $meta[$index]['instances'] = array_values(array_diff($call['instances'], array($instance)));
+        foreach ($metadata as $index => $call) {
+            $tmp = $metadata[$index]['instances'];
+            $metadata[$index]['instances'] = array_values(array_diff($call['instances'], array($instance)));
             // If we did remove a call then make sure we mark the call as incomplete.
             // We currently don't allow completed calls to actually be deleted though as there could be unforeseen issues.
-            if ((count($tmp) > 0) && (count($tmp) != count($meta[$index]['instances'])))
-                $meta[$index]['complete'] = false;
+            if ((count($tmp) > 0) && (count($tmp) != count($metadata[$index]['instances'])))
+                $metadata[$index]['complete'] = false;
         }
         $fields = array_values(array_intersect(REDCap::getFieldNames($this->instrumentLower), array_keys($data[$record][$event])));
         db_query('DELETE FROM redcap_data WHERE project_id=' . $project_id . ' AND record=' . $record . $instanceText . ' AND (field_name="' . implode('" OR field_name="', $fields) . '");');
-        return $this->saveCallMetadata($project_id, $record, $meta);
+        return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
     public function saveCallData($project_id, $record, $instance, $var, $val)
@@ -328,7 +420,17 @@ class CallLog extends AbstractExternalModule
 
     public function saveCallMetadata($project_id, $record, $data)
     {
-        return REDCap::saveData($project_id, 'array', [$record => [$this->getEventOfInstrument('call_log_metadata') => [$this->metadataField => json_encode($data)]]]);
+        return REDCap::saveData(
+            $project_id,
+            'array',
+            [
+                $record => [
+                    $this->getEventOfInstrument('call_log_metadata') => [
+                        $this->metadataField => json_encode($data)
+                    ]
+                ]
+            ]
+        );
     }
 
     public function recentCallStarted($project_id, $record)

@@ -8,7 +8,7 @@ $pid = $_GET['pid'];
 $sendSuccess = False;
 $sendDone = False;
 
-if (empty($pid) || (empty($record) && $route != "dataLoad") || empty($route)) {
+if (empty($pid) || (empty($record) && $route != "getData") || empty($route)) {
     echo json_encode([
         "text" => "Malformed action missing PID ('$pid'), record ('$record'), or route ('$route') was posted to " . __FILE__,
         "success" => false
@@ -17,7 +17,7 @@ if (empty($pid) || (empty($record) && $route != "dataLoad") || empty($route)) {
 }
 
 switch ($route) {
-    case "dataLoad":
+    case "getData":
         // Load for the Call List
         $data = $module->loadCallListData();
         if (!empty($data))
@@ -60,8 +60,9 @@ switch ($route) {
         # Intended to be posted to by an outside script or DET to resolve an existing adhoc call on a record(s)
         # url: /ExternalModules/?prefix=call_log&page=router&route=adhocResolve&pid=NNN&adhocCode=NNN&recordList=NNN
         if (!empty($_GET['adhocCode'])) {
+            $metadata = $module->getCallMetadata($project_id, $record);
             foreach (explode(',', $record) as $rcrd) {
-                $module->resolveAdhoc($pid, trim($rcrd), $_GET['adhocCode']);
+                $module->resolveAdhoc($pid, trim($rcrd), $_GET['adhocCode'], $metadata);
             }
             $sendDone = True;
         }
@@ -81,7 +82,7 @@ switch ($route) {
         break;
     case "callDelete":
         # Posted to by the call log to delete the last saved instance of the call log instrument.
-        $module->deleteLastCallInstance($pid, $record);
+        $module->deleteLastCallInstance($pid, $record, $metadata);
         $sendDone = True;
         break;
     case "metadataSave":
@@ -117,7 +118,7 @@ switch ($route) {
     case "setCallEnded":
         # This page is posted to by the call list to flag a call as no longer in progress
         if (!empty($_POST['id'])) {
-            $module->metadataCallEnded($pid, $record, $_POST['id']);
+            $module->metadataCallEnded($pid, $record, $metadata, $_POST['id']);
             $sendDone = True;
         }
         break;
@@ -132,7 +133,7 @@ switch ($route) {
     case "setNoCallsToday":
         # This page is posted to by the call list to flag a call as "no calls today"
         if (!empty($_POST['id'])) {
-            $module->metadataNoCallsToday($pid, $record, $_POST['id']);
+            $module->metadataNoCallsToday($pid, $record, $metadata, $_POST['id']);
             $sendDone = True;
         }
         break;
