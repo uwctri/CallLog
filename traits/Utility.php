@@ -48,7 +48,7 @@ trait Utility
     }
 
     // Returns a map from unique:display name
-    public function getEventNameMap()
+    private function getEventNameMap()
     {
         $eventNames = array_values(REDCap::getEventNames());
         foreach (array_values(REDCap::getEventNames(true)) as $i => $unique)
@@ -94,7 +94,7 @@ trait Utility
     }
 
     // Get the first (or only) event that an instrument is on
-    function getEventOfInstrument($instrument)
+    private function getEventOfInstrument($instrument)
     {
         $events = [];
         $validEvents = array_keys(REDCap::getEventNames());
@@ -107,7 +107,7 @@ trait Utility
     }
 
     // Get record_id or real name for a project
-    function getRecordIdField($project_id)
+    private function getRecordIdField($project_id)
     {
         $sql = "SELECT field_name FROM redcap_metadata WHERE field_order = 1 AND project_id = ?";
         $result = $this->query($sql, [$project_id]);
@@ -129,5 +129,14 @@ trait Utility
         $date = date('Y-m-d', strtotime("$date $logic days"));
         $holidayOffset = in_array(date('m-d', strtotime($date)), $this->holidays) ? "1" : "0";
         return date('Y-m-d', strtotime("$date {$operation}{$holidayOffset} days"));
+    }
+
+    private function projectLog($action, $record = null, $event_id = null, $project_id = null)
+    {
+        $record = $record ?? $_GET['id'];
+        $event_id = $event_id ?? $_GET['event_id'];
+        $project_id = $project_id ?? $_GET['pid'];
+        $sql = null;
+        REDCap::logEvent("Call Log", $action, $sql, $record, $event_id, $project_id);
     }
 }

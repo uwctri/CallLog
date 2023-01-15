@@ -75,21 +75,21 @@ class CallLog extends AbstractExternalModule
     public function redcap_data_entry_form($project_id, $record, $instrument)
     {
         $summary = $this->getProjectSetting('call_summary');
+        $this->passArgument('recentCaller', $this->recentCallStarted($project_id, $record));
+
+        // Call Log only info
         if ($instrument == $this->instrumentLower) {
-            $this->passArgument('metadata', $this->getCallMetadata($project_id, $record));
-            $this->passArgument('data', $this->getAllCallData($project_id, $record));
-            $this->passArgument('eventNameMap', $this->getEventNameMap());
             $this->passArgument('adhoc', $this->loadAdhocTemplateConfig());
-            $this->includeCss('css/log.css');
-            $this->includeJs('js/summary_table.js');
             $this->includeJs('js/call_log.js');
-        } elseif (in_array($instrument, $summary)) {
+        }
+
+        // Call Log + anything w/ summary table on it
+        if (in_array($instrument, array_merge($summary, [$this->instrumentLower]))) {
             $this->passArgument('metadata', $this->getCallMetadata($project_id, $record));
             $this->passArgument('data', $this->getAllCallData($project_id, $record));
             $this->includeCss('css/log.css');
             $this->includeJs('js/summary_table.js');
         }
-        $this->passArgument('recentCaller', $this->recentCallStarted($project_id, $record));
     }
 
     public function redcap_module_link_check_display($project_id, $link)
@@ -117,7 +117,7 @@ class CallLog extends AbstractExternalModule
                 # API url: ExternalModules/?prefix=call_log&page=router&route=newAdhoc&pid=NNN&adhocCode=NNN&record=NNN&type=NNN&fudate=NNN&futime=NNN&reporter=NAME
                 # Identical to adhocLoad but via GET, seperated for possible future changes
                 if (empty($_GET['type'])) break;
-                $saveResult = $this->metadataAdhoc($project_id, $record, [
+                $saveResult = $this->metadataAdhoc($project_id, $record, $config["adhoc"], [
                     'id' => $_GET['type'],
                     'date' => $_GET['fudate'],
                     'time' => $_GET['futime'],
@@ -128,7 +128,7 @@ class CallLog extends AbstractExternalModule
             case "adhocLoad":
                 # Posted to by the call log to save a new adhoc call
                 if (empty($_POST['id'])) break;
-                $saveResult = $this->metadataAdhoc($project_id, $record, [
+                $saveResult = $this->metadataAdhoc($project_id, $record, $config["adhoc"], [
                     'id' => $_POST['id'],
                     'date' => $_POST['date'],
                     'time' => $_POST['time'],
@@ -289,14 +289,14 @@ class CallLog extends AbstractExternalModule
                     if ($data[$event][$callConfig["window"]] >= $today) {
                         $meta[$callConfig['id']] = [
                             "template" => 'nts',
-                            "event_id" => $callConfig['event'],
+                            "event_id" => $event,
                             "name" => $callConfig['name'],
                             "instances" => [],
                             "voiceMails" => 0,
                             "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
                             "complete" => false
                         ];
-                        $this->projectLog("Need to Schedue call {$callConfig['id']} created during cron");
+                        $this->projectLog("Need to Schedue call {$callConfig['id']} created during cron", $record, $event, $project_id);
                     }
                 }
             }
@@ -304,9 +304,8 @@ class CallLog extends AbstractExternalModule
         return "The \"{$cronInfo['cron_description']}\" cron job completed successfully.";
     }
 
-    public function metadataAdhoc($project_id, $record, $payload)
+    public function metadataAdhoc($project_id, $record, $config, $payload)
     {
-        $config = $this->loadCallTemplateConfig()["adhoc"];
         $config = array_filter($config, function ($x) use ($payload) {
             return $x['id'] == $payload['id'];
         });
@@ -340,7 +339,7 @@ class CallLog extends AbstractExternalModule
             if ($callData['complete'] || $callData['reason'] != $code) continue;
             $callData['complete'] = true; // Don't delete, just comp. Might need info for something
             $callData['completedBy'] = "REDCap";
-            $this->projectLog("Adhoc call {$callID} marked as complete via API.");
+            $this->projectLog("Adhoc call {$callID} marked as complete via API.", $record, null, $project_id);
         }
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
@@ -764,7 +763,8 @@ class CallLog extends AbstractExternalModule
         $call_event = $this->getEventOfInstrument('call_log');
         $meta_event = $this->getEventOfInstrument('call_log_metadata');
         $data = array(
-            "modulePrefix" => $this->PREFIX,
+            "eventNameMap" => $this->getEventNameMap(),
+            "modulePrefix" => $this->getPrefix(),
             "callLogEvent" => $call_event,
             "user" => USERID,
             "userNameMap" => $this->getUserNameMap(),
@@ -792,12 +792,6 @@ class CallLog extends AbstractExternalModule
             ];
         }
         return $config;
-    }
-
-    private function projectLog($action)
-    {
-        $sql = null;
-        REDCap::logEvent("Call Log", $action, $sql, $_GET['id'], $_GET['event_id'], $_GET['pid']);
     }
 
     public function ajaxLog()

@@ -32,7 +32,8 @@ switch ($route) {
         # url: ExternalModules/?prefix=call_log&page=router&route=newAdhoc&pid=NNN&adhocCode=NNN&record=NNN&type=NNN&fudate=NNN&futime=NNN&reporter=NAME
         # Identical to adhocLoad but via GET, seperated for possible future changes
         if (!empty($_GET['type'])) {
-            $module->metadataAdhoc($pid, $record, [
+            $config = $this->loadCallTemplateConfig()["adhoc"];
+            $module->metadataAdhoc($pid, $record, $config, [
                 'id' => $_GET['type'],
                 'date' => $_GET['fudate'],
                 'time' => $_GET['futime'],
@@ -45,7 +46,8 @@ switch ($route) {
     case "adhocLoad":
         # Posted to by the call log to save a new adhoc call
         if (!empty($_POST['id'])) {
-            $module->metadataAdhoc($pid, $record, [
+            $config = $this->loadCallTemplateConfig()["adhoc"];
+            $module->metadataAdhoc($pid, $record, $config, [
                 'id' => $_POST['id'],
                 'date' => $_POST['date'],
                 'time' => $_POST['time'],

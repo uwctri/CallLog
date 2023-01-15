@@ -32,7 +32,6 @@ if (isset($_GET['metaReport'])) {
 <script src="<?= $module->getURL('js/call_list.js'); ?>"></script>
 <script>
     CallLog.usernameLists = <?= json_encode($module->getUserNameListConfig()); ?>;
-    CallLog.eventNameMap = <?= json_encode($module->getEventNameMap()); ?>;
 </script>
 <?php
 $startTime = microtime(true);
