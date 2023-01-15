@@ -15,7 +15,6 @@ trait CallMetadataLogic
             if (!empty($metadata[$callConfig['id']])) continue;
             $metadata[$callConfig['id']] = [
                 "template" => 'new',
-                "event" => '', //None for new entry calls
                 "event_id" => '',
                 "name" => $callConfig['name'],
                 "load" => date("Y-m-d H:i"),
@@ -31,7 +30,6 @@ trait CallMetadataLogic
 
     public function metadataFollowup($project_id, $record, $metadata, $config)
     {
-        $eventMap = REDCap::getEventNames(true);
         foreach ($config as $callConfig) {
             $data = REDCap::getData($project_id, 'array', $record, [$callConfig['field'], $callConfig['end']])[$record];
             if (!empty($metadata[$callConfig['id']]) && $data[$callConfig['event']][$callConfig['field']] == "") {
@@ -50,7 +48,6 @@ trait CallMetadataLogic
                     "end" => $end,
                     "template" => 'followup',
                     "event_id" => $callConfig['event'],
-                    "event" => $eventMap[$callConfig['event']],
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
@@ -76,7 +73,6 @@ trait CallMetadataLogic
 
     public function metadataReminder($project_id, $record, $metadata, $config)
     {
-        $eventMap = REDCap::getEventNames(true);
         $today = date('Y-m-d');
         foreach ($config as $callConfig) {
             $data = REDCap::getData($project_id, 'array', $record, [$callConfig['field'], $callConfig['removeVar']])[$record];
@@ -124,7 +120,6 @@ trait CallMetadataLogic
                     "end" => $newEnd,
                     "template" => 'reminder',
                     "event_id" => $callConfig['event'],
-                    "event" => $eventMap[$callConfig['event']],
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
@@ -138,7 +133,6 @@ trait CallMetadataLogic
 
     public function metadataMissedCancelled($project_id, $record, $metadata, $config)
     {
-        $eventMap = REDCap::getEventNames(true);
         foreach ($config as $callConfig) {
             $data = REDCap::getData($project_id, 'array', $record, [$callConfig['apptDate'], $callConfig['indicator']])[$record][$callConfig['event']];
             $idExact = $callConfig['id'] . '||' . $data[$callConfig['apptDate']];
@@ -148,7 +142,6 @@ trait CallMetadataLogic
                     "appt" => $data[$callConfig['apptDate']],
                     "template" => 'mcv',
                     "event_id" => $callConfig['event'],
-                    "event" => $eventMap[$callConfig['event']],
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
@@ -188,7 +181,6 @@ trait CallMetadataLogic
         }, $Proj->eventInfo), array_keys($Proj->eventInfo));
         $callLogEvent = $this->getEventOfInstrument('call_log');
         $metadataEvent = $this->getEventOfInstrument('call_log_metadata');
-        $eventMap = REDCap::getEventNames(true);
         foreach ($config as $i => $callConfig) {
             $data = REDCap::getData($project_id, 'array', $record, [$callConfig['apptDate'], $callConfig['indicator'], $callConfig['skip']])[$record];
             $prevEvent = $orderedEvents[array_search($callConfig['event'], $orderedEvents) - 1];
@@ -200,7 +192,6 @@ trait CallMetadataLogic
                 $metadata[$callConfig['id']] = [
                     "template" => 'nts',
                     "event_id" => $callConfig['event'],
-                    "event" => $eventMap[$callConfig['event']],
                     "name" => $callConfig['name'],
                     "instances" => [],
                     "voiceMails" => 0,
@@ -218,14 +209,12 @@ trait CallMetadataLogic
 
     public function metadataPhoneVisit($project_id, $record, $metadata, $config)
     {
-        $eventMap = REDCap::getEventNames(true);
         foreach ($config as $i => $callConfig) {
             $data = REDCap::getData($project_id, 'array', $record, $callConfig['indicator'])[$record];
             if (!empty($meta[$callConfig['id']]) || empty($data[$callConfig['event']][$callConfig['indicator']])) continue;
             $meta[$callConfig['id']] = [
                 "template" => 'visit',
                 "event_id" => $callConfig['event'],
-                "event" => $eventMap[$callConfig['event']],
                 "end" => $data[$callConfig['event']][$callConfig['autoRemove']],
                 "name" => $callConfig['name'],
                 "instances" => [],
