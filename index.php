@@ -29,7 +29,6 @@ if (isset($_GET['metaReport'])) {
 // Full Call List Page
 ?>
 <link rel="stylesheet" href="<?= $module->getURL('css/list.css'); ?>">
-<script src="<?= $module->getURL('js/cookie.min.js'); ?>"></script>
 <script src="<?= $module->getURL('js/call_list.js'); ?>"></script>
 <script>
     CallLog.usernameLists = <?= json_encode($module->getUserNameListConfig()); ?>;
@@ -84,7 +83,7 @@ list($noData, $tabs, $noData, $timeTaken) = $module->loadCallListData(true);
             "<div class='dataTables_filter customSearch'><label>Search:<input type='search'></label></div>");
 
         // Exactly what it looks like
-        CallLog.fn.setupCookies();
+        CallLog.fn.setupLocalSettings();
 
         // Everything is built out, show the body now
         $(".card").fadeIn();
