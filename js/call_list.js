@@ -4,7 +4,6 @@ CallLog.childRows = {};
 CallLog.colConfig = {};
 CallLog.displayedData = {};
 CallLog.packagedCallData = {};
-CallLog.cookie = {};
 
 CallLog.alwaysShowCallbackCol = false;
 CallLog.earlyCall = 5 * 60 * 1000; // Grace time on early calling of 5 mins
@@ -44,23 +43,21 @@ CallLog.fn.setupSearch = function () {
     });
 }
 
-CallLog.fn.setupCookies = function () {
-
-    // Load cookie - Select the first tab on the call list
-    let cookie = Cookies.get('RedcapCallLog');
-    cookie = cookie ? JSON.parse(cookie) : false;
-    if (cookie[pid]) {
-        CallLog.cookie = cookie;
-        $(".call-link[data-tabid=" + cookie[pid] + "]").click();
-    } else {
-        $(".call-link").first().click();
-    }
-
-    // Setup cookie saveing for remembering call tab
-    $(".call-link").on('click', function () {
-        CallLog.cookie[pid] = $(this).data('tabid');
-        Cookies.set('RedcapCallLog', JSON.stringify(CallLog.cookie), { sameSite: 'strict' });
+CallLog.fn.setupLocalSettings = function () {
+    let key = `ExternalModules.UWMadison.CallLog.${pid}`;
+    // Setup localStorage saving 
+    $(".call-link").on('click', (el) => {
+        let tab = $(el.currentTarget).data('tabid');
+        localStorage.setItem(key, JSON.stringify({ tab }));
     });
+    // Load localStorage
+    let storage = localStorage.getItem(key);
+    storage = storage ? JSON.parse(storage) : false;
+    if (storage) {
+        $(`.call-link[data-tabid=${storage.tab}]`).click();
+        return;
+    }
+    $(".call-link").first().click();
 }
 
 CallLog.fn.setupClickToExpand = function () {
