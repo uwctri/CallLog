@@ -22,23 +22,26 @@ class CallLog extends AbstractExternalModule
     private $module_global = 'CallLog';
 
     // Hard Coded Data Dictionary Values
-    public $instrumentName = "Call Log";
-    public $instrumentLower = "call_log";
-    public $instrumentMeta = "call_log_metadata";
-    public $metadataField = "call_metadata";
+    private $instrumentName = "Call Log";
+    private $instrumentLower = "call_log";
+    private $instrumentMeta = "call_log_metadata";
+    private $metadataField = "call_metadata";
 
     // Hard Coded Config
-    public $startedCallGrace = '30'; # mins to start a call early
-    public $dateMathCutoff = 5; # Date+/- less than N days will avoid weekends/holidays
-    public $holidays = ['12-25', '12-24', '12-31', '07-04', '01-01']; # Fixed holidays
+    private $startedCallGrace = '30'; # mins to assume that a call is ongoing for
+    private $dateMathCutoff = 5; # Date+/- less than N days will avoid weekends/holidays
+    private $holidays = ['12-25', '12-24', '12-31', '07-04', '01-01']; # Fixed holidays
 
     public function redcap_save_record($project_id, $record, $instrument)
     {
+        // Call Log Save
         if ($instrument == $this->instrumentLower) {
             $this->reportDisconnectedPhone($project_id, $record);
             $this->metadataUpdateCommon($project_id, $record);
             return;
         }
+
+        // All other saves
         $metadata = $this->getCallMetadata($project_id, $record);
         $config = $this->loadCallTemplateConfig();
         $triggerForm = $this->getProjectSetting('trigger_save');
