@@ -38,22 +38,29 @@ class CallLog extends AbstractExternalModule
         if ($instrument == $this->instrument) {
             $this->reportDisconnectedPhone($project_id, $record);
             $this->metadataUpdateCommon($project_id, $record, $metadata);
+            $this->saveCallMetadata($project_id, $record, $metadata);
             return;
         }
 
-        // All other saves
+        // Call Metadata updates
         $config = $this->loadCallTemplateConfig();
         $triggerForm = $this->getProjectSetting('trigger_save');
-        $result = ["metadata" => $metadata];
+        $changes = [];
         if (empty($triggerForm) || ($instrument == $triggerForm)) {
-            $result = $this->metadataFollowup($project_id, $record, $metadata, $config['followup']);
-            $result = $this->metadataReminder($project_id, $record, $result['metadata'], $config['reminder']);
-            $result = $this->metadataMissedCancelled($project_id, $record, $result['metadata'], $config['mcv']);
-            $result = $this->metadataNeedToSchedule($project_id, $record, $result['metadata'], $config['nts']);
+            $a = $this->metadataFollowup($project_id, $record, $metadata, $config['followup']);
+            $b = $this->metadataReminder($project_id, $record, $metadata, $config['reminder']);
+            $c = $this->metadataMissedCancelled($project_id, $record, $metadata, $config['mcv']);
+            $d = $this->metadataNeedToSchedule($project_id, $record, $metadata, $config['nts']);
+            $changes = [$a, $b, $c, $d];
         }
-        $result = $this->metadataNewEntry($project_id, $record, $result['metadata'], $config['new']);
-        $result = $this->metadataPhoneVisit($project_id, $record, $result['metadata'], $config['visit']);
-        $this->callStarted($project_id, $record, $result['metadata']);
+        $e = $this->metadataNewEntry($project_id, $record, $metadata, $config['new']);
+        $f = $this->metadataPhoneVisit($project_id, $record, $metadata, $config['visit']);
+        if (in_array(true, array_merge($changes, [$e, $f]))) {
+            $this->saveCallMetadata($project_id, $record, $metadata);
+        }
+
+        // Misc Call Updates (Could still touch metadata, but returns junk, saves own data)
+        $this->callStarted($project_id, $record, $metadata);
         $this->updateDisconnectedPhone($project_id, $record);
     }
 
@@ -162,7 +169,6 @@ class CallLog extends AbstractExternalModule
                 break;
         }
 
-        // TODO result something more useful
         return  array_merge([
             "text" => "Action '$action' was completed successfully",
             "success" => $success,
@@ -212,7 +218,8 @@ class CallLog extends AbstractExternalModule
                 foreach (explode(',', $payload['record_list']) as $record) {
                     $record = trim($record);
                     $metadata = $this->getCallMetadata($project_id, $record);
-                    $this->metadataNewEntry($project_id, $record, $metadata, $config['new']);
+                    $changes = $this->metadataNewEntry($project_id, $record, $metadata, $config['new']);
+                    if ($changes) $this->saveCallMetadata($project_id, $record, $metadata);
                 }
                 break;
             case "scheduleLoad":
@@ -221,9 +228,10 @@ class CallLog extends AbstractExternalModule
                 foreach (explode(',', $payload['record_list']) as $record) {
                     $record = trim($record);
                     $metadata = $this->getCallMetadata($project_id, $record);
-                    $result = $this->metadataReminder($project_id, $record, $metadata, $config['reminder']);
-                    $result = $this->metadataMissedCancelled($project_id, $record, $result['metadata'], $config['mcv']);
-                    $result = $this->metadataNeedToSchedule($project_id, $record, $result['metadata'], $config['nts']);
+                    $a = $this->metadataReminder($project_id, $record, $metadata, $config['reminder']);
+                    $b = $this->metadataMissedCancelled($project_id, $record, $metadata, $config['mcv']);
+                    $c = $this->metadataNeedToSchedule($project_id, $record, $metadata, $config['nts']);
+                    if (in_array(true, [$a, $b, $c])) $this->saveCallMetadata($project_id, $record, $metadata);
                 }
                 break;
         }

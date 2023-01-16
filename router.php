@@ -88,7 +88,8 @@ switch ($route) {
         $config = $module->loadCallTemplateConfig();
         foreach (explode(',', $record) as $rcrd) {
             $metadata = $module->getCallMetadata($project_id, trim($rcrd));
-            $module->metadataNewEntry($pid, trim($rcrd), $metadata, $config['new']);
+            $changes = $module->metadataNewEntry($pid, trim($rcrd), $metadata, $config['new']);
+            if ($changes) $module->saveCallMetadata($project_id, $record, $metadata);
         }
         $sendDone = True;
         break;
@@ -98,9 +99,10 @@ switch ($route) {
         $config = $module->loadCallTemplateConfig();
         foreach (explode(',', $record) as $rcrd) {
             $metadata = $module->getCallMetadata($project_id, trim($rcrd));
-            $result = $module->metadataReminder($pid, trim($rcrd), $metadata, $config['reminder']);
-            $module->metadataMissedCancelled($pid, trim($rcrd), $result['metadata'], $config['mcv']);
-            $module->metadataNeedToSchedule($pid, trim($rcrd), $result['metadata'], $config['nts']);
+            $a = $module->metadataReminder($pid, trim($rcrd), $metadata, $config['reminder']);
+            $b = $module->metadataMissedCancelled($pid, trim($rcrd), $metadata, $config['mcv']);
+            $c = $module->metadataNeedToSchedule($pid, trim($rcrd), $metadata, $config['nts']);
+            if (in_array(true, [$a, $b, $c])) $module->saveCallMetadata($project_id, $record, $metadata);
         }
         $sendDone = True;
         break;

@@ -6,35 +6,31 @@ use Redcap;
 
 trait CallLogic
 {
-    public function metadataNewEntry($project_id, $record, $metadata, $config)
+    public function metadataNewEntry($project_id, $record, &$metadata, $config)
     {
         // Can't be a new call if metadata already exists
         $changeOccured = false;
-        if (empty($metadata)) {
-            foreach ($config as $callConfig) {
-                // Don't re-create call
-                if (!empty($metadata[$callConfig['id']])) continue;
-                $metadata[$callConfig['id']] = [
-                    "template" => 'new',
-                    "event_id" => '',
-                    "name" => $callConfig['name'],
-                    "load" => date("Y-m-d H:i"),
-                    "instances" => [],
-                    "voiceMails" => 0,
-                    "expire" => $callConfig['expire'],
-                    "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                    "complete" => false
-                ];
-                $changeOccured = true;
-            }
+        if (!empty($metadata)) return false;
+        foreach ($config as $callConfig) {
+            // Don't re-create call
+            if (!empty($metadata[$callConfig['id']])) continue;
+            $metadata[$callConfig['id']] = [
+                "template" => 'new',
+                "event_id" => '',
+                "name" => $callConfig['name'],
+                "load" => date("Y-m-d H:i"),
+                "instances" => [],
+                "voiceMails" => 0,
+                "expire" => $callConfig['expire'],
+                "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
+                "complete" => false
+            ];
+            $changeOccured = true;
         }
-        return [
-            "metadata" => $metadata,
-            "saveInfo" => $changeOccured ? $this->saveCallMetadata($project_id, $record, $metadata) : []
-        ];
+        return $changeOccured;
     }
 
-    public function metadataFollowup($project_id, $record, $metadata, $config)
+    public function metadataFollowup($project_id, $record, &$metadata, $config)
     {
         $changeOccured = false;
         foreach ($config as $callConfig) {
@@ -78,13 +74,10 @@ trait CallLogic
                 }
             }
         }
-        return [
-            "metadata" => $metadata,
-            "saveInfo" => $changeOccured ? $this->saveCallMetadata($project_id, $record, $metadata) : []
-        ];
+        return $changeOccured;
     }
 
-    public function metadataReminder($project_id, $record, $metadata, $config)
+    public function metadataReminder($project_id, $record, &$metadata, $config)
     {
         $changeOccured = false;
         $today = date('Y-m-d');
@@ -147,13 +140,10 @@ trait CallLogic
                 $changeOccured = true;
             }
         }
-        return [
-            "metadata" => $metadata,
-            "saveInfo" => $changeOccured ? $this->saveCallMetadata($project_id, $record, $metadata) : []
-        ];
+        return $changeOccured;
     }
 
-    public function metadataMissedCancelled($project_id, $record, $metadata, $config)
+    public function metadataMissedCancelled($project_id, $record, &$metadata, $config)
     {
         $changeOccured = false;
         foreach ($config as $callConfig) {
@@ -196,14 +186,11 @@ trait CallLogic
                 }
             }
         }
-        return [
-            "metadata" => $metadata,
-            "saveInfo" => $changeOccured ? $this->saveCallMetadata($project_id, $record, $metadata) : []
-        ];
+        return $changeOccured;
     }
 
 
-    public function metadataNeedToSchedule($project_id, $record, $metadata, $config)
+    public function metadataNeedToSchedule($project_id, $record, &$metadata, $config)
     {
         global $Proj;
         $changeOccured = false;
@@ -237,13 +224,10 @@ trait CallLogic
                 $changeOccured = true;
             }
         }
-        return [
-            "metadata" => $metadata,
-            "saveInfo" => $changeOccured ? $this->saveCallMetadata($project_id, $record, $metadata) : []
-        ];
+        return $changeOccured;
     }
 
-    public function metadataPhoneVisit($project_id, $record, $metadata, $config)
+    public function metadataPhoneVisit($project_id, $record, &$metadata, $config)
     {
         $changeOccured = false;
         foreach ($config as $i => $callConfig) {
@@ -261,20 +245,17 @@ trait CallLogic
             ];
             $changeOccured = true;
         }
-        return [
-            "metadata" => $metadata,
-            "saveInfo" => $changeOccured ? $this->saveCallMetadata($project_id, $record, $metadata) : []
-        ];
+        return $changeOccured;
     }
 
-    public function metadataUpdateCommon($project_id, $record, $metadata)
+    public function metadataUpdateCommon($project_id, $record, &$metadata)
     {
-        if (empty($metadata)) return; // We don't make the 1st metadata entry here.
+        if (empty($metadata)) return false; // We don't make the 1st metadata entry here.
         $data = $this->getAllCallData($project_id, $record);
         $instance = end(array_keys($data));
         $data = end($data); // get the data of the newest instance only
         $id = $data['call_id'];
-        if (in_array($instance, $metadata[$id]["instances"])) return;
+        if (in_array($instance, $metadata[$id]["instances"])) return false;
         $metadata[$id]["instances"][] = $instance;
         if ($data['call_left_message'][1] == '1')
             $metadata[$id]["voiceMails"]++;
@@ -283,7 +264,6 @@ trait CallLogic
             $metadata[$id]['completedBy'] = $this->getUser()->getUsername();
         }
         $metadata[$id]['callStarted'] = '';
-        // TODO should this return something better? (above we return null)
-        return $this->saveCallMetadata($project_id, $record, $metadata);
+        return true;
     }
 }
