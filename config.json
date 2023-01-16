@@ -40,6 +40,15 @@
     "no-csrf-pages": [
         "api"
     ],
+    "auth-ajax-actions": [
+        "getData",
+        "newAdhoc",
+        "callDelete",
+        "metadataSave",
+        "setCallEnded",
+        "setCallStarted",
+        "setNoCallsToday"
+    ],
     "framework-version": 7,
     "crons": [
         {
