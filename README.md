@@ -20,16 +20,11 @@ Basic setup:
 
 ## Feature Requests & Issues
 
-* Move remaining HTML in js to templates. This should resolve the very messy notes HTML template string.
+* Fix the NTS issue
+* Major JS Cleanup
+* Imrpove text on the config page
+* Speed up the config page?
 * We collect a history of requests for "No calls today", but don't display that data anywhere.
-* Custom page for configuration. The current one is slow due to styling the amount of config on a typical project
-* One click deploy of call log instrument to the project
-* Create a solution for customizing the display of the call log button
 * Switching between tabs on the call log should clear any entered data and display warning about data lost
-* Currently we allow for the scheduled call backs to override the withdrawn status of subjects. Switch this to a toggle feature with default on.
 * Currently many configs are copied to the metadata of a call. Could we instead load the config and refrence it via template name to avoid this bloat? That would mean a potiental re-pull of data and recalculation of ranges.
-
-* Nice to Have
-  * Consolidated call back tabs or area to aggregate calls across multiple projects.
-  * Consider showing if a call back was set in the call summary table
-  * Statistics page
+  * Improve metadata report page

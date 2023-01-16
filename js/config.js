@@ -31,6 +31,9 @@ $(document).ready(function () {
 
             $modal.addClass('callConfig');
 
+            // Remove junk "1" from text field
+            $("tr[field$=_text] span").remove();
+
             // If nothing is selected on the radio options then default to first option
             $modal.find("tr[field=call_template], tr[field=tab_link]").each(function () {
                 if ($(this).find('input:checked').length == 0)
@@ -88,9 +91,6 @@ $(document).ready(function () {
                     `<span class="withdrawTmpTextLoaded" style="position: absolute;transform: translateY(20px);">Hide all of a subject's calls until this date</span>`
                 );
             }
-
-            // Remove junk "1" from text field
-            $("tr[field=report_text] span").remove();
         };
     });
 
