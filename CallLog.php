@@ -322,7 +322,7 @@ class CallLog extends AbstractExternalModule
         $instanceText = $instance != '1' ? ' AND instance= ' . $instance : ' AND isnull(instance)';
         foreach ($metadata as $index => $call) {
             $tmp = $metadata[$index]['instances'];
-            $metadata[$index]['instances'] = array_values(array_diff($call['instances'], array($instance)));
+            $metadata[$index]['instances'] = array_values(array_diff($call['instances'], [$instance]));
             // If we did remove a call then make sure we mark the call as incomplete.
             // We currently don't allow completed calls to actually be deleted though as there could be unforeseen issues.
             if ((count($tmp) > 0) && (count($tmp) != count($metadata[$index]['instances'])))
@@ -689,7 +689,7 @@ class CallLog extends AbstractExternalModule
     {
         $call_event = $this->getEventOfInstrument('call_log');
         $meta_event = $this->getEventOfInstrument('call_log_metadata');
-        $data = array(
+        $data = [
             "eventNameMap" => $this->getEventNameMap(),
             "prefix" => $this->getPrefix(),
             "user" => USERID,
@@ -702,7 +702,7 @@ class CallLog extends AbstractExternalModule
             ],
             "configError" => !($call_event && $meta_event),
             "router" => $this->getURL('router.php')
-        );
+        ];
         echo "<script>var " . $this->module_global . " = " . json_encode($data) . ";</script>";
     }
 
@@ -882,9 +882,9 @@ class CallLog extends AbstractExternalModule
                 $instanceData = $recordData['repeat_instances'][$callEvent][$this->instrumentLower][end($call['instances'])];
                 $instanceEventData = $recordData[$call['event_id']];
                 $instanceData = array_merge(
-                    array_filter(empty($instanceEventData) ? [] : $instanceEventData, array($this, 'isNotBlank')),
-                    array_filter($recordData[$callEvent], array($this, 'isNotBlank')),
-                    array_filter(empty($instanceData) ? [] : $instanceData, array($this, 'isNotBlank'))
+                    array_filter(empty($instanceEventData) ? [] : $instanceEventData, [$this, 'isNotBlank']),
+                    array_filter($recordData[$callEvent], [$this, 'isNotBlank']),
+                    array_filter(empty($instanceData) ? [] : $instanceData, [$this, 'isNotBlank'])
                 );
 
                 // Check to see if a call back was request for Today or Tomorrow+
@@ -982,6 +982,6 @@ class CallLog extends AbstractExternalModule
                 $packagedCallData[$tabs['call2tabMap'][$callID]][] = $instanceData;
             }
         }
-        return array($packagedCallData, $tabs, $alwaysShowCallbackCol, round(((microtime(true) - $startTime)), 5));
+        return [$packagedCallData, $tabs, $alwaysShowCallbackCol, round(((microtime(true) - $startTime)), 5)];
     }
 }

@@ -122,7 +122,7 @@ switch ($route) {
     case "setNoCallsToday":
         # This page is posted to by the call list to flag a call as "no calls today"
         if (!empty($_POST['id'])) {
-            $module->metadataNoCallsToday($pid, $record, $metadata, $_POST['id']);
+            $module->noCallsToday($pid, $record, $metadata, $_POST['id']);
             $sendDone = True;
         }
         break;
