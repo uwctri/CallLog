@@ -71,7 +71,7 @@ CallLog.fn.goToCallList = function () {
 }
 
 CallLog.fn.formatNavForCalls = function () {
-    let a = `#form\\[${CallLog.static.instrumentLower}\\]`;
+    let a = `#form\\[${CallLog.static.instrument}\\]`;
     if ($(a).next().length) {
         $(a).next().hide();
         $(a).prev().prop('href', $(a).next().prop('href'));

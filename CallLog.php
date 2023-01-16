@@ -23,8 +23,7 @@ class CallLog extends AbstractExternalModule
     private $module_global = 'CallLog';
 
     // Hard Coded Data Dictionary Values
-    private $instrumentName = "Call Log";
-    private $instrumentLower = "call_log";
+    private $instrument = "call_log";
     private $instrumentMeta = "call_log_metadata";
     private $metadataField = "call_metadata";
 
@@ -36,7 +35,7 @@ class CallLog extends AbstractExternalModule
     public function redcap_save_record($project_id, $record, $instrument)
     {
         // Call Log Save
-        if ($instrument == $this->instrumentLower) {
+        if ($instrument == $this->instrument) {
             $this->reportDisconnectedPhone($project_id, $record);
             $this->metadataUpdateCommon($project_id, $record);
             return;
@@ -84,13 +83,13 @@ class CallLog extends AbstractExternalModule
         $this->passArgument('recentCaller', $this->recentCallStarted($project_id, $record));
 
         // Call Log only info
-        if ($instrument == $this->instrumentLower) {
+        if ($instrument == $this->instrument) {
             $this->passArgument('adhoc', $this->loadAdhocTemplateConfig());
             $this->includeJs('js/call_log.js');
         }
 
         // Call Log + anything w/ summary table on it
-        if (in_array($instrument, array_merge($summary, [$this->instrumentLower]))) {
+        if (in_array($instrument, array_merge($summary, [$this->instrument]))) {
             $this->passArgument('metadata', $this->getCallMetadata($project_id, $record));
             $this->passArgument('data', $this->getAllCallData($project_id, $record));
             $this->includeCss('css/log.css');
@@ -234,7 +233,7 @@ class CallLog extends AbstractExternalModule
     {
         // Check if deployed
         $instruments = array_keys(REDCap::getInstrumentNames(null, $project_id));
-        if (in_array($this->instrumentLower, $instruments)) return;
+        if (in_array($this->instrument, $instruments)) return;
         if (in_array($this->instrumentMeta, $instruments)) return;
 
         // Prep to correct the dd
@@ -351,7 +350,7 @@ class CallLog extends AbstractExternalModule
     {
         $event = $this->getEventOfInstrument('call_log');
         $data = REDCap::getData($project_id, 'array', $record, null, $event);
-        $instance = end(array_keys($data[$record]['repeat_instances'][$event][$this->instrumentLower]));
+        $instance = end(array_keys($data[$record]['repeat_instances'][$event][$this->instrument]));
         $instance = $instance ? $instance : '1';
         $instanceText = $instance != '1' ? ' AND instance= ' . $instance : ' AND isnull(instance)';
         foreach ($metadata as $index => $call) {
@@ -362,7 +361,7 @@ class CallLog extends AbstractExternalModule
             if ((count($tmp) > 0) && (count($tmp) != count($metadata[$index]['instances'])))
                 $metadata[$index]['complete'] = false;
         }
-        $fields = array_values(array_intersect(REDCap::getFieldNames($this->instrumentLower), array_keys($data[$record][$event])));
+        $fields = array_values(array_intersect(REDCap::getFieldNames($this->instrument), array_keys($data[$record][$event])));
         db_query('DELETE FROM redcap_data WHERE project_id=' . $project_id . ' AND record=' . $record . $instanceText . ' AND (field_name="' . implode('" OR field_name="', $fields) . '");');
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
@@ -371,7 +370,7 @@ class CallLog extends AbstractExternalModule
     {
         $event = $this->getEventOfInstrument('call_log');
         $data = REDCap::getData($project_id, 'array', $record, null, $event);
-        $callData = $data[$record]['repeat_instances'][$event][$this->instrumentLower];
+        $callData = $data[$record]['repeat_instances'][$event][$this->instrument];
         return empty($callData) ? [1 => $data[$record][$event]] : $callData;
     }
 
@@ -729,8 +728,7 @@ class CallLog extends AbstractExternalModule
             "user" => USERID,
             "userNameMap" => $this->getUserNameMap(),
             "static" => [
-                "instrument" => $this->instrumentName,
-                "instrumentLower" => $this->instrumentLower,
+                "instrument" => $this->instrument,
                 "instrumentEvent" => $call_event,
                 "record_id" => REDCap::getRecordIdField()
             ],
@@ -913,7 +911,7 @@ class CallLog extends AbstractExternalModule
 
                 // Gather Instance Level Data
                 // This first line could be empty for New Entry calls, but it won't matter.
-                $instanceData = $recordData['repeat_instances'][$callEvent][$this->instrumentLower][end($call['instances'])];
+                $instanceData = $recordData['repeat_instances'][$callEvent][$this->instrument][end($call['instances'])];
                 $instanceEventData = $recordData[$call['event_id']];
                 $instanceData = array_merge(
                     array_filter(empty($instanceEventData) ? [] : $instanceEventData, [$this, 'isNotBlank']),
@@ -962,7 +960,7 @@ class CallLog extends AbstractExternalModule
                 $attempts = $recordData[$callEvent]['call_open_date'] == $today ? 1 : 0;
                 $instanceData['_callNotes'] = "";
                 foreach (array_reverse($call['instances']) as $instance) {
-                    $itterData = $recordData['repeat_instances'][$callEvent][$this->instrumentLower][$instance];
+                    $itterData = $recordData['repeat_instances'][$callEvent][$this->instrument][$instance];
                     $leftMsg = $itterData['call_left_message'][1] == "1" ? '<b>Left Message</b>' : '';
                     $setCB = $itterData['call_requested_callback'][1] == "1" ? 'Set Callback' : '';
                     $text = $leftMsg && $setCB ? $leftMsg . " & " . $setCB : $leftMsg . $setCB . '&nbsp;';
@@ -976,8 +974,8 @@ class CallLog extends AbstractExternalModule
 
                 // Add what the next instance should be for possible links
                 $instanceData['_nextInstance'] = 1;
-                if (!empty($recordData['repeat_instances'][$callEvent][$this->instrumentLower])) {
-                    $instanceData['_nextInstance'] = end(array_keys($recordData['repeat_instances'][$callEvent][$this->instrumentLower])) + 1;
+                if (!empty($recordData['repeat_instances'][$callEvent][$this->instrument])) {
+                    $instanceData['_nextInstance'] = end(array_keys($recordData['repeat_instances'][$callEvent][$this->instrument])) + 1;
                 } else if (!empty($recordData[$callEvent]['call_template'])) {
                     $instanceData['_nextInstance'] = 2;
                 }

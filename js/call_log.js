@@ -97,7 +97,7 @@ CallLog.fn.buildNotesArea = function () {
 }
 
 CallLog.fn.isCompletedLog = function () {
-    if ($(`select[name=${CallLog.static.instrumentLower}_complete]`).val() == "0")
+    if ($(`select[name=${CallLog.static.instrument}_complete]`).val() == "0")
         return false;
 
     // Prevent editing
@@ -185,8 +185,8 @@ $(document).ready(function () {
     // Hide a few things for style
     $("#formtop-div").hide();
     $("td.context_msg").hide();
-    $(`#${CallLog.static.instrumentLower}_complete-sh-tr`).hide();
-    $(`#${CallLog.static.instrumentLower}_complete-tr`).hide();
+    $(`#${CallLog.static.instrument}_complete-sh-tr`).hide();
+    $(`#${CallLog.static.instrument}_complete-tr`).hide();
 
     //Build out the Notes area
     CallLog.fn.buildNotesArea();
