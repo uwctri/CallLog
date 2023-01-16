@@ -240,7 +240,7 @@ trait CallLogic
             $meta[$id]["voiceMails"]++;
         if ($data['call_outcome'] == '1') {
             $meta[$id]['complete'] = true;
-            $meta[$id]['completedBy'] = $this->framework->getUser()->getUsername();
+            $meta[$id]['completedBy'] = $this->getUser()->getUsername();
         }
         $meta[$id]['callStarted'] = '';
         return $this->saveCallMetadata($project_id, $record, $meta);

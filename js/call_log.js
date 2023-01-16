@@ -7,16 +7,13 @@ window.displayFormSaveBtnTooltip = function () { }
 
 // Debug function, easily save the metadata after directly editing it
 CallLog.fn.saveMetadata = function () {
-    $.ajax({
-        method: 'POST',
-        url: CallLog.router,
-        data: {
-            route: 'metadataSave',
-            record: getParameterByName('id'),
-            metadata: JSON.stringify(CallLog.metadata)
-        },
-        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-        success: (data) => console.log(data)
+    CallLog.em.ajax("metadataSave", {
+        record: getParameterByName('id'),
+        metadata: JSON.stringify(CallLog.metadata)
+    }).then(function (response) {
+        console.log(response)
+    }).catch(function (err) {
+        console.log(err);
     });
 }
 
@@ -105,8 +102,9 @@ CallLog.fn.isCompletedLog = function () {
     $("#__SUBMITBUTTONS__-tr").hide();
 
     // Fill out call details
-    let id = CallLog.data[getParameterByName('instance')]['call_id'];
-    let data = CallLog.data[getParameterByName('instance')];
+    let instance = getParameterByName('instance') || 1;
+    let id = CallLog.data[instance]['call_id'];
+    let data = CallLog.data[instance];
     $("#CallLogCurrentCall").text(CallLog.metadata[id]['name']);
     $("td:contains(Current Caller)").next().text(data['call_open_user_full_name']);
     $("#CallLogCurrentTime").text(formatDate(new Date(data['call_open_date'] + "T00:00:00"), 'MM-dd-y') + " " + format_time(data['call_open_time']));
@@ -137,25 +135,20 @@ CallLog.fn.buildAdhocMenu = function () {
         $(`#${adhoc.id} .callModalSave`).on('click', function () {
             let date = $(`#${adhoc.id} input[name=callDate]`).val(); //redcap format function
             date = date ? formatDate(new Date(date), 'y-MM-dd') : "";
-            $.ajax({
-                method: 'POST',
-                url: CallLog.router,
-                data: {
-                    route: 'adhocLoad',
-                    record: getParameterByName('id'),
-                    id: adhoc.id,
-                    date: date,
-                    time: to24hr($(`#${adhoc.id} input[name=callTime]`).val()),
-                    reason: $(`#${adhoc.id} select[name=reason]`).val(),
-                    notes: $(`#${adhoc.id} textarea[name=notes]`).val(),
-                    reporter: CallLog.user
-                },
-                error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-                success: function (data) {
-                    // Data is thrown out
-                    window.onbeforeunload = function () { };
-                    window.location = (window.location + "").replace('index', 'record_home');
-                }
+            CallLog.em.ajax("newAdhoc", {
+                record: getParameterByName('id'),
+                id: adhoc.id,
+                date: date,
+                time: to24hr($(`#${adhoc.id} input[name=callTime]`).val()),
+                reason: $(`#${adhoc.id} select[name=reason]`).val(),
+                notes: $(`#${adhoc.id} textarea[name=notes]`).val(),
+                reporter: CallLog.user
+            }).then(function (response) {
+                console.log(response);
+                window.onbeforeunload = function () { };
+                window.location = (window.location + "").replace('index', 'record_home');
+            }).catch(function (err) {
+                console.log(err);
             });
             $(`#${adhoc.id}`).modal('hide');
         });

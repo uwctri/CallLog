@@ -83,17 +83,14 @@ CallLog.fn.setupClickToExpand = function () {
 }
 
 CallLog.fn.projectLog = function (action, call_id, record) {
-    $.ajax({
-        method: 'POST',
-        url: CallLog.router,
-        data: {
-            route: 'log',
-            action: action,
-            details: `${action}\nCall ID = ${call_id}`,
-            record: record
-        },
-        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-        success: (data) => console.log(data)
+    CallLog.em.ajax("log", {
+        text: `${action}\nCall ID: ${call_id}`,
+        record: record,
+        event: null
+    }).then(function (response) {
+        console.log(response)
+    }).catch(function (err) {
+        console.log(err)
     });
 }
 
@@ -165,7 +162,7 @@ CallLog.fn.createColConfig = function (index, tab_id) {
         } else if (fConfig.validation == 'phone') {
             colConfig.render = (data, type, _row, _meta) => (data && (type === 'filter')) ? data.replace(/[\\(\\)\\-\s]/g, '') : data || "";
         } else if (Object.keys(CallLog.usernameLists).includes(fConfig.field)) {
-            colConfig.render = (data, _type, _row, _meta) => data ? data.includes($("#username-reference").text()) ? CallLog.usernameLists[fConfig.field]['include'] : CallLog.usernameLists[fConfig.field]['exclude'] : "";
+            colConfig.render = (data, _type, _row, _meta) => data ? data.includes(CallLog.user) ? CallLog.usernameLists[fConfig.field]['include'] : CallLog.usernameLists[fConfig.field]['exclude'] : "";
         }
 
         // Build out any links
@@ -329,39 +326,30 @@ CallLog.fn.callURLclick = function (record, call_id, url, callbackDateTime) {
 
 CallLog.fn.startCall = function (record, call_id, url) {
     CallLog.fn.projectLog("Started Call", call_id, record);
-    $.ajax({
-        method: 'POST',
-        url: CallLog.router,
-        data: {
-            route: 'setCallStarted',
-            record: record,
-            id: call_id,
-            user: $("#username-reference").text()
-        },
-        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-        success: () => {
-            window.location = url;
-            // window.open(url, "_blank")
-            // TODO update call started icon
-        }
+    CallLog.em.ajax("setCallStarted", {
+        record: record,
+        id: call_id,
+        user: CallLog.user
+    }).then(function (response) {
+        console.log(response);
+        window.location = url;
+        // window.open(url, "_blank")
+        // TODO update call started icon
+    }).catch(function (err) {
+        console.log(err)
     });
 }
 
 CallLog.fn.endCall = function (record, call_id) {
-    $.ajax({
-        method: 'POST',
-        url: CallLog.router,
-        data: {
-            route: 'setCallEnded',
-            record: record,
-            id: call_id
-        },
-        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-        success: () => {
-            CallLog.fn.projectLog("Manually Ended Call", call_id, record);
-            console.log('Call ended. Refreshing table data.');
-            CallLog.fn.refreshTableData();
-        }
+    CallLog.em.ajax("setCallEnded", {
+        record: record,
+        id: call_id
+    }).then(function (response) {
+        console.log(response);
+        CallLog.fn.projectLog("Manually Ended Call", call_id, record);
+        CallLog.fn.refreshTableData();
+    }).catch(function (err) {
+        console.log(err);
     });
 }
 
@@ -373,77 +361,69 @@ CallLog.fn.toggleCallBackCol = function () {
 }
 
 CallLog.fn.refreshTableData = function () {
-    $.ajax({
-        method: 'POST',
-        url: CallLog.router,
-        data: {
-            route: 'getData'
-        },
-        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-        success: (routerData) => {
-            routerData = JSON.parse(routerData);
-            if (!routerData.success) {
-                Swal.fire({
-                    title: 'Unable to Load Data',
-                    text: "Unable to reach the REDCap server to load data. Please refresh the page or contact a REDCap Administrator for assistance.",
-                    icon: 'error',
-                });
-                return;
-            }
-            let [packagedCallData, tabConfig, alwaysShowCallbackCol, timeTaken] = routerData.data;
-            CallLog.packagedCallData = packagedCallData;
-            CallLog.alwaysShowCallbackCol = alwaysShowCallbackCol;
-
-            // Keep track of users in multiple tabs
-            CallLog.multiTabCache = {};
-            CallLog.activeCallCache = [];
-            $.each(CallLog.packagedCallData, (tab, data) => {
-                data.forEach((el) => {
-                    CallLog.multiTabCache[el.record_id] ||= [];
-                    CallLog.multiTabCache[el.record_id].push(tab);
-                    if (el._callStarted) CallLog.activeCallCache.push(el.record_id);
-                });
+    CallLog.em.ajax("getData", {}).then(function (response) {
+        if (!response.success) {
+            Swal.fire({
+                title: 'Unable to Load Data',
+                text: "Unable to reach the REDCap server to load data. Please refresh the page or contact a REDCap Administrator for assistance.",
+                icon: 'error',
             });
-            CallLog.multiTabCache = Object.fromEntries(Object.entries(CallLog.multiTabCache).filter((el) => el[1].length > 1));
-
-            $('.callTable').each(function (_index, el) {
-                let table = $(el).DataTable();
-                let page = table.page.info().page;
-                let tab_id = $(el).closest('.tab-pane').prop('id');
-                table.clear();
-                table.rows.add(CallLog.packagedCallData[tab_id]);
-                let order = table.order()[0];
-                if (CallLog.alwaysShowCallbackCol && order[0] <= 1 && order[1] == "asc")
-                    table.order([ // Order by call back times if previous ordered by record_id
-                        [CallLog.colConfig[tab_id].length - 1, "desc"]
-                    ]);
-                table.draw();
-                table.page(page).draw('page');
-                CallLog.fn.updateDataCache(tab_id);
-                CallLog.fn.updateBadges(tab_id);
-            });
-
-            CallLog.fn.toggleCallBackCol();
-
-            // Enable Tooltips for the call-back column
-            $('*[data-toggle="tooltip"]').tooltip();
-
-            console.log(`Refreshed data in ${timeTaken} seconds`);
+            return;
         }
+        let [packagedCallData, tabConfig, alwaysShowCallbackCol, timeTaken] = response.data;
+        CallLog.packagedCallData = packagedCallData;
+        CallLog.alwaysShowCallbackCol = alwaysShowCallbackCol;
+
+        // Keep track of users in multiple tabs
+        CallLog.multiTabCache = {};
+        CallLog.activeCallCache = [];
+        $.each(CallLog.packagedCallData, (tab, data) => {
+            data.forEach((el) => {
+                CallLog.multiTabCache[el.record_id] ||= [];
+                CallLog.multiTabCache[el.record_id].push(tab);
+                if (el._callStarted) CallLog.activeCallCache.push(el.record_id);
+            });
+        });
+        CallLog.multiTabCache = Object.fromEntries(Object.entries(CallLog.multiTabCache).filter((el) => el[1].length > 1));
+
+        $('.callTable').each(function (_index, el) {
+            let table = $(el).DataTable();
+            let page = table.page.info().page;
+            let tab_id = $(el).closest('.tab-pane').prop('id');
+            table.clear();
+            table.rows.add(CallLog.packagedCallData[tab_id]);
+            let order = table.order()[0];
+            if (CallLog.alwaysShowCallbackCol && order[0] <= 1 && order[1] == "asc")
+                table.order([ // Order by call back times if previous ordered by record_id
+                    [CallLog.colConfig[tab_id].length - 1, "desc"]
+                ]);
+            table.draw();
+            table.page(page).draw('page');
+            CallLog.fn.updateDataCache(tab_id);
+            CallLog.fn.updateBadges(tab_id);
+        });
+
+        CallLog.fn.toggleCallBackCol();
+
+        // Enable Tooltips for the call-back column
+        $('*[data-toggle="tooltip"]').tooltip();
+
+        console.log(`Refreshed data in ${timeTaken} seconds`);
+    }).catch(function (err) {
+        console.log(err);
     });
 }
 
 CallLog.fn.noCallsToday = function (record, call_id) {
-    $.ajax({
-        method: 'POST',
-        url: CallLog.router,
-        data: {
-            route: 'setNoCallsToday',
-            record: record,
-            id: call_id
-        },
-        error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-        success: (_data) => CallLog.fn.refreshTableData()
+    CallLog.fn.projectLog("No Calls Today", call_id, record);
+    CallLog.em.ajax("setNoCallsToday", {
+        record: record,
+        id: call_id
+    }).then(function (response) {
+        console.log(response);
+        CallLog.fn.refreshTableData()
+    }).catch(function (err) {
+        console.log(err);
     });
 }
 

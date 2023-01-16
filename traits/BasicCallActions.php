@@ -60,7 +60,7 @@ trait BasicCallActions
         // Update progress for ongoing call
         $grace = strtotime('-' . $this->startedCallGrace . ' minutes'); // grace minutes ago
         $now = date("Y-m-d H:i");
-        $user = $this->framework->getUser()->getUsername();
+        $user = $this->getUser()->getUsername();
         foreach ($metadata as $id => $call) {
             if (!$call['complete'] && ($call['callStartedBy'] == $user) && (strtotime($call['callStarted']) > $grace))
                 $metadata[$id]['callStarted'] = $now;
@@ -70,8 +70,8 @@ trait BasicCallActions
 
     public function callEnded($project_id, $record, $metadata, $call_id)
     {
-        if (!empty($meta[$call_id]))
-            $meta[$call_id]['callStarted'] = '';
+        if (!empty($metadata[$call_id]))
+            $metadata[$call_id]['callStarted'] = '';
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 }
