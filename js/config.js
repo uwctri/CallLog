@@ -47,6 +47,17 @@ $(document).ready(function () {
             $modal.find("input[name^=call_template____]:checked").click();
             $modal.find("input[name^=tab_link____]:checked").click();
 
+            // Insert a button to deploy Payemnts form
+            $("[field=intro_text] label").after('<button class="setupCallLog" style="float:right">Deploy Call Long Instruments</button>')
+            $(".setupCallLog").on("click", () => {
+                $(".setupCallLog").attr("disabled", true);
+                CallLog.em.ajax("deployInstruments", {}).then((response) => {
+                    location.reload();
+                }).catch((err) => {
+                    console.log(err)
+                });
+            });
+
             // Hide all the flag fields and set events for them
             $("input[name^=tab_calls_included____]").on('change', function () {
                 $el = $(this);
