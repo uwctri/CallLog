@@ -19,7 +19,7 @@ $(document).ready(function () {
     $modal.on('show.bs.modal', function () {
 
         // Making sure we are overriding this modules's modal only.
-        if ($(this).data('module') !== CallLog.modulePrefix) return;
+        if ($(this).data('module') !== CallLog.prefix) return;
 
         if (typeof ExternalModules.Settings.prototype.resetConfigInstancesOld === 'undefined')
             ExternalModules.Settings.prototype.resetConfigInstancesOld = ExternalModules.Settings.prototype.resetConfigInstances;
@@ -27,7 +27,7 @@ $(document).ready(function () {
         ExternalModules.Settings.prototype.resetConfigInstances = function () {
 
             ExternalModules.Settings.prototype.resetConfigInstancesOld();
-            if ($modal.data('module') !== CallLog.modulePrefix) return;
+            if ($modal.data('module') !== CallLog.prefix) return;
 
             $modal.addClass('callConfig');
 
@@ -85,7 +85,7 @@ $(document).ready(function () {
 
     $modal.on('hide.bs.modal', function () {
         // Making sure we are overriding this modules's modal only.
-        if ($(this).data('module') !== CallLog.modulePrefix) return;
+        if ($(this).data('module') !== CallLog.prefix) return;
 
         $(this).removeClass('callConfig');
         CallLog.configInit = false;

@@ -9,12 +9,13 @@ use Piping;
 use Design;
 use Metadata;
 
-require_once 'traits/CallMetadataLogic.php';
+require_once 'traits/BasicCallActions.php';
+require_once 'traits/CallLogic.php';
 require_once 'traits/Utility.php';
 
 class CallLog extends AbstractExternalModule
 {
-    use CallMetadataLogic;
+    use CallLogic;
     use Utility;
 
     private $module_global = 'CallLog';
@@ -49,7 +50,7 @@ class CallLog extends AbstractExternalModule
         $this->updateDisconnectedPhone($project_id, $record);
         $this->metadataNewEntry($project_id, $record, $metadata, $config['new']);
         $this->metadataPhoneVisit($project_id, $record, $metadata, $config['visit']);
-        $this->metadataCallStarted($project_id, $record, $metadata);
+        $this->callStarted($project_id, $record, $metadata);
     }
 
     public function redcap_every_page_top($project_id)
@@ -174,17 +175,17 @@ class CallLog extends AbstractExternalModule
             case "setCallEnded":
                 # This page is posted to by the call list to flag a call as no longer in progress
                 if (empty($_POST['id']) || empty($metadata)) break;
-                $saveResult = $this->metadataCallEnded($project_id, $record, $metadata, $_POST['id']);
+                $saveResult = $this->callEnded($project_id, $record, $metadata, $_POST['id']);
                 break;
             case "setCallStarted":
                 # This page is posted to by the call list to flag a call as in progress
                 if (empty($_POST['id']) || empty($_POST['user']) || empty($metadata)) break;
-                $saveResult = $this->metadataCallStarted($project_id, $record, $metadata, $_POST['id'], $_POST['user']);
+                $saveResult = $this->callStarted($project_id, $record, $metadata, $_POST['id'], $_POST['user']);
                 break;
             case "setNoCallsToday":
                 # This page is posted to by the call list to flag a call as "no calls today"
                 if (empty($_POST['id'])) break;
-                $saveResult = $this->metadataNoCallsToday($project_id, $record, $metadata, $_POST['id']);
+                $saveResult = $this->noCallsToday($project_id, $record, $metadata, $_POST['id']);
                 break;
         }
 
@@ -193,38 +194,6 @@ class CallLog extends AbstractExternalModule
             "success" => true,
             "data" => $callListData
         ], $saveResult);
-    }
-
-    public function reportDisconnectedPhone($project_id, $record)
-    {
-        $config = $this->loadBadPhoneConfig();
-        if ($config['_missing']) return;
-        $event = $config['event'];
-        $oldNotes = REDCap::getData($project_id, 'array', $record, $config['notes'], $event)[$record][$event][$config['notes']];
-        $callData = end($this->getAllCallData($project_id, $record));
-        if ($callData['call_disconnected'][1] != "1") return;
-        $write[$record][$event][$config['flag']] = "1";
-        $write[$record][$event][$config['notes']] = $callData['call_open_date'] . ' ' . $callData['call_open_time'] . ' ' . $callData['call_open_user_full_name'] . ': ' . $callData['call_notes'] . "\r\n\r\n" . $oldNotes;
-        REDCap::saveData($project_id, 'array', $write, 'overwrite');
-    }
-
-    public function updateDisconnectedPhone($project_id, $record)
-    {
-        $config = $this->loadBadPhoneConfig();
-        if ($config['_missing']) return;
-        $event = $config['event'];
-        $isResolved = REDCap::getData(
-            $project_id,
-            'array',
-            $record,
-            $config['resolved'],
-            $event
-        )[$record][$event][$config['resolved']][1] == "1";
-        if (!$isResolved) return;
-        $write[$record][$event][$config['flag']] = "";
-        $write[$record][$event][$config['notes']] = "";
-        $write[$record][$event][$config['resolved']][1] = "0";
-        REDCap::saveData($project_id, 'array', $write, 'overwrite');
     }
 
     private function deployInstruments($project_id)
@@ -344,43 +313,6 @@ class CallLog extends AbstractExternalModule
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
-    public function metadataNoCallsToday($project_id, $record, $metadata, $call_id)
-    {
-        if (!empty($metadata[$call_id])) {
-            if (!is_array($metadata[$call_id]['noCallsToday'])) {
-                $metadata[$call_id]['noCallsToday'] = [];
-            }
-            $metadata[$call_id]['noCallsToday'][] = date('Y-m-d');
-        }
-        return $this->saveCallMetadata($project_id, $record, $metadata);
-    }
-
-    public function metadataCallStarted($project_id, $record, $metadata, $call_id = null, $user = null)
-    {
-        if (empty($metadata)) return;
-        if ($call_id && $user) {
-            $metadata[$call_id]['callStarted'] = date("Y-m-d H:i");
-            $metadata[$call_id]['callStartedBy'] = $user;
-            return $this->saveCallMetadata($project_id, $record, $metadata);
-        }
-        // Update progress for ongoing call
-        $grace = strtotime('-' . $this->startedCallGrace . ' minutes'); // grace minutes ago
-        $now = date("Y-m-d H:i");
-        $user = $this->framework->getUser()->getUsername();
-        foreach ($metadata as $id => $call) {
-            if (!$call['complete'] && ($call['callStartedBy'] == $user) && (strtotime($call['callStarted']) > $grace))
-                $metadata[$id]['callStarted'] = $now;
-        }
-        return $this->saveCallMetadata($project_id, $record, $metadata);
-    }
-
-    public function metadataCallEnded($project_id, $record, $metadata, $call_id)
-    {
-        if (!empty($meta[$call_id]))
-            $meta[$call_id]['callStarted'] = '';
-        return $this->saveCallMetadata($project_id, $record, $metadata);
-    }
-
     public function deleteLastCallInstance($project_id, $record, $metadata)
     {
         $event = $this->getEventOfInstrument('call_log');
@@ -399,11 +331,6 @@ class CallLog extends AbstractExternalModule
         $fields = array_values(array_intersect(REDCap::getFieldNames($this->instrumentLower), array_keys($data[$record][$event])));
         db_query('DELETE FROM redcap_data WHERE project_id=' . $project_id . ' AND record=' . $record . $instanceText . ' AND (field_name="' . implode('" OR field_name="', $fields) . '");');
         return $this->saveCallMetadata($project_id, $record, $metadata);
-    }
-
-    public function saveCallData($project_id, $record, $instance, $var, $val)
-    {
-        return REDCap::saveData($project_id, 'array', [$record => ['repeat_instances' => [$this->getEventOfInstrument('call_log') => [$this->instrumentLower => [$instance => [$var => $val]]]]]], 'overwrite');
     }
 
     public function getAllCallData($project_id, $record)
@@ -764,14 +691,13 @@ class CallLog extends AbstractExternalModule
         $meta_event = $this->getEventOfInstrument('call_log_metadata');
         $data = array(
             "eventNameMap" => $this->getEventNameMap(),
-            "modulePrefix" => $this->getPrefix(),
-            "callLogEvent" => $call_event,
+            "prefix" => $this->getPrefix(),
             "user" => USERID,
             "userNameMap" => $this->getUserNameMap(),
             "static" => [
                 "instrument" => $this->instrumentName,
                 "instrumentLower" => $this->instrumentLower,
-                "instrumentMetadata" => $this->instrumentMeta,
+                "instrumentEvent" => $call_event,
                 "record_id" => REDCap::getRecordIdField()
             ],
             "configError" => !($call_event && $meta_event),

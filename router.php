@@ -69,19 +69,6 @@ switch ($route) {
             $sendDone = True;
         }
         break;
-    case "calldataSave":
-        # Posted to by the call log to save the record's data via the console.
-        # This is useful for debugging and resolving enduser issues.
-        $instance = $_POST['instance'];
-        $var = $_POST['dataVar'];
-        $val = $_POST['dataVal'];
-        if (json_decode($_POST['isCheckbox']))
-            $val = json_decode($val, true);
-        if (!empty($instance) && !empty($var) && !is_null($val)) {
-            $module->saveCallData($pid, $record, $instance, $var, $val);
-            $sendDone = True;
-        }
-        break;
     case "callDelete":
         # Posted to by the call log to delete the last saved instance of the call log instrument.
         $module->deleteLastCallInstance($pid, $record, $metadata);
@@ -120,7 +107,7 @@ switch ($route) {
     case "setCallEnded":
         # This page is posted to by the call list to flag a call as no longer in progress
         if (!empty($_POST['id'])) {
-            $module->metadataCallEnded($pid, $record, $metadata, $_POST['id']);
+            $module->callEnded($pid, $record, $metadata, $_POST['id']);
             $sendDone = True;
         }
         break;
@@ -128,7 +115,7 @@ switch ($route) {
         # This page is posted to by the call list to flag a call as in progress
         if (!empty($_POST['id']) && !empty($_POST['user'])) {
             $metadata = $module->getCallMetadata($project_id, $_POST['id']);
-            $module->metadataCallStarted($pid, $record, $metadata, $_POST['id'], $_POST['user']);
+            $module->callStarted($pid, $record, $metadata, $_POST['id'], $_POST['user']);
             $sendDone = True;
         }
         break;
