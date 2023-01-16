@@ -178,7 +178,7 @@ CallLog.fn.createColConfig = function (index, tab_id) {
                     url = `../DataEntry/record_home.php?pid=${pid}&id=RECORD`;
                     break;
                 case "call":
-                    url = `../DataEntry/index.php?pid=${pid}&id=RECORD&event_id=${CallLog.callLogEvent}&page=${CallLog.static.instrumentLower}&instance=INSTANCE&call_id=CALLID&showReturn=1`;
+                    url = `../DataEntry/index.php?pid=${pid}&id=RECORD&event_id=${CallLog.static.instrumentEvent}&page=${CallLog.static.instrumentLower}&instance=INSTANCE&call_id=CALLID&showReturn=1`;
                     break;
                 case "instrument":
                     url = `../DataEntry/index.php?pid=${pid}&id=RECORD&event_id=${fConfig.linkedEvent}&page=${fConfig.linkedInstrument}`;

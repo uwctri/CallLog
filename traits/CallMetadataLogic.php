@@ -4,7 +4,7 @@ namespace UWMadison\CallLog;
 
 use Redcap;
 
-trait CallMetadataLogic
+trait CallLogic
 {
     public function metadataNewEntry($project_id, $record, $metadata, $config)
     {
