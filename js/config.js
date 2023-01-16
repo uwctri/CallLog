@@ -51,8 +51,8 @@ $(document).ready(function () {
             $modal.find("input[name^=tab_link____]:checked").click();
 
             // Insert a button to deploy Payemnts form
-            $("[field=intro_text] label").after('<button class="setupCallLog" style="float:right">Deploy Call Long Instruments</button>')
-            $(".setupCallLog").on("click", () => {
+            $modal.find("[field=intro_text] label").after('<button class="setupCallLog" style="float:right">Deploy Call Long Instruments</button>')
+            $modal.find(".setupCallLog").on("click", () => {
                 $(".setupCallLog").attr("disabled", true);
                 CallLog.em.ajax("deployInstruments", {}).then((response) => {
                     location.reload();
@@ -62,7 +62,7 @@ $(document).ready(function () {
             });
 
             // Hide all the flag fields and set events for them
-            $("input[name^=tab_calls_included____]").on('change', function () {
+            $modal.on('change', 'input[name^=tab_calls_included____]', function () {
                 $el = $(this);
                 let localValues = $el.val().split(',').map(x => x.trim());
                 $.each(['followup', 'mcv', 'adhoc'], function (_, template) {
@@ -75,7 +75,7 @@ $(document).ready(function () {
                 });
             });
 
-            // Hide Bade Phone section's numbering
+            // Hide Bad Phone section's numbering
             $modal.find('tr[field=bad_phone_collection]').first().nextUntil('.sub_end').addBack().find('span').hide();
 
             // Rearrange the Withdraw config
