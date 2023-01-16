@@ -381,7 +381,7 @@
                             "type": "field-list"
                         },
                         {
-                            "key": "nts_text_cron",
+                            "key": "nts_cron_text",
                             "name": "As an alternative, or in addition to, the above you can generate an NTS when a call window has started, but the appointment is not schedualed.",
                             "type": "descriptive"
                         },
