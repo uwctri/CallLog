@@ -62,8 +62,8 @@ switch ($route) {
         # Intended to be posted to by an outside script or DET to resolve an existing adhoc call on a record(s)
         # url: /ExternalModules/?prefix=call_log&page=router&route=adhocResolve&pid=NNN&adhocCode=NNN&recordList=NNN
         if (!empty($_GET['adhocCode'])) {
-            $metadata = $module->getCallMetadata($project_id, $record);
             foreach (explode(',', $record) as $rcrd) {
+                $metadata = $module->getCallMetadata($project_id, trim($rcrd));
                 $module->resolveAdhoc($pid, trim($rcrd), $_GET['adhocCode'], $metadata);
             }
             $sendDone = True;
@@ -85,9 +85,9 @@ switch ($route) {
     case "newEntryLoad":
         # This page is intended to be posted to by an outside script to load New Entry calls for any number of records
         # url: /ExternalModules/?prefix=call_log&page=router&route=newEntryLoad&pid=NNN&recordList=NNN
-        $metadata = $module->getCallMetadata($project_id, $record);
         $config = $module->loadCallTemplateConfig();
         foreach (explode(',', $record) as $rcrd) {
+            $metadata = $module->getCallMetadata($project_id, trim($rcrd));
             $module->metadataNewEntry($pid, trim($rcrd), $metadata, $config['new']);
         }
         $sendDone = True;
@@ -95,9 +95,9 @@ switch ($route) {
     case "scheduleLoad":
         # This page is intended to be posted to by an outside script after scheduling occurs. 
         # url: /ExternalModules/?prefix=call_log&page=router&route=scheduleLoad&pid=NNN&recordList=NNN
-        $metadata = $module->getCallMetadata($project_id, $record);
         $config = $module->loadCallTemplateConfig();
         foreach (explode(',', $record) as $rcrd) {
+            $metadata = $module->getCallMetadata($project_id, trim($rcrd));
             $module->metadataReminder($pid, trim($rcrd), $metadata, $config['reminder']);
             $module->metadataMissedCancelled($pid, trim($rcrd), $metadata, $config['mcv']);
             $module->metadataNeedToSchedule($pid, trim($rcrd), $metadata, $config['nts']);
