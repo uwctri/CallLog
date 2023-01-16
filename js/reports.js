@@ -16,6 +16,7 @@
     ];
 
     for (const field in data['_cols']) {
+        if (!field) continue;
         structure.push({
             title: data['_cols'][field]['name'],
             data: field

@@ -2,7 +2,6 @@
 // *************************
 // Metadata Report Page
 if (isset($_GET['metaReport'])) {
-    $module->initializeJavascriptModuleObject();
 ?>
     <link rel="stylesheet" href="<?= $module->getURL('css/reports.css'); ?>">
     <script>
