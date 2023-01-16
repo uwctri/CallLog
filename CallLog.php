@@ -105,7 +105,8 @@ class CallLog extends AbstractExternalModule
     public function redcap_module_ajax($action, $payload, $project_id, $record)
     {
         $callListData = false;
-        $saveResult = [];
+        $success = true;
+        $result = [];
         $record = $record ?? $payload['record'];
         $metadata = $this->getCallMetadata($project_id, $record);
         $config = $this->loadCallTemplateConfig();
@@ -115,13 +116,16 @@ class CallLog extends AbstractExternalModule
                 $this->projectLog($payload['text'], $record, $payload['event'], $project_id);
                 break;
             case "getData":
-                // Load for the Call List
+                # Load for the Call List
                 $callListData = $this->loadCallListData();
+                break;
+            case "deployInstruments":
+                $success = $this->deployInstruments($project_id);
                 break;
             case "newAdhoc":
                 # Posted to by the call log to save a new adhoc call
                 if (empty($payload['id'])) break;
-                $saveResult = $this->metadataAdhoc($project_id, $record, $config["adhoc"], [
+                $result = $this->metadataAdhoc($project_id, $record, $config["adhoc"], [
                     'id' => $payload['id'],
                     'date' => $payload['date'],
                     'time' => $payload['time'],
@@ -138,37 +142,38 @@ class CallLog extends AbstractExternalModule
                 # Posted to by the call log to save the record's data via the console.
                 # This is useful for debugging and resolving enduser issues.
                 if (empty($payload['metadata'])) break;
-                $saveResult = $this->saveCallMetadata($project_id, $record, json_decode($payload['metadata'], true));
+                $result = $this->saveCallMetadata($project_id, $record, json_decode($payload['metadata'], true));
                 break;
             case "setCallStarted":
                 # This page is posted to by the call list to flag a call as in progress
                 if (empty($payload['id']) || empty($payload['user']) || empty($metadata)) break;
-                $saveResult = $this->callStarted($project_id, $record, $metadata, $payload['id'], $payload['user']);
+                $result = $this->callStarted($project_id, $record, $metadata, $payload['id'], $payload['user']);
                 break;
             case "setCallEnded":
                 # This page is posted to by the call list to flag a call as no longer in progress
                 if (empty($payload['id']) || empty($metadata)) break;
-                $saveResult = $this->callEnded($project_id, $record, $metadata, $payload['id']);
+                $result = $this->callEnded($project_id, $record, $metadata, $payload['id']);
                 break;
             case "setNoCallsToday":
                 # This page is posted to by the call list to flag a call as "no calls today"
                 if (empty($payload['id'])) break;
-                $saveResult = $this->noCallsToday($project_id, $record, $metadata, $payload['id']);
+                $result = $this->noCallsToday($project_id, $record, $metadata, $payload['id']);
                 break;
         }
 
         // TODO result something more useful
         return  array_merge([
             "text" => "Action '$action' was completed successfully",
-            "success" => true,
+            "success" => $success,
             "data" => $callListData
-        ], $saveResult);
+        ], $result);
     }
 
     public function api($action, $payload, $project_id)
     {
         // TODO newAdhoc has param name changes
         // TODO adhocResolve  -> resolveAdhoc, param is now "code"
+        // TODO post only params now
 
         $request = RestUtility::processRequest();
         $payload = $request->getRequestVars();
@@ -233,8 +238,8 @@ class CallLog extends AbstractExternalModule
     {
         // Check if deployed
         $instruments = array_keys(REDCap::getInstrumentNames(null, $project_id));
-        if (in_array($this->instrument, $instruments)) return;
-        if (in_array($this->instrumentMeta, $instruments)) return;
+        if (in_array($this->instrument, $instruments)) return false;
+        if (in_array($this->instrumentMeta, $instruments)) return false;
 
         // Prep to correct the dd
         global $Proj;
@@ -249,8 +254,10 @@ class CallLog extends AbstractExternalModule
 
         // Update the dd
         $sql_errors = MetaData::save_metadata($dd, true, false, $project_id);
-        db_query(count($sql_errors) > 0 ? "ROLLBACK" : "COMMIT");
+        $errors = count($sql_errors) > 0;
+        db_query($errors ? "ROLLBACK" : "COMMIT");
         db_query("SET AUTOCOMMIT=1");
+        return !$errors;
     }
 
     function cronNeedToSchedule($cronInfo)

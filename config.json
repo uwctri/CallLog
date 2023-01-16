@@ -48,7 +48,8 @@
         "metadataSave",
         "setCallEnded",
         "setCallStarted",
-        "setNoCallsToday"
+        "setNoCallsToday",
+        "deployInstruments"
     ],
     "framework-version": 11,
     "enable-ajax-logging": true,
