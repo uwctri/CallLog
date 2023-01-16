@@ -104,16 +104,16 @@ class CallLog extends AbstractExternalModule
 
     public function redcap_module_ajax($action, $payload, $project_id, $record)
     {
-        // TODO this isn't used currently
-        // TODO port over "logs" action to normal log method
-        // TODO loadAdhoc -> newAdhoc
-
         $callListData = false;
         $saveResult = [];
+        $record = $record ?? $payload['record'];
         $metadata = $this->getCallMetadata($project_id, $record);
         $config = $this->loadCallTemplateConfig();
 
         switch ($action) {
+            case "log":
+                $this->projectLog($payload['text'], $record, $payload['event'], $project_id);
+                break;
             case "getData":
                 // Load for the Call List
                 $callListData = $this->loadCallListData();
@@ -140,15 +140,15 @@ class CallLog extends AbstractExternalModule
                 if (empty($payload['metadata'])) break;
                 $saveResult = $this->saveCallMetadata($project_id, $record, json_decode($payload['metadata'], true));
                 break;
-            case "setCallEnded":
-                # This page is posted to by the call list to flag a call as no longer in progress
-                if (empty($payload['id']) || empty($metadata)) break;
-                $saveResult = $this->callEnded($project_id, $record, $metadata, $payload['id']);
-                break;
             case "setCallStarted":
                 # This page is posted to by the call list to flag a call as in progress
                 if (empty($payload['id']) || empty($payload['user']) || empty($metadata)) break;
                 $saveResult = $this->callStarted($project_id, $record, $metadata, $payload['id'], $payload['user']);
+                break;
+            case "setCallEnded":
+                # This page is posted to by the call list to flag a call as no longer in progress
+                if (empty($payload['id']) || empty($metadata)) break;
+                $saveResult = $this->callEnded($project_id, $record, $metadata, $payload['id']);
                 break;
             case "setNoCallsToday":
                 # This page is posted to by the call list to flag a call as "no calls today"
@@ -382,6 +382,11 @@ class CallLog extends AbstractExternalModule
 
     public function saveCallMetadata($project_id, $record, $data)
     {
+        $sql = "SELECT field_name FROM redcap_data WHERE project_id = ? and record = ? LIMIT 1";
+        $result = $this->query($sql, [$project_id, $record]);
+        if (empty($result->fetch_assoc())) {
+            return false;
+        }
         return REDCap::saveData(
             $project_id,
             'array',
@@ -400,7 +405,7 @@ class CallLog extends AbstractExternalModule
         $meta = $this->getCallMetadata($project_id, $record);
         if (empty($meta)) return '';
         $grace = $this->startedCallGrace; // Minutes of Grace time
-        $user = $this->framework->getUser()->getUsername();
+        $user = $this->getUser()->getUsername();
         foreach ($meta as $call) {
             if (
                 !$call['complete'] && ($call['callStartedBy'] != $user) &&
@@ -720,6 +725,7 @@ class CallLog extends AbstractExternalModule
 
     private function initGlobal()
     {
+        $this->initializeJavascriptModuleObject();
         $call_event = $this->getEventOfInstrument('call_log');
         $meta_event = $this->getEventOfInstrument('call_log_metadata');
         $data = [
@@ -732,10 +738,10 @@ class CallLog extends AbstractExternalModule
                 "instrumentEvent" => $call_event,
                 "record_id" => REDCap::getRecordIdField()
             ],
-            "configError" => !($call_event && $meta_event),
-            "router" => $this->getURL('router.php')
+            "configError" => !($call_event && $meta_event)
         ];
         echo "<script>var " . $this->module_global . " = " . json_encode($data) . ";</script>";
+        echo "<script>" . $this->module_global . ".em = " . $this->getJavascriptModuleObjectName() . ";</script>";
     }
 
     public function getUserNameListConfig()
@@ -750,13 +756,6 @@ class CallLog extends AbstractExternalModule
             ];
         }
         return $config;
-    }
-
-    public function ajaxLog()
-    {
-        $sql = null;
-        $event = null;
-        REDCap::logEvent("Call Log", $_POST['details'], $sql, $_POST['record'], $event, $_GET['pid']);
     }
 
     public function loadReportConfig($excludeWithdrawn = true)

@@ -73,20 +73,15 @@ CallLog.fn.buildCallSummaryTable = function () {
             });
 
             // Write back the metadata
-            $.ajax({
-                method: 'POST',
-                url: CallLog.router,
-                data: {
-                    route: 'metadataSave',
-                    record: getParameterByName('id'),
-                    metadata: JSON.stringify(CallLog.metadata)
-                },
-                error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-                success: (data) => {
-                    // Force page reload
-                    window.onbeforeunload = function () { };
-                    window.location = window.location;
-                }
+            CallLog.em.ajax("metadataSave", {
+                record: getParameterByName('id'),
+                metadata: JSON.stringify(CallLog.metadata)
+            }).then(function (response) {
+                console.log(response);
+                window.onbeforeunload = function () { };
+                window.location = window.location;
+            }).catch(function (err) {
+                console.log(err);
             });
         })
     });
@@ -134,20 +129,16 @@ CallLog.fn.buildCallSummaryTable = function () {
                 return;
             let instance = getParameterByName('instance') > 1 ? getParameterByName('instance') - 1 : 1;
             // Post to delete, removes metadata too
-            $.ajax({
-                method: 'POST',
-                url: CallLog.router,
-                data: {
-                    route: 'callDelete',
-                    record: getParameterByName('id')
-                },
-                error: (jqXHR, textStatus, errorThrown) => console.log(`${jqXHR}\n${textStatus}\n${errorThrown}`),
-                success: (data) => {
-                    let url = new URL(location.href);
-                    url.searchParams.set('instance', instance);
-                    window.onbeforeunload = function () { };
-                    window.location = url;
-                }
+            CallLog.em.ajax("callDelete", {
+                record: getParameterByName('id')
+            }).then(function (response) {
+                console.log(response);
+                let url = new URL(location.href);
+                url.searchParams.set('instance', instance);
+                window.onbeforeunload = function () { };
+                window.location = url;
+            }).catch(function (err) {
+                console.log(err);
             });
         })
     });

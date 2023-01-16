@@ -10,7 +10,7 @@
         }
     ],
     "compatibility": {
-        "redcap-version-min": "10.0.0"
+        "redcap-version-min": "12.5.9"
     },
     "permissions": [
         "redcap_data_entry_form",
@@ -41,6 +41,7 @@
         "api"
     ],
     "auth-ajax-actions": [
+        "log",
         "getData",
         "newAdhoc",
         "callDelete",
@@ -49,7 +50,8 @@
         "setCallStarted",
         "setNoCallsToday"
     ],
-    "framework-version": 7,
+    "framework-version": 11,
+    "enable-ajax-logging": true,
     "crons": [
         {
             "cron_name": "call_log_nts_generate",
