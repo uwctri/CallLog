@@ -6,6 +6,9 @@ use REDCap;
 
 trait Utility
 {
+    private $dateMathCutoff = 5; # Date+/- less than N days will avoid weekends/holidays
+    private $holidays = ['12-25', '12-24', '12-31', '07-04', '01-01']; # Fixed holidays
+
     private function includeJs($path)
     {
         echo '<script src="' . $this->getUrl($path) . '"></script>';

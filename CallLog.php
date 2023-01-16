@@ -29,32 +29,32 @@ class CallLog extends AbstractExternalModule
 
     // Hard Coded Config
     private $startedCallGrace = '30'; # mins to assume that a call is ongoing for
-    private $dateMathCutoff = 5; # Date+/- less than N days will avoid weekends/holidays
-    private $holidays = ['12-25', '12-24', '12-31', '07-04', '01-01']; # Fixed holidays
 
     public function redcap_save_record($project_id, $record, $instrument)
     {
+        $metadata = $this->getCallMetadata($project_id, $record);
+
         // Call Log Save
         if ($instrument == $this->instrument) {
             $this->reportDisconnectedPhone($project_id, $record);
-            $this->metadataUpdateCommon($project_id, $record);
+            $this->metadataUpdateCommon($project_id, $record, $metadata);
             return;
         }
 
         // All other saves
-        $metadata = $this->getCallMetadata($project_id, $record);
         $config = $this->loadCallTemplateConfig();
         $triggerForm = $this->getProjectSetting('trigger_save');
+        $result = ["metadata" => $metadata];
         if (empty($triggerForm) || ($instrument == $triggerForm)) {
-            $this->metadataFollowup($project_id, $record, $metadata, $config['followup']);
-            $this->metadataReminder($project_id, $record, $metadata, $config['reminder']);
-            $this->metadataMissedCancelled($project_id, $record, $metadata, $config['mcv']);
-            $this->metadataNeedToSchedule($project_id, $record, $metadata, $config['nts']);
+            $result = $this->metadataFollowup($project_id, $record, $metadata, $config['followup']);
+            $result = $this->metadataReminder($project_id, $record, $result['metadata'], $config['reminder']);
+            $result = $this->metadataMissedCancelled($project_id, $record, $result['metadata'], $config['mcv']);
+            $result = $this->metadataNeedToSchedule($project_id, $record, $result['metadata'], $config['nts']);
         }
+        $result = $this->metadataNewEntry($project_id, $record, $result['metadata'], $config['new']);
+        $result = $this->metadataPhoneVisit($project_id, $record, $result['metadata'], $config['visit']);
+        $this->callStarted($project_id, $record, $result['metadata']);
         $this->updateDisconnectedPhone($project_id, $record);
-        $this->metadataNewEntry($project_id, $record, $metadata, $config['new']);
-        $this->metadataPhoneVisit($project_id, $record, $metadata, $config['visit']);
-        $this->callStarted($project_id, $record, $metadata);
     }
 
     public function redcap_every_page_top($project_id)
@@ -64,6 +64,7 @@ class CallLog extends AbstractExternalModule
         include('templates.php');
         $this->initGlobal();
         $this->includeJs('js/every_page.js');
+        $this->passArgument("debug", $this->loadCallTemplateConfig());
 
         // Record Home Page
         if ($this->isPage('DataEntry/record_home.php') && $_GET['id']) {
@@ -220,9 +221,9 @@ class CallLog extends AbstractExternalModule
                 foreach (explode(',', $payload['record_list']) as $record) {
                     $record = trim($record);
                     $metadata = $this->getCallMetadata($project_id, $record);
-                    $this->metadataReminder($project_id, $record, $metadata, $config['reminder']);
-                    $this->metadataMissedCancelled($project_id, $record, $metadata, $config['mcv']);
-                    $this->metadataNeedToSchedule($project_id, $record, $metadata, $config['nts']);
+                    $result = $this->metadataReminder($project_id, $record, $metadata, $config['reminder']);
+                    $result = $this->metadataMissedCancelled($project_id, $record, $result['metadata'], $config['mcv']);
+                    $result = $this->metadataNeedToSchedule($project_id, $record, $result['metadata'], $config['nts']);
                 }
                 break;
         }
@@ -391,9 +392,7 @@ class CallLog extends AbstractExternalModule
     {
         $sql = "SELECT field_name FROM redcap_data WHERE project_id = ? and record = ? LIMIT 1";
         $result = $this->query($sql, [$project_id, $record]);
-        if (empty($result->fetch_assoc())) {
-            return false;
-        }
+        if (empty($result->fetch_assoc())) return false;
         return REDCap::saveData(
             $project_id,
             'array',
@@ -668,7 +667,7 @@ class CallLog extends AbstractExternalModule
         // Loop over all tabs
         foreach ($settings["tab_name"] as $i => $tab_name) {
 
-            // Grap settings for the tab
+            // Grab settings for the tab
             $tabOrder = $orderMapping[$i];
             $calls = $settings["tab_calls_included"][$i];
             $tab_id = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '_', strtolower($tab_name)));
