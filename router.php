@@ -98,9 +98,9 @@ switch ($route) {
         $config = $module->loadCallTemplateConfig();
         foreach (explode(',', $record) as $rcrd) {
             $metadata = $module->getCallMetadata($project_id, trim($rcrd));
-            $module->metadataReminder($pid, trim($rcrd), $metadata, $config['reminder']);
-            $module->metadataMissedCancelled($pid, trim($rcrd), $metadata, $config['mcv']);
-            $module->metadataNeedToSchedule($pid, trim($rcrd), $metadata, $config['nts']);
+            $result = $module->metadataReminder($pid, trim($rcrd), $metadata, $config['reminder']);
+            $module->metadataMissedCancelled($pid, trim($rcrd), $result['metadata'], $config['mcv']);
+            $module->metadataNeedToSchedule($pid, trim($rcrd), $result['metadata'], $config['nts']);
         }
         $sendDone = True;
         break;
