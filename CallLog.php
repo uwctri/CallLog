@@ -15,6 +15,7 @@ require_once 'traits/Utility.php';
 
 class CallLog extends AbstractExternalModule
 {
+    use BasicCallActions;
     use CallLogic;
     use Utility;
 
