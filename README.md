@@ -28,3 +28,47 @@ Basic setup:
 * Switching between tabs on the call log should clear any entered data and display warning about data lost
 * Currently many configs are copied to the metadata of a call. Could we instead load the config and refrence it via template name to avoid this bloat? That would mean a potiental re-pull of data and recalculation of ranges.
   * Improve metadata report page
+
+## API
+
+Several actions exist for the API, all use the same end point
+
+`POST redcap/api/?type=module&prefix=call_log&page=api&NOAUTH`
+
+Action: newAdhoc - Trigger when a new record is created via outside script to create New Call Logs
+
+|**Body Parameter** |             **Description**             |   **Type**   |  **Required?**  |
+|:-----------------:|:---------------------------------------:|:------------:|:----------------:
+|   token           |   User's API token                      |  string      |    Yes          |
+|   action          |   "newAdhoc"                            |  string      |    Yes          |
+|   id              |   Event IDs or '*' for all              |  string      |    Yes          |
+|   date            |   Date to contact subject (Y-M-D)       |  string      |    No           |
+|   time            |   Time to contact subject (HH:MM)       |  string      |    No           |
+|   reason          |   Text note describing reason for call  |  string      |    No           |
+|   reporter        |   Username of reporter or freetext      |  string      |    No           |
+|   record          |   Record ID                             |  string      |    Yes          |
+
+Action: resolveAdhoc - remove? Swap?
+
+|**Body Parameter** |             **Description**             |   **Type**   |  **Required?**  |
+|:-----------------:|:---------------------------------------:|:------------:|:----------------:
+|   token           |   User's API token                      |  string      |        Always   |
+|   action          |   "resolveAdhoc"                        |  string      |        Always   |
+|   id              |   Event IDs or '*' for all              |  string      |                 |
+|   records         |   Record IDs or '*' for all             |  json array  |    Yes          |
+
+Action: newEntryLoad - Trigger when a new record is created via outside script to create New Call Logs
+
+|**Body Parameter** |             **Description**             |   **Type**   |  **Required?**  |
+|:-----------------:|:---------------------------------------:|:------------:|:----------------:
+|   token           |   User's API token                      |  string      |    Yes          |
+|   action          |   "newEntryLoad"                        |  string      |    Yes          |
+|   records         |   Record IDs to trigger                 |  json array  |    Yes          |
+
+Action: scheduleLoad - Trigger when a record is scheduled to run needed metadata functions
+
+|**Body Parameter** |             **Description**             |   **Type**   |  **Required?**  |
+|:-----------------:|:---------------------------------------:|:------------:|:----------------:
+|   token           |   User's API token                      |  string      |    Yes          |
+|   action          |   "scheduleLoad"                        |  string      |    Yes          |
+|   records         |   Record IDs to trigger                 |  json array  |    Yes          |

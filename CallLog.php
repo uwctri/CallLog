@@ -169,19 +169,25 @@ class CallLog extends AbstractExternalModule
                 break;
         }
 
-        return  array_merge([
-            "text" => "Action '$action' was completed successfully",
+        return array_merge([
+            "action" => $action,
             "success" => $success,
             "data" => $callListData
         ], $result);
     }
 
-    public function api($action, $payload, $project_id)
+    public function api()
     {
-        // TODO newAdhoc has param name changes
-        // TODO adhocResolve  -> resolveAdhoc, param is now "code"
+        // TODO API is currently broken
+        // TODO newAdhoc has param name changes (used a lot)
+        // TODO resolveAdhoc is only used in Reach DET
+        // TODO newEntryLoad used in ----
+        // TODO scheduleLoad used in one calendar script
         // TODO post only params now
+        // POST /redcap/api/?type=module&prefix=call_log&page=api&NOAUTH
 
+        $success = true;
+        $result = [];
         $request = RestUtility::processRequest();
         $payload = $request->getRequestVars();
         $project_id = $payload['projectid'];
@@ -190,12 +196,13 @@ class CallLog extends AbstractExternalModule
         $config = $this->loadCallTemplateConfig();
         switch ($action) {
             case "newAdhoc":
-                # Intended to be posted to by an outside script or DET to make a singe new adhoc call on a record
-                # API url: ExternalModules/?prefix=call_log&page=router&route=newAdhoc&pid=NNN&adhocCode=NNN&record=NNN&type=NNN&fudate=NNN&futime=NNN&reporter=NAME
-                # Identical to adhocLoad but via GET, seperated for possible future changes
-                if (empty($payload['type'])) break;
-                $this->metadataAdhoc($project_id, $payload['record'], $config["adhoc"], [
-                    'id' => $payload['type'],
+                # Identical to native but via API
+                if (empty($payload['id']) || empty($payload['record'])) {
+                    $success = false;
+                    break;
+                }
+                $result = $this->metadataAdhoc($project_id, $payload['record'], $config["adhoc"], [
+                    'id' => $payload['id'],
                     'date' => $payload['date'],
                     'time' => $payload['time'],
                     'reason' => $payload['reason'],
@@ -204,8 +211,11 @@ class CallLog extends AbstractExternalModule
                 break;
             case "resolveAdhoc":
                 # Intended to be posted to by an outside script or DET to resolve an existing adhoc call on a record(s)
-                # API url: /ExternalModules/?prefix=call_log&page=router&route=adhocResolve&pid=NNN&adhocCode=NNN&recordList=NNN
-                if (empty($payload['code'])) break;
+                # adhocCode=NNN&recordList=NNN
+                if (empty($payload['code'])) {
+                    $success = false;
+                    break;
+                }
                 foreach (explode(',', $payload['record_list']) as $record) {
                     $record = trim($record);
                     $metadata = $this->getCallMetadata($project_id, $record);
@@ -214,33 +224,36 @@ class CallLog extends AbstractExternalModule
                 break;
             case "newEntryLoad":
                 # This page is intended to be posted to by an outside script to load New Entry calls for any number of records
-                # API url: /ExternalModules/?prefix=call_log&page=router&route=newEntryLoad&pid=NNN&recordList=NNN
+                # recordList=NNN
                 foreach (explode(',', $payload['record_list']) as $record) {
                     $record = trim($record);
                     $metadata = $this->getCallMetadata($project_id, $record);
                     $changes = $this->metadataNewEntry($project_id, $record, $metadata, $config['new']);
-                    if ($changes) $this->saveCallMetadata($project_id, $record, $metadata);
+                    if ($changes) {
+                        $result[] = $this->saveCallMetadata($project_id, $record, $metadata);
+                    }
                 }
                 break;
             case "scheduleLoad":
                 # This page is intended to be posted to by an outside script after scheduling occurs. 
-                # API url: /ExternalModules/?prefix=call_log&page=router&route=scheduleLoad&pid=NNN&recordList=NNN
+                # recordList=NNN
                 foreach (explode(',', $payload['record_list']) as $record) {
                     $record = trim($record);
                     $metadata = $this->getCallMetadata($project_id, $record);
                     $a = $this->metadataReminder($project_id, $record, $metadata, $config['reminder']);
                     $b = $this->metadataMissedCancelled($project_id, $record, $metadata, $config['mcv']);
                     $c = $this->metadataNeedToSchedule($project_id, $record, $metadata, $config['nts']);
-                    if (in_array(true, [$a, $b, $c])) $this->saveCallMetadata($project_id, $record, $metadata);
+                    if (in_array(true, [$a, $b, $c])) {
+                        $result[] = $this->saveCallMetadata($project_id, $record, $metadata);
+                    }
                 }
                 break;
         }
-
-        // TODO result something more useful
-        return  [
-            "text" => "Action '$action' was completed successfully",
-            "success" => true,
-        ];
+        return json_encode([
+            "action" => $action,
+            "success" => $success,
+            "result" => $result
+        ]);
     }
 
     private function deployInstruments($project_id)
@@ -332,11 +345,12 @@ class CallLog extends AbstractExternalModule
         if (empty($payload['date']))
             $payload['date'] = Date('Y-m-d');
         $reported = Date('Y-m-d H:i:s');
+        $reporter = $this->getUserNameMap($project_id)[$payload['reporter']] ?? $payload['reporter'];
         $metadata[$config['id'] . '||' . $reported] = [
             "start" => $payload['date'],
             "contactOn" => trim($payload['date'] . " " . $payload['time']),
             "reported" => $reported,
-            "reporter" => $this->getUserNameMap($project_id)[$payload['reporter']],
+            "reporter" => $reporter,
             "reason" => $payload['reason'],
             "initNotes" => $payload['notes'],
             "template" => 'adhoc',
@@ -355,7 +369,7 @@ class CallLog extends AbstractExternalModule
     {
         foreach ($metadata as $callID => $callData) {
             if ($callData['complete'] || $callData['reason'] != $code) continue;
-            $callData['complete'] = true; // Don't delete, just comp. Might need info for something
+            $callData['complete'] = true;
             $callData['completedBy'] = "REDCap";
             $this->projectLog("Adhoc call {$callID} marked as complete via API.", $record, null, $project_id);
         }
@@ -745,7 +759,7 @@ class CallLog extends AbstractExternalModule
         $data = [
             "eventNameMap" => $this->getEventNameMap(),
             "prefix" => $this->getPrefix(),
-            "user" => USERID,
+            "user" => $this->getUser()->getUsername(),
             "userNameMap" => $this->getUserNameMap(),
             "static" => [
                 "instrument" => $this->instrument,
@@ -772,14 +786,9 @@ class CallLog extends AbstractExternalModule
         return $config;
     }
 
-    public function loadReportConfig($excludeWithdrawn = true)
+    private function getWithdrawConfig()
     {
-        // Constants for data pull
-        $project_id = $_GET['pid'];
-        $metaEvent = $this->getEventOfInstrument('call_log_metadata');
-        $report_fields = $this->getProjectSetting('report_field')[0];
-        $report_names = $this->getProjectSetting('report_field_name')[0];
-        $withdraw_config = [
+        return [
             'event' => $this->getProjectSetting("withdraw_event"),
             'var' => $this->getProjectSetting("withdraw_var"),
             'tmp' => [
@@ -787,6 +796,16 @@ class CallLog extends AbstractExternalModule
                 'var' => $this->getProjectSetting("withdraw_tmp_var")
             ]
         ];
+    }
+
+    public function loadReportConfig($excludeWithdrawn = true)
+    {
+        // Constants for data pull
+        $project_id = $_GET['pid'];
+        $metaEvent = $this->getEventOfInstrument('call_log_metadata');
+        $report_fields = $this->getProjectSetting('report_field')[0];
+        $report_names = $this->getProjectSetting('report_field_name')[0];
+        $withdraw_config = $this->getWithdrawConfig();
 
         // Prep for getData
         $firstEvent = array_keys(REDCap::getEventNames())[0];
@@ -842,25 +861,12 @@ class CallLog extends AbstractExternalModule
         $startTime = microtime(true);
         $project_id = $_GET['pid'];
 
-        // Event IDs
+        // Event IDs, Configs etc
         $callEvent = $this->getEventOfInstrument('call_log');
         $metaEvent = $this->getEventOfInstrument('call_log_metadata');
-
-        // Withdraw Conditon Config
-        $withdraw = [
-            'event' => $this->getProjectSetting("withdraw_event"),
-            'var' => $this->getProjectSetting("withdraw_var"),
-            'tmp' => [
-                'event' => $this->getProjectSetting("withdraw_tmp_event"),
-                'var' => $this->getProjectSetting("withdraw_tmp_var")
-            ]
-        ];
-
-        // MCV and Scheduled Vists Config for Live Data
+        $withdraw = $this->getWithdrawConfig();
         $autoRemoveConfig = $this->loadAutoRemoveConfig();
         $mcvDayOf = $this->getProjectSetting('show_mcv');
-
-        // Large Configs
         $tabs = $this->loadTabConfig();
         $adhoc = $this->loadAdhocTemplateConfig();
 
@@ -961,7 +967,7 @@ class CallLog extends AbstractExternalModule
                 // Check if the call was recently opened
                 $instanceData['_callStarted'] = strtotime($call['callStarted']) > strtotime('-' . $this->startedCallGrace . ' minutes');
 
-                // Check if No Calls Today flag is set ( todo - remove the '==', we don't use strings here anymore )
+                // Check if No Calls Today flag is set ( TODO - remove the '==', we don't use strings here anymore )
                 if ($today == $call['noCallsToday'] || in_array($today, $call['noCallsToday']))
                     $instanceData['_noCallsToday'] = true;
 
