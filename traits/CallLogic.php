@@ -178,12 +178,11 @@ trait CallLogic
                 if (count($callData["instances"]) == 0) {
                     unset($metadata[$callID]);
                     $changeOccured = true;
-                } else {
-                    // TODO this should refrence metadata
-                    $callData['complete'] = true;
-                    $callData['completedBy'] = "REDCap";
-                    $this->projectLog("Missed/Cancelled call {$callID} marked as complete, call appears to be a duplicate.");
+                    continue;
                 }
+                $metadata[$callID]['complete'] = true;
+                $metadata[$callID]['completedBy'] = "REDCap";
+                $this->projectLog("Missed/Cancelled call {$callID} marked as complete, call appears to be a duplicate.");
             }
         }
         return $changeOccured;
