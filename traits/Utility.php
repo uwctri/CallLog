@@ -99,8 +99,9 @@ trait Utility
     // Get the first (or only) event that an instrument is on
     private function getEventOfInstrument($instrument)
     {
+        global $Proj;
         $events = [];
-        $validEvents = array_keys(REDCap::getEventNames());
+        $validEvents = array_keys($Proj->eventInfo);
         $sql = "SELECT event_id FROM redcap_events_forms WHERE form_name = ?";
         $result = $this->query($sql, [$instrument]);
         while ($row = $result->fetch_assoc()) {

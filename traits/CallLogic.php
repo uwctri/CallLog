@@ -196,8 +196,8 @@ trait CallLogic
         $orderedEvents = array_combine(array_map(function ($x) {
             return $x['day_offset'];
         }, $Proj->eventInfo), array_keys($Proj->eventInfo));
-        $callLogEvent = $this->getEventOfInstrument('call_log');
-        $metadataEvent = $this->getEventOfInstrument('call_log_metadata');
+        $callLogEvent = $this->getEventOfInstrument($this->instrument);
+        $metadataEvent = $this->getEventOfInstrument($this->instrumentMeta);
         foreach ($config as $i => $callConfig) {
             $data = REDCap::getData($project_id, 'array', $record, [$callConfig['apptDate'], $callConfig['indicator'], $callConfig['skip']])[$record];
             $prevEvent = $orderedEvents[array_search($callConfig['event'], $orderedEvents) - 1];
