@@ -69,7 +69,7 @@ class CallLog extends AbstractExternalModule
         if (!defined("USERID")) return;
 
         include('templates.php');
-        $this->initGlobal();
+        $this->initGlobal($project_id);
         $this->includeJs('js/every_page.js');
         $this->passArgument("debug", $this->loadCallTemplateConfig());
 
@@ -178,12 +178,6 @@ class CallLog extends AbstractExternalModule
 
     public function api()
     {
-        // TODO API is currently broken
-        // TODO newAdhoc has param name changes (used a lot)
-        // TODO resolveAdhoc is only used in Reach DET
-        // TODO newEntryLoad used in ----
-        // TODO scheduleLoad used in one calendar script
-        // TODO post only params now
         // POST /redcap/api/?type=module&prefix=call_log&page=api&NOAUTH
 
         $success = true;
@@ -192,41 +186,48 @@ class CallLog extends AbstractExternalModule
         $payload = $request->getRequestVars();
         $project_id = $payload['projectid'];
         $action = $payload['action'];
+        $records = json_decode($payload['record_list'] ?? '');
+        $records = $records ?? [$payload['record']];
+
+        global $Proj;
+        $Proj = new Project($project_id);
 
         $config = $this->loadCallTemplateConfig();
         switch ($action) {
             case "newAdhoc":
                 # Identical to native but via API
-                if (empty($payload['id']) || empty($payload['record'])) {
+                # Paylod: (req) type, record, (opt) date, time, reason, reporter. All Strings
+                if (empty($payload['type'])) {
                     $success = false;
                     break;
                 }
-                $result = $this->metadataAdhoc($project_id, $payload['record'], $config["adhoc"], [
-                    'id' => $payload['id'],
-                    'date' => $payload['date'],
-                    'time' => $payload['time'],
-                    'reason' => $payload['reason'],
-                    'reporter' => $payload['reporter']
-                ]);
+                foreach ($records as $record) {
+                    $result[] = $this->metadataAdhoc($project_id, $record, $config["adhoc"], [
+                        'id' => $payload['type'],
+                        'date' => $payload['date'],
+                        'time' => $payload['time'],
+                        'reason' => $payload['reason'],
+                        'reporter' => $payload['reporter']
+                    ]);
+                }
                 break;
             case "resolveAdhoc":
                 # Intended to be posted to by an outside script or DET to resolve an existing adhoc call on a record(s)
-                # adhocCode=NNN&recordList=NNN
+                # Paylod: code - String, record_list - Json Array
                 if (empty($payload['code'])) {
                     $success = false;
                     break;
                 }
-                foreach (explode(',', $payload['record_list']) as $record) {
+                foreach ($records as $record) {
                     $record = trim($record);
                     $metadata = $this->getCallMetadata($project_id, $record);
                     $this->resolveAdhoc($project_id, $record, $payload['code'], $metadata);
                 }
                 break;
-            case "newEntryLoad":
+            case "newEntry":
                 # This page is intended to be posted to by an outside script to load New Entry calls for any number of records
-                # recordList=NNN
-                foreach (explode(',', $payload['record_list']) as $record) {
-                    $record = trim($record);
+                # Paylod: record_list - Json Array
+                foreach ($records as $record) {
                     $metadata = $this->getCallMetadata($project_id, $record);
                     $changes = $this->metadataNewEntry($project_id, $record, $metadata, $config['new']);
                     if ($changes) {
@@ -234,10 +235,10 @@ class CallLog extends AbstractExternalModule
                     }
                 }
                 break;
-            case "scheduleLoad":
+            case "schedule":
                 # This page is intended to be posted to by an outside script after scheduling occurs. 
-                # recordList=NNN
-                foreach (explode(',', $payload['record_list']) as $record) {
+                # Paylod: record_list - Json Array
+                foreach ($records as $record) {
                     $record = trim($record);
                     $metadata = $this->getCallMetadata($project_id, $record);
                     $a = $this->metadataReminder($project_id, $record, $metadata, $config['reminder']);
@@ -378,7 +379,7 @@ class CallLog extends AbstractExternalModule
 
     public function deleteLastCallInstance($project_id, $record, $metadata)
     {
-        $event = $this->getEventOfInstrument('call_log');
+        $event = $this->getEventOfInstrument($this->instrument);
         $data = REDCap::getData($project_id, 'array', $record, null, $event);
         $instance = end(array_keys($data[$record]['repeat_instances'][$event][$this->instrument]));
         $instance = $instance ? $instance : '1';
@@ -398,7 +399,7 @@ class CallLog extends AbstractExternalModule
 
     public function getAllCallData($project_id, $record)
     {
-        $event = $this->getEventOfInstrument('call_log');
+        $event = $this->getEventOfInstrument($this->instrument);
         $data = REDCap::getData($project_id, 'array', $record, null, $event);
         $callData = $data[$record]['repeat_instances'][$event][$this->instrument];
         return empty($callData) ? [1 => $data[$record][$event]] : $callData;
@@ -406,7 +407,7 @@ class CallLog extends AbstractExternalModule
 
     public function getCallMetadata($project_id, $record)
     {
-        $metadata = REDCap::getData($project_id, 'array', $record, $this->metadataField)[$record][$this->getEventOfInstrument('call_log_metadata')][$this->metadataField];
+        $metadata = REDCap::getData($project_id, 'array', $record, $this->metadataField)[$record][$this->getEventOfInstrument($this->instrumentMeta)][$this->metadataField];
         return empty($metadata) ? [] : json_decode($metadata, true);
     }
 
@@ -420,7 +421,7 @@ class CallLog extends AbstractExternalModule
             'array',
             [
                 $record => [
-                    $this->getEventOfInstrument('call_log_metadata') => [
+                    $this->getEventOfInstrument($this->instrumentMeta) => [
                         $this->metadataField => json_encode($data)
                     ]
                 ]
@@ -751,11 +752,11 @@ class CallLog extends AbstractExternalModule
         ];
     }
 
-    private function initGlobal()
+    private function initGlobal($project_id)
     {
         $this->initializeJavascriptModuleObject();
-        $call_event = $this->getEventOfInstrument('call_log');
-        $meta_event = $this->getEventOfInstrument('call_log_metadata');
+        $call_event = $this->getEventOfInstrument($this->instrument);
+        $meta_event = $this->getEventOfInstrument($this->instrumentMeta);
         $data = [
             "eventNameMap" => $this->getEventNameMap(),
             "prefix" => $this->getPrefix(),
@@ -801,8 +802,8 @@ class CallLog extends AbstractExternalModule
     public function loadReportConfig($excludeWithdrawn = true)
     {
         // Constants for data pull
-        $project_id = $_GET['pid'];
-        $metaEvent = $this->getEventOfInstrument('call_log_metadata');
+        $project_id = $_GET['pid']; // TODO we shouldn't pull this
+        $metaEvent = $this->getEventOfInstrument($this->instrumentMeta);
         $report_fields = $this->getProjectSetting('report_field')[0];
         $report_names = $this->getProjectSetting('report_field_name')[0];
         $withdraw_config = $this->getWithdrawConfig();
@@ -862,8 +863,8 @@ class CallLog extends AbstractExternalModule
         $project_id = $_GET['pid'];
 
         // Event IDs, Configs etc
-        $callEvent = $this->getEventOfInstrument('call_log');
-        $metaEvent = $this->getEventOfInstrument('call_log_metadata');
+        $callEvent = $this->getEventOfInstrument($this->instrument);
+        $metaEvent = $this->getEventOfInstrument($this->instrumentMeta);
         $withdraw = $this->getWithdrawConfig();
         $autoRemoveConfig = $this->loadAutoRemoveConfig();
         $mcvDayOf = $this->getProjectSetting('show_mcv');
