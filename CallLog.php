@@ -22,6 +22,7 @@ class CallLog extends AbstractExternalModule
     use Configuration;
 
     private $module_global = 'CallLog';
+    public $tabsConfig;
 
     // Hard Coded Data Dictionary Values
     private $instrument = "call_log";
@@ -72,15 +73,33 @@ class CallLog extends AbstractExternalModule
         include('templates.php');
         $this->initGlobal();
         $this->includeJs('js/every_page.js');
-        $this->passArgument("debug", $this->getCallTemplateConfig());
+
+        // EM Pages
+        if ($this->isPage('ExternalModules/') && $_GET['prefix'] == 'call_log') {
+
+            // Metadata Reports 
+            if (isset($_GET['metaReport'])) {
+                $this->includeCss('css/reports.css');
+                $this->includeJs('js/reports.js', 'defer');
+                $this->passArgument('reportConfig', $this->getReportConfig());
+                return;
+            }
+
+            // Call List
+            $this->includeCss('css/list.css');
+            $this->includeJs('js/call_list.js');
+            $this->tabsConfig = $this->getTabConfig();
+            $this->passArgument('tabs', $this->tabsConfig);
+            $this->passArgument('usernameLists', $this->getUserNameListConfig());
+        }
 
         // Record Home Page
-        if ($this->isPage('DataEntry/record_home.php') && $_GET['id']) {
+        else if ($this->isPage('DataEntry/record_home.php') && $_GET['id']) {
             $this->includeJs('js/record_home_page.js');
         }
 
         // Custom Config page
-        if ($this->isPage('ExternalModules/manager/project.php') && $project_id) {
+        else if ($this->isPage('ExternalModules/manager/project.php') && $project_id) {
             $this->includeCss('css/config.css');
             $this->includeJs('js/config.js');
         }
@@ -126,7 +145,7 @@ class CallLog extends AbstractExternalModule
                 break;
             case "getData":
                 # Load for the Call List
-                $callListData = $this->getCallListData();
+                $callListData = $this->getCallListData($project_id);
                 break;
             case "deployInstruments":
                 $success = $this->deployInstruments($project_id);
@@ -468,11 +487,8 @@ class CallLog extends AbstractExternalModule
         echo "<script>" . $this->module_global . ".em = " . $this->getJavascriptModuleObjectName() . ";</script>";
     }
 
-    public function getCallListData($skipDataPack = false)
+    private function getCallListData($project_id)
     {
-        $startTime = microtime(true);
-        $project_id = $_GET['pid'];
-
         // Event IDs, Configs etc
         $callEvent = $this->getEventOfInstrument($this->instrument);
         $metaEvent = $this->getEventOfInstrument($this->instrumentMeta);
@@ -501,7 +517,7 @@ class CallLog extends AbstractExternalModule
 
         // Main Loop
         $user_id = USERID ?? null;
-        $records = $skipDataPack || empty($user_id) ? '-1' : null;
+        $records = empty($user_id) ? '-1' : null;
         $events = null;
         $group = REDCap::getUserRights($user_id)[$user_id]['group_id'];
         $dataLoad = REDCap::getData($project_id, 'array', $records, $fields, $events, $group);
@@ -645,6 +661,9 @@ class CallLog extends AbstractExternalModule
                 $packagedCallData[$tabs['call2tabMap'][$callID]][] = $instanceData;
             }
         }
-        return [$packagedCallData, $tabs, $alwaysShowCallbackCol, round(((microtime(true) - $startTime)), 5)];
+        return [
+            "data" => $packagedCallData,
+            "showCallback" => $alwaysShowCallbackCol
+        ];
     }
 }

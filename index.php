@@ -3,11 +3,6 @@
 // Metadata Report Page
 if (isset($_GET['metaReport'])) {
 ?>
-    <link rel="stylesheet" href="<?= $module->getURL('css/reports.css'); ?>">
-    <script>
-        <?= $module->getJavascriptModuleObjectName(); ?>.config = <?= json_encode($module->getReportConfig()); ?>;
-    </script>
-
     <div class="projhdr"><i class="fas fa-receipt"></i> Call Metadata Reports</div>
     <div class="container float-left" style="max-width:800px">
         <div class="row p-2">
@@ -19,26 +14,13 @@ if (isset($_GET['metaReport'])) {
             </div>
         </div>
     </div>
-    <script src="<?= $module->getURL('js/reports.js'); ?>"></script>
 <?php
     return;
 }
 // *************************
 // Full Call List Page
 ?>
-<link rel="stylesheet" href="<?= $module->getURL('css/list.css'); ?>">
-<script src="<?= $module->getURL('js/call_list.js'); ?>"></script>
 <script>
-    CallLog.usernameLists = <?= json_encode($module->getUserNameListConfig()); ?>;
-</script>
-<?php
-$startTime = microtime(true);
-
-// Load our init tab config, no actual data here
-list($noData, $tabs, $noData, $timeTaken) = $module->getCallListData(true);
-?>
-<script>
-    CallLog.tabs = <?= json_encode($tabs); ?>;
     $(document).ready(function() {
         if (CallLog.configError) {
             Swal.fire({
@@ -95,17 +77,15 @@ list($noData, $tabs, $noData, $timeTaken) = $module->getCallListData(true);
         CallLog.fn.toggleCallBackCol();
         CallLog.fn.refreshTableData();
         $(".dataTables_empty").text('Loading...')
-
-        console.log("Page first loaded in " + <?= json_encode(round(((microtime(true) - $startTime)), 5)) ?> + " seconds");
     });
 </script>
 
 <div class="projhdr"><i class="fas fa-phone"></i> Call List</div>
 <div class="card" style="display:none">
-    <?php if (count($tabs['config']) > 1) { ?>
+    <?php if (count($module->tabsConfig['config']) > 1) { ?>
         <div class="card-header tab-header">
             <ul class="nav nav-tabs card-header-tabs">
-                <?php foreach ($tabs['config'] as $tab) { ?>
+                <?php foreach ($module->tabsConfig['config'] as $tab) { ?>
                     <li class="nav-item call-tab">
                         <a class="nav-link call-link" data-toggle="tab" data-tabid="<?php echo $tab['tab_id'] ?>" href="#<?php echo $tab['tab_id'] ?>"><?php echo $tab['tab_name'] ?></a>
                     </li>
@@ -114,7 +94,7 @@ list($noData, $tabs, $noData, $timeTaken) = $module->getCallListData(true);
         </div>
         <div class="tab-content">
         <?php } ?>
-        <?php foreach ($tabs['config'] as $tab_index => $tab) { ?>
+        <?php foreach ($module->tabsConfig['config'] as $tab_index => $tab) { ?>
             <div id="<?php echo $tab["tab_id"] ?>" class="tab-pane">
                 <div class="card-header">
                     <div class="row header-row">
@@ -143,7 +123,7 @@ list($noData, $tabs, $noData, $timeTaken) = $module->getCallListData(true);
                 </div>
             </div>
         <?php } ?>
-        <?php if (count($tabs['config']) > 1) { ?>
+        <?php if (count($module->tabsConfig['config']) > 1) { ?>
         </div>
     <?php } ?>
 </div>
