@@ -409,7 +409,9 @@ CallLog.fn.refreshTableData = function () {
         // Enable Tooltips for the call-back column
         $('*[data-toggle="tooltip"]').tooltip();
 
+        // Report and setup the next refresh
         console.timeEnd('getData');
+        setTimeout(CallLog.fn.refreshTableData, CallLog.pageRefresh);
     }).catch(function (err) {
         console.log(err);
     });
@@ -442,3 +444,58 @@ CallLog.fn.updateBadges = function (tab_id) {
     if (badge > 0)
         $(`.call-link[data-tabid=${tab_id}]`).append(`<span class="badge badge-secondary">${badge}</span>`);
 }
+
+$(document).ready(function () {
+    if (CallLog.configError) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Call Log config Issue',
+            text: 'The Call Log External Module requries the Call Long, and Call Metadata instruments to exist on one event and the former to be enable as a repeatable instrument. Please invesitage and resovle.',
+        });
+        return;
+    }
+
+    // Setup search, must happen before table init
+    CallLog.fn.setupSearch();
+
+    // Main table build out
+    $('.callTable').each(function (index, el) {
+
+        let tab_id = $(el).closest('.tab-pane').prop('id');
+        CallLog.childRows[tab_id] = "";
+        CallLog.colConfig[tab_id] = CallLog.fn.createColConfig(index, tab_id);
+
+        // Init the table
+        $(el).DataTable({
+            lengthMenu: [
+                [25, 50, 100, -1],
+                [25, 50, 100, "All"]
+            ],
+            language: {
+                emptyTable: "No calls to display"
+            },
+            columns: CallLog.colConfig[tab_id],
+            createdRow: (row, data, index) => $(row).addClass('dataTablesRow'),
+            sDom: 'ltpi'
+        });
+
+    });
+
+    // Insert search box, must happen after table init
+    $('.dataTables_length').after(
+        "<div class='dataTables_filter customSearch'><label>Search:<input type='search'></label></div>");
+
+    // Exactly what it looks like
+    CallLog.fn.setupLocalSettings();
+
+    // Everything is built out, show the body now
+    $(".card").fadeIn();
+
+    // Enable click to expand for all rows
+    CallLog.fn.setupClickToExpand();
+
+    // Load the initial data
+    CallLog.fn.toggleCallBackCol();
+    CallLog.fn.refreshTableData();
+    $(".dataTables_empty").text('Loading...')
+});

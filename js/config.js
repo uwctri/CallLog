@@ -1,6 +1,6 @@
-$(document).ready(function () {
+(() => {
     console.log("Loaded Call Log config");
-    CallLog.configInit = false;
+    let configInit = false;
 
     // Setup template buttons to show correct settings
     $("body").on('click', ".callConfig input[name^=call_template____]", function () {
@@ -44,9 +44,9 @@ $(document).ready(function () {
             $modal.find(".sub_start").each((_, x) => $(x).find('td').last().attr('colspan', '2'));
 
             // Below operations run only once
-            if (CallLog.configInit) return;
+            if (configInit) return;
 
-            CallLog.configInit = true;
+            configInit = true;
             $modal.find("input[name^=call_template____]:checked").click();
             $modal.find("input[name^=tab_link____]:checked").click();
 
@@ -99,9 +99,9 @@ $(document).ready(function () {
         if ($(this).data('module') !== CallLog.prefix) return;
 
         $(this).removeClass('callConfig');
-        CallLog.configInit = false;
+        configInit = false;
 
         if (typeof ExternalModules.Settings.prototype.resetConfigInstancesOld !== 'undefined')
             ExternalModules.Settings.prototype.resetConfigInstances = ExternalModules.Settings.prototype.resetConfigInstancesOld;
     });
-});
+})();

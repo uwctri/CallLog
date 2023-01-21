@@ -1,5 +1,5 @@
 
-$(document).ready(() => {
+(() => {
 
     let callLogLink = "";
     const callIcon = `<a class="CallLogLink"><i class="fa fa-phone"></i></a>`;
@@ -33,5 +33,5 @@ $(document).ready(() => {
         $(el).hide();
     });
 
-});
+})();
 

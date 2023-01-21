@@ -87,7 +87,7 @@ class CallLog extends AbstractExternalModule
 
             // Call List
             $this->includeCss('css/list.css');
-            $this->includeJs('js/call_list.js');
+            $this->includeJs('js/call_list.js', 'defer');
             $this->tabsConfig = $this->getTabConfig();
             $this->passArgument('tabs', $this->tabsConfig);
             $this->passArgument('usernameLists', $this->getUserNameListConfig());
@@ -95,13 +95,13 @@ class CallLog extends AbstractExternalModule
 
         // Record Home Page
         else if ($this->isPage('DataEntry/record_home.php') && $_GET['id']) {
-            $this->includeJs('js/record_home_page.js');
+            $this->includeJs('js/record_home_page.js', 'defer');
         }
 
         // Custom Config page
         else if ($this->isPage('ExternalModules/manager/project.php') && $project_id) {
             $this->includeCss('css/config.css');
-            $this->includeJs('js/config.js');
+            $this->includeJs('js/config.js', 'defer');
         }
     }
 

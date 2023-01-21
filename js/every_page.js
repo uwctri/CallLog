@@ -3,14 +3,6 @@ CallLog.defaultDateTimeFormat = 'MM-dd-y hh:mma';
 CallLog.fn = CallLog.fn || {};
 CallLog.css = CallLog.css || {};
 
-function to24hr(t) {
-    let isPM = t.includes('P');
-    t = t.toLowerCase().replaceAll(/[amp ]/g, '');
-    if (!isPM) return t;
-    let [h, m] = t.split(':');
-    return h == 12 ? t : `${parseInt(h) + 12}:${m}`;
-}
-
 Date.prototype.addDays = function (days) {
     return new Date(this.setDate(this.getDate() + days));
 }
@@ -27,6 +19,14 @@ Object.filterKeys = (obj, allowedKeys) =>
             res[key] = obj[key];
             return res;
         }, {});
+
+CallLog.fn.to24hr = function (t) {
+    let isPM = t.includes('P');
+    t = t.toLowerCase().replaceAll(/[amp ]/g, '');
+    if (!isPM) return t;
+    let [h, m] = t.split(':');
+    return h == 12 ? t : `${parseInt(h) + 12}:${m}`;
+}
 
 CallLog.fn.isCallLogNext = function () {
     return $(".form_menu_selected").parent().nextAll().filter(function () {
