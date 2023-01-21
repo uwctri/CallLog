@@ -5,7 +5,7 @@ if (isset($_GET['metaReport'])) {
 ?>
     <link rel="stylesheet" href="<?= $module->getURL('css/reports.css'); ?>">
     <script>
-        <?= $module->getJavascriptModuleObjectName(); ?>.config = <?= json_encode($module->loadReportConfig()); ?>;
+        <?= $module->getJavascriptModuleObjectName(); ?>.config = <?= json_encode($module->getReportConfig()); ?>;
     </script>
 
     <div class="projhdr"><i class="fas fa-receipt"></i> Call Metadata Reports</div>
@@ -20,7 +20,6 @@ if (isset($_GET['metaReport'])) {
         </div>
     </div>
     <script src="<?= $module->getURL('js/reports.js'); ?>"></script>
-
 <?php
     return;
 }
@@ -36,7 +35,7 @@ if (isset($_GET['metaReport'])) {
 $startTime = microtime(true);
 
 // Load our init tab config, no actual data here
-list($noData, $tabs, $noData, $timeTaken) = $module->loadCallListData(true);
+list($noData, $tabs, $noData, $timeTaken) = $module->getCallListData(true);
 ?>
 <script>
     CallLog.tabs = <?= json_encode($tabs); ?>;

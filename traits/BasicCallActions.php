@@ -8,7 +8,7 @@ trait BasicCallActions
 {
     public function reportDisconnectedPhone($project_id, $record)
     {
-        $config = $this->loadBadPhoneConfig();
+        $config = $this->getBadPhoneConfig();
         if ($config['_missing']) return;
         $event = $config['event'];
         $oldNotes = REDCap::getData($project_id, 'array', $record, $config['notes'], $event)[$record][$event][$config['notes']];
@@ -21,7 +21,7 @@ trait BasicCallActions
 
     public function updateDisconnectedPhone($project_id, $record)
     {
-        $config = $this->loadBadPhoneConfig();
+        $config = $this->getBadPhoneConfig();
         if ($config['_missing']) return;
         $event = $config['event'];
         $isResolved = REDCap::getData(
