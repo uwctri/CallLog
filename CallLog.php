@@ -5,7 +5,6 @@ namespace UWMadison\CallLog;
 use ExternalModules\AbstractExternalModule;
 use REDCap;
 use Project;
-use Piping;
 use Design;
 use Metadata;
 use RestUtility;
@@ -13,12 +12,14 @@ use RestUtility;
 require_once 'traits/BasicCallActions.php';
 require_once 'traits/CallLogic.php';
 require_once 'traits/Utility.php';
+require_once 'traits/Configuration.php';
 
 class CallLog extends AbstractExternalModule
 {
     use BasicCallActions;
     use CallLogic;
     use Utility;
+    use Configuration;
 
     private $module_global = 'CallLog';
 
@@ -43,7 +44,7 @@ class CallLog extends AbstractExternalModule
         }
 
         // Call Metadata updates
-        $config = $this->loadCallTemplateConfig();
+        $config = $this->getCallTemplateConfig();
         $triggerForm = $this->getProjectSetting('trigger_save');
         $changes = [];
         if (empty($triggerForm) || ($instrument == $triggerForm)) {
@@ -69,9 +70,9 @@ class CallLog extends AbstractExternalModule
         if (!defined("USERID")) return;
 
         include('templates.php');
-        $this->initGlobal($project_id);
+        $this->initGlobal();
         $this->includeJs('js/every_page.js');
-        $this->passArgument("debug", $this->loadCallTemplateConfig());
+        $this->passArgument("debug", $this->getCallTemplateConfig());
 
         // Record Home Page
         if ($this->isPage('DataEntry/record_home.php') && $_GET['id']) {
@@ -92,7 +93,7 @@ class CallLog extends AbstractExternalModule
 
         // Call Log only info
         if ($instrument == $this->instrument) {
-            $this->passArgument('adhoc', $this->loadAdhocTemplateConfig());
+            $this->passArgument('adhoc', $this->getAdhocTemplateConfig());
             $this->includeJs('js/call_log.js');
         }
 
@@ -117,7 +118,7 @@ class CallLog extends AbstractExternalModule
         $result = [];
         $record = $record ?? $payload['record'];
         $metadata = $this->getCallMetadata($project_id, $record);
-        $config = $this->loadCallTemplateConfig();
+        $config = $this->getCallTemplateConfig();
 
         switch ($action) {
             case "log":
@@ -125,7 +126,7 @@ class CallLog extends AbstractExternalModule
                 break;
             case "getData":
                 # Load for the Call List
-                $callListData = $this->loadCallListData();
+                $callListData = $this->getCallListData();
                 break;
             case "deployInstruments":
                 $success = $this->deployInstruments($project_id);
@@ -192,7 +193,7 @@ class CallLog extends AbstractExternalModule
         global $Proj;
         $Proj = new Project($project_id);
 
-        $config = $this->loadCallTemplateConfig();
+        $config = $this->getCallTemplateConfig();
         switch ($action) {
             case "newAdhoc":
                 # Identical to native but via API
@@ -257,33 +258,7 @@ class CallLog extends AbstractExternalModule
         ]);
     }
 
-    private function deployInstruments($project_id)
-    {
-        // Check if deployed
-        $instruments = array_keys(REDCap::getInstrumentNames(null, $project_id));
-        if (in_array($this->instrument, $instruments)) return false;
-        if (in_array($this->instrumentMeta, $instruments)) return false;
-
-        // Prep to correct the dd
-        global $Proj;
-        $Proj = new Project($project_id);
-        $dd = Design::excel_to_array($this->getUrl("call.csv"), ",");
-        db_query("SET AUTOCOMMIT=0");
-        db_query("BEGIN");
-
-        //Create a data dictionary snapshot of the *current* metadata and store the file in the edocs table
-        // This is why we need to define a Project above
-        MetaData::createDataDictionarySnapshot();
-
-        // Update the dd
-        $sql_errors = MetaData::save_metadata($dd, true, false, $project_id);
-        $errors = count($sql_errors) > 0;
-        db_query($errors ? "ROLLBACK" : "COMMIT");
-        db_query("SET AUTOCOMMIT=1");
-        return !$errors;
-    }
-
-    function cronNeedToSchedule($cronInfo)
+    public function cronNeedToSchedule($cronInfo)
     {
         global $Proj;
         $today = Date('Y-m-d');
@@ -294,7 +269,7 @@ class CallLog extends AbstractExternalModule
             $Proj = new Project($project_id);
             $project_record_id = $this->getRecordIdField($project_id);
 
-            $config = $this->loadCallTemplateConfig()["nts"];
+            $config = $this->getCallTemplateConfig()["nts"];
             if (empty($config)) continue;
             foreach ($config as $callConfig) {
 
@@ -336,7 +311,33 @@ class CallLog extends AbstractExternalModule
         return "The \"{$cronInfo['cron_description']}\" cron job completed successfully.";
     }
 
-    public function metadataAdhoc($project_id, $record, $config, $payload)
+    private function deployInstruments($project_id)
+    {
+        // Check if deployed
+        $instruments = array_keys(REDCap::getInstrumentNames(null, $project_id));
+        if (in_array($this->instrument, $instruments)) return false;
+        if (in_array($this->instrumentMeta, $instruments)) return false;
+
+        // Prep to correct the dd
+        global $Proj;
+        $Proj = new Project($project_id);
+        $dd = Design::excel_to_array($this->getUrl("call.csv"), ",");
+        db_query("SET AUTOCOMMIT=0");
+        db_query("BEGIN");
+
+        //Create a data dictionary snapshot of the *current* metadata and store the file in the edocs table
+        // This is why we need to define a Project above
+        MetaData::createDataDictionarySnapshot();
+
+        // Update the dd
+        $sql_errors = MetaData::save_metadata($dd, true, false, $project_id);
+        $errors = count($sql_errors) > 0;
+        db_query($errors ? "ROLLBACK" : "COMMIT");
+        db_query("SET AUTOCOMMIT=1");
+        return !$errors;
+    }
+
+    private function metadataAdhoc($project_id, $record, $config, $payload)
     {
         $config = array_filter($config, function ($x) use ($payload) {
             return $x['id'] == $payload['id'];
@@ -366,7 +367,7 @@ class CallLog extends AbstractExternalModule
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
-    public function resolveAdhoc($project_id, $record, $code, $metadata)
+    private function resolveAdhoc($project_id, $record, $code, $metadata)
     {
         foreach ($metadata as $callID => $callData) {
             if ($callData['complete'] || $callData['reason'] != $code) continue;
@@ -377,7 +378,7 @@ class CallLog extends AbstractExternalModule
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
-    public function deleteLastCallInstance($project_id, $record, $metadata)
+    private function deleteLastCallInstance($project_id, $record, $metadata)
     {
         $event = $this->getEventOfInstrument($this->instrument);
         $data = REDCap::getData($project_id, 'array', $record, null, $event);
@@ -397,7 +398,7 @@ class CallLog extends AbstractExternalModule
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
-    public function getAllCallData($project_id, $record)
+    private function getAllCallData($project_id, $record)
     {
         $event = $this->getEventOfInstrument($this->instrument);
         $data = REDCap::getData($project_id, 'array', $record, null, $event);
@@ -405,13 +406,13 @@ class CallLog extends AbstractExternalModule
         return empty($callData) ? [1 => $data[$record][$event]] : $callData;
     }
 
-    public function getCallMetadata($project_id, $record)
+    private function getCallMetadata($project_id, $record)
     {
         $metadata = REDCap::getData($project_id, 'array', $record, $this->metadataField)[$record][$this->getEventOfInstrument($this->instrumentMeta)][$this->metadataField];
         return empty($metadata) ? [] : json_decode($metadata, true);
     }
 
-    public function saveCallMetadata($project_id, $record, $data)
+    private function saveCallMetadata($project_id, $record, $data)
     {
         $sql = "SELECT field_name FROM redcap_data WHERE project_id = ? and record = ? LIMIT 1";
         $result = $this->query($sql, [$project_id, $record]);
@@ -429,7 +430,7 @@ class CallLog extends AbstractExternalModule
         );
     }
 
-    public function recentCallStarted($project_id, $record)
+    private function recentCallStarted($project_id, $record)
     {
         $meta = $this->getCallMetadata($project_id, $record);
         if (empty($meta)) return '';
@@ -446,313 +447,7 @@ class CallLog extends AbstractExternalModule
         return '';
     }
 
-    public function loadBadPhoneConfig()
-    {
-        $settings = $this->getProjectSettings();
-        $config = [
-            $settings['bad_phone_event'][0], $settings['bad_phone_flag'][0],
-            $settings['bad_phone_notes'][0], $settings['bad_phone_resolved'][0]
-        ];
-        $missing = count(array_filter($config)) != count($config);
-        return [
-            'event' => $config[0],
-            'flag' => $config[1],
-            'notes' => $config[2],
-            'resolved' => $config[3],
-            '_missing' => $missing
-        ];
-    }
-
-    public function loadAdhocTemplateConfig()
-    {
-        $settings = $this->getProjectSettings();
-        foreach ($settings["call_template"] as $i => $template) {
-            if ($template != "adhoc") continue;
-            $reasons = $settings["adhoc_reason"][$i][0];
-            if (empty($reasons)) continue;
-            $config[$settings["call_id"][$i]] = [
-                "id" => $settings["call_id"][$i],
-                "name" => $settings["call_name"][$i],
-                "reasons" => $this->explodeCodedValueText($reasons)
-            ];
-        }
-        return $config;
-    }
-
-    public function loadCallTemplateConfig()
-    {
-        $eventNameMap = $this->getEventNameMap();
-        $newEntryConfig = [];
-        $reminderConfig = [];
-        $followupConfig = [];
-        $mcvConfig = [];
-        $ntsConfig = [];
-        $adhocConfig = [];
-        $visitConfig = [];
-        $settings = $this->getProjectSettings();
-        foreach ($settings["call_template"] as $i => $template) {
-            $hide = $settings["hide_after_attempts"][$i];
-            $commonConfig = [
-                "id" => $settings["call_id"][$i],
-                "name" => $settings["call_name"][$i],
-                "hideAfterAttempt" => $hide ? (int)$hide : 9999
-            ];
-
-            // Load New Entry Config
-            if ($template == "new") {
-                $days = intval($settings["new_expire_days"][$i][0]);
-                $arr = array_merge([
-                    "expire" => $days
-                ], $commonConfig);
-                $newEntryConfig[] = $arr;
-            }
-
-            // Load Reminder Config
-            elseif ($template == "reminder") {
-                $field = $settings["reminder_variable"][$i][0];
-                if (empty($field)) continue;
-                $includeEvents = array_map('trim', explode(',', $settings["reminder_include_events"][$i][0]));
-                foreach ($includeEvents as $eventName) {
-                    $arr = array_merge([
-                        "event" => REDCap::getEventIdFromUniqueEvent($eventName),
-                        "field" => $field,
-                        "days" => (int)$settings["reminder_days"][$i][0],
-                        "removeEvent" => $settings["reminder_remove_event"][$i][0],
-                        "removeVar" => $settings["reminder_remove_var"][$i][0]
-                    ], $commonConfig);
-                    $arr['id'] = $arr['id'] . '|' . $eventName;
-                    $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
-                    $reminderConfig[] = $arr;
-                }
-            }
-
-            // Load Follow up Config
-            elseif ($template == "followup") {
-                $event = $settings["followup_event"][$i][0];
-                $field = $settings["followup_date"][$i][0];
-                $days = (int)$settings["followup_days"][$i][0];
-                $length = (int)$settings["followup_length"][$i][0];
-                $end = $settings["followup_end"][$i][0];
-                if (!empty($field) && !empty($event) && !empty($days)) {
-                    $followupConfig[] = array_merge([
-                        "event" => $event,
-                        "field" => $field,
-                        "days" => $days,
-                        "length" => $length,
-                        "end" => $end
-                    ], $commonConfig);
-                } elseif (!empty($field) && (!empty($days) || $days == "0")) {
-                    $includeEvents = array_map('trim', explode(',', $settings["followup_include_events"][$i][0]));
-                    foreach ($includeEvents as $eventName) {
-                        $arr = array_merge([
-                            "event" => REDCap::getEventIdFromUniqueEvent($eventName),
-                            "field" => $field,
-                            "days" => $days,
-                            "length" => $length,
-                            "end" => $end
-                        ], $commonConfig);
-                        $arr['id'] = $arr['id'] . '|' . $eventName;
-                        $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
-                        $followupConfig[] = $arr;
-                    }
-                }
-            }
-
-            // Load Missed/Cancelled Visit Config
-            elseif ($template == "mcv") {
-                $indicator = $settings["mcv_indicator"][$i][0];
-                $dateField = $settings["mcv_date"][$i][0];
-                if (empty($indicator) || empty($dateField)) continue;
-                $includeEvents = array_map('trim', explode(',', $settings["mcv_include_events"][$i][0]));
-                foreach ($includeEvents as $eventName) {
-                    $arr = array_merge([
-                        "event" => REDCap::getEventIdFromUniqueEvent($eventName),
-                        "indicator" => $indicator,
-                        "apptDate" => $dateField,
-                    ], $commonConfig);
-                    $arr['id'] = $arr['id'] . '|' . $eventName;
-                    $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
-                    $mcvConfig[] = $arr;
-                }
-            }
-
-            // Load Need to Schedule Visit Config
-            elseif ($template == "nts") {
-                $indicator = $settings["nts_indicator"][$i][0];
-                $dateField = $settings["nts_date"][$i][0];
-                $skipField = $settings["nts_skip"][$i][0];
-                $window = $settings["nts_window_start_cron"][$i][0];
-                if (empty($indicator) || empty($dateField)) continue;
-                $includeEvents = array_map('trim', explode(',', $settings["nts_include_events"][$i][0]));
-                foreach ($includeEvents as $eventName) {
-                    $arr = array_merge([
-                        "event" => REDCap::getEventIdFromUniqueEvent($eventName),
-                        "indicator" => $indicator,
-                        "apptDate" => $dateField,
-                        "skip" => $skipField,
-                        "window" => $window
-                    ], $commonConfig);
-                    $arr['id'] = $arr['id'] . '|' . $eventName;
-                    $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
-                    $ntsConfig[] = $arr;
-                }
-            }
-
-            // Load Adhoc Visit Config
-            elseif ($template == "adhoc") {
-                $reasons = $settings["adhoc_reason"][$i][0];
-                if (empty($reasons)) continue;
-                $arr = array_merge([
-                    "reasons" => $this->explodeCodedValueText($reasons),
-                ], $commonConfig);
-                $adhocConfig[] = $arr;
-            }
-
-            // Load Scheduled Phone Visit Config
-            elseif ($template == "visit") {
-                $indicator = $settings["visit_indicator"][$i][0];
-                $autoField = $settings["visit_auto_remove"][$i][0];
-                if (empty($indicator)) continue;
-                $includeEvents = array_map('trim', explode(',', $settings["visit_include_events"][$i][0]));
-                foreach ($includeEvents as $eventName) {
-                    $arr = array_merge([
-                        "event" => REDCap::getEventIdFromUniqueEvent($eventName),
-                        "indicator" => $indicator,
-                        "autoRemove" => $autoField
-                    ], $commonConfig);
-                    $arr['id'] = $arr['id'] . '|' . $eventName;
-                    $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];
-                    $visitConfig[] = $arr;
-                }
-            }
-        }
-        return [
-            "new" => $newEntryConfig,
-            "reminder" => $reminderConfig,
-            "followup" => $followupConfig,
-            "mcv" => $mcvConfig,
-            "nts" => $ntsConfig,
-            "adhoc" => $adhocConfig,
-            "visit" => $visitConfig
-        ];
-    }
-
-    public function loadAutoRemoveConfig()
-    {
-        $settings = $this->getProjectSettings();
-        $config = [];
-        foreach ($settings["call_template"] as $i => $template) {
-            if ($template == "mcv")
-                $config[$settings["call_id"][$i]] = $settings["mcv_auto_remove"][$i][0];
-            if ($template == "visit")
-                $config[$settings["call_id"][$i]] = $settings["visit_auto_remove"][$i][0];
-            if ($template == "followup")
-                $config[$settings["call_id"][$i]] = $settings["followup_auto_remove"][$i][0];
-        }
-        return $config;
-    }
-
-    public function loadTabConfig()
-    {
-        // Grab setup
-        global $Proj;
-        $allFields = [];
-        $settings = $this->getProjectSettings();
-        $orderMapping = $settings["tab_order"];
-        $record_id_field = REDCap::getRecordIdField();
-        $record_id_label = $this->getFieldLabel($record_id_field);
-        $dd = REDCap::getDataDictionary('array');
-
-        // Grab all expanded area info that is the same across tabs
-        $expands = [];
-        foreach ($settings["tab_expands_field"][0] as $i => $field) {
-            $name = $settings["tab_expands_field_name"][0][$i] ?? trim($this->getFieldLabel($field), ":?");
-            $validation = $Proj->metadata[$field]["element_validation_type"] ?? "";
-            $default = $settings["tab_expands_field_default"][0][$i] ?? "";
-            $expands[] = [
-                "field" => $field,
-                "map" => $this->getDictionaryValuesFor($field, $dd),
-                "displayName" => trim($name) . ": ",
-                "validation" => $validation,
-                "isFormStatus" => $Proj->isFormStatus($field),
-                "fieldType" => $Proj->metadata[$field]["element_type"],
-                "default" => $default,
-                "expanded" => true
-            ];
-            $allFields[] = $field;
-        }
-
-        // Default ordering
-        if (count(array_filter($settings["tab_order"])) != count($settings["tab_order"])) {
-            $orderMapping = range(0, count($settings["tab_name"]));
-        }
-
-        // Loop over all tabs
-        foreach ($settings["tab_name"] as $i => $tab_name) {
-
-            // Grab settings for the tab
-            $tabOrder = $orderMapping[$i];
-            $calls = $settings["tab_calls_included"][$i];
-            $tab_id = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '_', strtolower($tab_name)));
-            $tabConfig[$tabOrder] = [
-                "tab_name" => $tab_name,
-                "included_calls" => $calls,
-                "tab_id" => $tab_id,
-                "fields" => $settings["tab_field"][$i],
-                "showFollowupWindows" => $settings["tab_includes_followup"][$i] == '1',
-                "showMissedDateTime" => $settings["tab_includes_mcv"][$i] == '1',
-                "showAdhocDates" => $settings["tab_includes_adhoc"][$i] == '1'
-            ];
-            $tabNameMap[$tab_id] = $tab_name;
-            $calls = array_map('trim', explode(',', $calls));
-            foreach ($calls as $call) {
-                $call2TabMap[$call] = $tab_id;
-            }
-
-            // Setup standard & shared fields
-            $tabConfig[$tabOrder]["fields"] = array_merge($expands, [
-                [
-                    "field" => $record_id_field,
-                    "displayName" => $record_id_label,
-                    "validation" => "",
-                    "link" => $settings["tab_link"][$i] ?? "home",
-                    "linkedEvent" => $settings["tab_field_link_event"][$i],
-                    "linkedInstrument" => $settings["tab_field_link_instrument"][$i],
-                ]
-                # TODO add Label and Attempt
-            ]);
-
-            // Setup the tab's config
-            foreach ($settings["tab_field"][$i] as $j => $field) {
-                $name = $settings["tab_field_name"][$i][$j] ?? trim($this->getFieldLabel($field), ":?");
-                $validation = $Proj->metadata[$field]["element_validation_type"] ?? "";
-                $default = $settings["tab_field_default"][$i][$j] ?? "";
-                $tabConfig[$tabOrder]["fields"][] = [
-                    "field" => $field,
-                    "map" => $this->getDictionaryValuesFor($field, $dd),
-                    "displayName" => $name,
-                    "validation" => $validation,
-                    "isFormStatus" => $Proj->isFormStatus($field),
-                    "fieldType" => $Proj->metadata[$field]["element_type"],
-                    "default" => $default
-                ];
-                $allFields[] = $field;
-            }
-        }
-
-        // Re-index to be sure we are zero based
-        ksort($tabConfig);
-        $tabConfig = array_combine(range(0, count($tabConfig) - 1), array_values($tabConfig));
-
-        return [
-            'config' => $tabConfig,
-            'call2tabMap' => $call2TabMap,
-            'tabNameMap' => $tabNameMap,
-            'allFields' => $allFields
-        ];
-    }
-
-    private function initGlobal($project_id)
+    private function initGlobal()
     {
         $this->initializeJavascriptModuleObject();
         $call_event = $this->getEventOfInstrument($this->instrument);
@@ -773,91 +468,7 @@ class CallLog extends AbstractExternalModule
         echo "<script>" . $this->module_global . ".em = " . $this->getJavascriptModuleObjectName() . ";</script>";
     }
 
-    public function getUserNameListConfig()
-    {
-        $config = [];
-        $include = $this->getProjectSetting('username_include');
-        $exclude = $this->getProjectSetting('username_exclude');
-        foreach ($this->getProjectSetting('username_field') as $index => $field) {
-            $config[$field] = [
-                'include' => $include[$index],
-                'exclude' => $exclude[$index]
-            ];
-        }
-        return $config;
-    }
-
-    private function getWithdrawConfig()
-    {
-        return [
-            'event' => $this->getProjectSetting("withdraw_event"),
-            'var' => $this->getProjectSetting("withdraw_var"),
-            'tmp' => [
-                'event' => $this->getProjectSetting("withdraw_tmp_event"),
-                'var' => $this->getProjectSetting("withdraw_tmp_var")
-            ]
-        ];
-    }
-
-    public function loadReportConfig($excludeWithdrawn = true)
-    {
-        // Constants for data pull
-        $project_id = $_GET['pid']; // TODO we shouldn't pull this
-        $metaEvent = $this->getEventOfInstrument($this->instrumentMeta);
-        $report_fields = $this->getProjectSetting('report_field')[0];
-        $report_names = $this->getProjectSetting('report_field_name')[0];
-        $withdraw_config = $this->getWithdrawConfig();
-
-        // Prep for getData
-        $firstEvent = array_keys(REDCap::getEventNames())[0];
-        $fields = array_merge([REDCap::getRecordIdField(), $this->metadataField, $withdraw_config['var'], $withdraw_config['tmp']['var']], $report_fields);
-        $events = [$firstEvent, $metaEvent, $withdraw_config['event'], $withdraw_config['tmp']['event']];
-        $records = null;
-        $data = REDCap::getData($project_id, 'array', $records, $fields, $events);
-        $result = [];
-
-        // Pull the record Label
-        $label = $this->getRecordLabel($project_id);
-
-        // Loop to format data
-        foreach ($data as $record => $record_data) {
-
-            // Flatten
-            $tmp = [];
-            foreach ($record_data as $eventid => $event_data) {
-                $tmp = array_merge(array_filter($event_data), $tmp ?? []);
-            }
-
-            // Check withdrawn
-            $withdraw = !empty($tmp[$withdraw_config['var']]) || !empty($tmp[$withdraw_config['tmp']['var']]);
-            if ($excludeWithdrawn && $withdraw) {
-                continue;
-            }
-
-            // Load hardcoded data
-            $result[$record]['_id'] = $record;
-            if (!empty($tmp[$this->metadataField])) {
-                $result[$record]['metadata'] = json_decode($tmp[$this->metadataField], true);
-            }
-            $result[$record]['_label'] = Piping::replaceVariablesInLabel($label, $record);
-
-            // Load custom data
-            foreach ($report_fields as $field) {
-                $result[$record][$field] = $tmp[$field] ?? "";
-            }
-        }
-
-        // Load custom cols
-        foreach ($report_fields as $index => $field) {
-            $result['_cols'][$field] = [
-                'name' => $report_names[$index] ?? $this->getFieldLabel($field),
-                'map' => $this->getDictionaryValuesFor($field)
-            ];
-        }
-        return $result;
-    }
-
-    public function loadCallListData($skipDataPack = false)
+    public function getCallListData($skipDataPack = false)
     {
         $startTime = microtime(true);
         $project_id = $_GET['pid'];
@@ -866,10 +477,10 @@ class CallLog extends AbstractExternalModule
         $callEvent = $this->getEventOfInstrument($this->instrument);
         $metaEvent = $this->getEventOfInstrument($this->instrumentMeta);
         $withdraw = $this->getWithdrawConfig();
-        $autoRemoveConfig = $this->loadAutoRemoveConfig();
+        $autoRemoveConfig = $this->getAutoRemoveConfig();
         $mcvDayOf = $this->getProjectSetting('show_mcv');
-        $tabs = $this->loadTabConfig();
-        $adhoc = $this->loadAdhocTemplateConfig();
+        $tabs = $this->getTabConfig();
+        $adhoc = $this->getAdhocTemplateConfig();
 
         // Minor Prep
         $packagedCallData = [];
