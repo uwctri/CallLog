@@ -1,5 +1,5 @@
 (() => {
-    let data = ExternalModules.UWMadison.CallLog.config;
+    let data = CallLog.reportConfig;
 
     let structure = [
         {

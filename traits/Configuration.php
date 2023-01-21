@@ -7,7 +7,7 @@ use Piping;
 
 trait Configuration
 {
-    public function getCallTemplateConfig()
+    private function getCallTemplateConfig()
     {
         $eventNameMap = $this->getEventNameMap();
         $newEntryConfig = [];
@@ -165,7 +165,7 @@ trait Configuration
         ];
     }
 
-    public function getAutoRemoveConfig()
+    private function getAutoRemoveConfig()
     {
         $settings = $this->getProjectSettings();
         $config = [];
@@ -180,7 +180,7 @@ trait Configuration
         return $config;
     }
 
-    public function getTabConfig()
+    private function getTabConfig()
     {
         // Grab setup
         global $Proj;
@@ -280,7 +280,7 @@ trait Configuration
         ];
     }
 
-    public function getUserNameListConfig()
+    private function getUserNameListConfig()
     {
         $config = [];
         $include = $this->getProjectSetting('username_include');
@@ -306,7 +306,7 @@ trait Configuration
         ];
     }
 
-    public function getReportConfig($excludeWithdrawn = true)
+    private function getReportConfig($excludeWithdrawn = true)
     {
         // Constants for data pull
         $project_id = $_GET['pid']; // TODO we shouldn't pull this

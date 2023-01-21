@@ -9,9 +9,10 @@ trait Utility
     private $dateMathCutoff = 5; # Date+/- less than N days will avoid weekends/holidays
     private $holidays = ['12-25', '12-24', '12-31', '07-04', '01-01']; # Fixed holidays
 
-    private function includeJs($path)
+    private function includeJs($path, $defer = false)
     {
-        echo '<script src="' . $this->getUrl($path) . '"></script>';
+        $defer = $defer ? "defer " : "";
+        echo '<script ' . $defer . 'src="' . $this->getUrl($path) . '"></script>';
     }
 
     private function includeCss($path)

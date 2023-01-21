@@ -361,6 +361,7 @@ CallLog.fn.toggleCallBackCol = function () {
 }
 
 CallLog.fn.refreshTableData = function () {
+    console.time('getData');
     CallLog.em.ajax("getData", {}).then(function (response) {
         if (!response.success) {
             Swal.fire({
@@ -370,9 +371,9 @@ CallLog.fn.refreshTableData = function () {
             });
             return;
         }
-        let [packagedCallData, tabConfig, alwaysShowCallbackCol, timeTaken] = response.data;
-        CallLog.packagedCallData = packagedCallData;
-        CallLog.alwaysShowCallbackCol = alwaysShowCallbackCol;
+        let result = response.data;
+        CallLog.packagedCallData = result.data;
+        CallLog.alwaysShowCallbackCol = result.showCallback;
 
         // Keep track of users in multiple tabs
         CallLog.multiTabCache = {};
@@ -408,7 +409,7 @@ CallLog.fn.refreshTableData = function () {
         // Enable Tooltips for the call-back column
         $('*[data-toggle="tooltip"]').tooltip();
 
-        console.log(`Refreshed data in ${timeTaken} seconds`);
+        console.timeEnd('getData');
     }).catch(function (err) {
         console.log(err);
     });

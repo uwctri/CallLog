@@ -27,7 +27,7 @@ Basic setup:
 * We collect a history of requests for "No calls today", but don't display that data anywhere.
 * Switching between tabs on the call log should clear any entered data and display warning about data lost
 * Currently many configs are copied to the metadata of a call. Could we instead load the config and refrence it via template name to avoid this bloat? That would mean a potiental re-pull of data and recalculation of ranges.
-  * Improve metadata report page
+* Improve metadata report page
 
 ## API
 
