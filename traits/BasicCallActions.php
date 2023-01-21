@@ -6,7 +6,7 @@ use Redcap;
 
 trait BasicCallActions
 {
-    public function reportDisconnectedPhone($project_id, $record)
+    private function reportDisconnectedPhone($project_id, $record)
     {
         $config = $this->getBadPhoneConfig();
         if ($config['_missing']) return;
@@ -19,7 +19,7 @@ trait BasicCallActions
         REDCap::saveData($project_id, 'array', $write, 'overwrite');
     }
 
-    public function updateDisconnectedPhone($project_id, $record)
+    private function updateDisconnectedPhone($project_id, $record)
     {
         $config = $this->getBadPhoneConfig();
         if ($config['_missing']) return;
@@ -38,7 +38,7 @@ trait BasicCallActions
         REDCap::saveData($project_id, 'array', $write, 'overwrite');
     }
 
-    public function noCallsToday($project_id, $record, $metadata, $call_id)
+    private function noCallsToday($project_id, $record, $metadata, $call_id)
     {
         if (!empty($metadata[$call_id])) {
             if (!is_array($metadata[$call_id]['noCallsToday'])) {
@@ -49,7 +49,7 @@ trait BasicCallActions
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
-    public function callStarted($project_id, $record, $metadata, $call_id = null, $user = null)
+    private function callStarted($project_id, $record, $metadata, $call_id = null, $user = null)
     {
         if (empty($metadata)) return;
         if ($call_id && $user) {
@@ -68,7 +68,7 @@ trait BasicCallActions
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
-    public function callEnded($project_id, $record, $metadata, $call_id)
+    private function callEnded($project_id, $record, $metadata, $call_id)
     {
         if (!empty($metadata[$call_id]))
             $metadata[$call_id]['callStarted'] = '';

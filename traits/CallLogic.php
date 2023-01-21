@@ -6,7 +6,7 @@ use Redcap;
 
 trait CallLogic
 {
-    public function metadataNewEntry($project_id, $record, &$metadata, $config)
+    private function metadataNewEntry($project_id, $record, &$metadata, $config)
     {
         // Can't be a new call if metadata already exists
         $changeOccured = false;
@@ -30,7 +30,7 @@ trait CallLogic
         return $changeOccured;
     }
 
-    public function metadataFollowup($project_id, $record, &$metadata, $config)
+    private function metadataFollowup($project_id, $record, &$metadata, $config)
     {
         $changeOccured = false;
         foreach ($config as $callConfig) {
@@ -77,7 +77,7 @@ trait CallLogic
         return $changeOccured;
     }
 
-    public function metadataReminder($project_id, $record, &$metadata, $config)
+    private function metadataReminder($project_id, $record, &$metadata, $config)
     {
         $changeOccured = false;
         $today = date('Y-m-d');
@@ -143,7 +143,7 @@ trait CallLogic
         return $changeOccured;
     }
 
-    public function metadataMissedCancelled($project_id, $record, &$metadata, $config)
+    private function metadataMissedCancelled($project_id, $record, &$metadata, $config)
     {
         $changeOccured = false;
         foreach ($config as $callConfig) {
@@ -189,7 +189,7 @@ trait CallLogic
     }
 
 
-    public function metadataNeedToSchedule($project_id, $record, &$metadata, $config)
+    private function metadataNeedToSchedule($project_id, $record, &$metadata, $config)
     {
         global $Proj;
         $changeOccured = false;
@@ -226,7 +226,7 @@ trait CallLogic
         return $changeOccured;
     }
 
-    public function metadataPhoneVisit($project_id, $record, &$metadata, $config)
+    private function metadataPhoneVisit($project_id, $record, &$metadata, $config)
     {
         $changeOccured = false;
         foreach ($config as $i => $callConfig) {
@@ -247,7 +247,7 @@ trait CallLogic
         return $changeOccured;
     }
 
-    public function metadataUpdateCommon($project_id, $record, &$metadata)
+    private function metadataUpdateCommon($project_id, $record, &$metadata)
     {
         if (empty($metadata)) return false; // We don't make the 1st metadata entry here.
         $data = $this->getAllCallData($project_id, $record);
