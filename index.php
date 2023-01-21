@@ -20,66 +20,6 @@ if (isset($_GET['metaReport'])) {
 // *************************
 // Full Call List Page
 ?>
-<script>
-    $(document).ready(function() {
-        if (CallLog.configError) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Call Log config Issue',
-                text: 'The Call Log External Module requries the Call Long, and Call Metadata instruments to exist on one event and the former to be enable as a repeatable instrument. Please invesitage and resovle.',
-            });
-            return;
-        }
-
-        // Setup search, must happen before table init
-        CallLog.fn.setupSearch();
-
-        // Main table build out
-        $('.callTable').each(function(index, el) {
-
-            let tab_id = $(el).closest('.tab-pane').prop('id');
-            CallLog.childRows[tab_id] = "";
-            CallLog.colConfig[tab_id] = CallLog.fn.createColConfig(index, tab_id);
-
-            // Init the table
-            $(el).DataTable({
-                lengthMenu: [
-                    [25, 50, 100, -1],
-                    [25, 50, 100, "All"]
-                ],
-                language: {
-                    emptyTable: "No calls to display"
-                },
-                columns: CallLog.colConfig[tab_id],
-                createdRow: (row, data, index) => $(row).addClass('dataTablesRow'),
-                sDom: 'ltpi'
-            });
-
-        });
-
-        // Insert search box, must happen after table init
-        $('.dataTables_length').after(
-            "<div class='dataTables_filter customSearch'><label>Search:<input type='search'></label></div>");
-
-        // Exactly what it looks like
-        CallLog.fn.setupLocalSettings();
-
-        // Everything is built out, show the body now
-        $(".card").fadeIn();
-
-        // Enable click to expand for all rows
-        CallLog.fn.setupClickToExpand();
-
-        // Refresh the data occasionally
-        setInterval(CallLog.fn.refreshTableData, CallLog.pageRefresh);
-
-        // Load the initial data
-        CallLog.fn.toggleCallBackCol();
-        CallLog.fn.refreshTableData();
-        $(".dataTables_empty").text('Loading...')
-    });
-</script>
-
 <div class="projhdr"><i class="fas fa-phone"></i> Call List</div>
 <div class="card" style="display:none">
     <?php if (count($module->tabsConfig['config']) > 1) { ?>

@@ -139,7 +139,7 @@ CallLog.fn.buildAdhocMenu = function () {
                 record: getParameterByName('id'),
                 id: adhoc.id,
                 date: date,
-                time: to24hr($(`#${adhoc.id} input[name=callTime]`).val()),
+                time: CallLog.fn.to24hr($(`#${adhoc.id} input[name=callTime]`).val()),
                 reason: $(`#${adhoc.id} select[name=reason]`).val(),
                 notes: $(`#${adhoc.id} textarea[name=notes]`).val(),
                 reporter: CallLog.user
