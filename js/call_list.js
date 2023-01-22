@@ -9,9 +9,6 @@ CallLog.alwaysShowCallbackCol = false;
 CallLog.earlyCall = 5 * 60 * 1000; // Grace time on early calling of 5 mins
 CallLog.pageRefresh = 1 * 60 * 1000; // Refresh page every 1 minutes
 
-CallLog.defaultDateFormat = 'MM-dd-y';
-CallLog.defaultDateTimeFormat = 'MM-dd-y hh:mma';
-
 Object.filter = (obj, predicate) =>
     Object.keys(obj)
         .filter(key => predicate(obj[key]))
@@ -243,7 +240,7 @@ CallLog.fn.createColConfig = function (index, tab_id) {
             title: 'Missed Date',
             data: '_appt_dt',
             render: (data, type, _row, _meta) =>
-                (type === 'display' || type === 'filter') ? formatDate(new Date(data), CallLog.defaultDateTimeFormat).toLowerCase() || "Not Specified" : data || "Not Specified"
+                (type === 'display' || type === 'filter') ? formatDate(new Date(data), CallLog.format.dateTime).toLowerCase() || "Not Specified" : data || "Not Specified"
         });
     }
 
@@ -255,7 +252,7 @@ CallLog.fn.createColConfig = function (index, tab_id) {
             data: '_adhocContactOn',
             render: function (data, type, _row, _meta) {
                 if (type === 'display' || type === 'filter') {
-                    let format = data.length <= 10 ? CallLog.defaultDateFormat : CallLog.defaultDateTimeFormat;
+                    let format = data.length <= 10 ? CallLog.format.date : CallLog.format.dateTime;
                     data = data.length <= 10 ? data + "T00:00" : data;
                     return formatDate(new Date(data), format).toLowerCase() || "Not Specified";
                 } else {

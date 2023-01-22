@@ -12,11 +12,13 @@ trait Configuration
         $this->initializeJavascriptModuleObject();
         $call_event = $this->getEventOfInstrument($this->instrument);
         $meta_event = $this->getEventOfInstrument($this->instrumentMeta);
+        $username = $this->getUser()->getUsername();
         $data = [
             "eventNameMap" => $this->getEventNameMap(),
             "prefix" => $this->getPrefix(),
-            "user" => $this->getUser()->getUsername(),
+            "user" => $username,
             "userNameMap" => $this->getUserNameMap(),
+            "format" => $this->getUserDateFormat($username),
             "static" => [
                 "instrument" => $this->instrument,
                 "instrumentEvent" => $call_event,

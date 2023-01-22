@@ -120,6 +120,23 @@ trait Utility
         return $result->fetch_assoc()["field_name"];
     }
 
+    // Get 
+    private function getUserDateFormat($username)
+    {
+        $sql = "SELECT datetime_format FROM redcap_user_information WHERE username = ?";
+        $result = $this->query($sql, [$username]);
+        $format = $result->fetch_assoc()["datetime_format"];
+        [$date, $time] =  explode('_', $format);
+        $time = $time == '12' ? 'hh:mma' : 'HH:mm';
+        $date = str_replace('Y', 'y', $date);
+        $date = str_replace('M', 'MM', $date);
+        $date = str_replace('D', 'dd', $date);
+        return [
+            'date' => $date,
+            'dateTime' => "$date $time"
+        ];
+    }
+
     private function dateMath($date, $operation, $days)
     {
         $date = date('Y-m-d', strtotime("$date {$operation}{$days} days"));
