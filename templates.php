@@ -104,15 +104,17 @@
         <tr>
     </table>
 
-    <tr id="noCallsDisplay">
-        <td colspan="2">
-            <div class="yellow">
-                <div class="container row">
-                    <div class="col m-2 text-center"><b>This subject has no active calls.</b></div>
+    <table id="noCallsDisplay">
+        <tr>
+            <td colspan="2">
+                <div class="yellow">
+                    <div class="container row">
+                        <div class="col m-2 text-center"><b>This subject has no active calls.</b></div>
+                    </div>
                 </div>
-            </div>
-        </td>
-    </tr>
+            </td>
+        </tr>
+    </table>
 
     <table id="notesEntry">
         <td class="col-7 notesRow" colspan="2" style="background-color:#f5f5f5">
