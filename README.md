@@ -2,7 +2,7 @@
 
 ## What does it do?
 
-The Call Log Redcap External Module is resonsible for the generation of calls associated with a redcap record, listing those calls on a convient call list, and tracking progress of those calls to completion. The call log EM currently supports five call types, any reasonable number of organizing tabs for the call list, and loading calls via a get or post request sent from an external script.
+The Call Log Redcap External Module is resonsible for the generation of calls associated with a redcap record, listing those calls on a convient call list, and tracking progress of those calls to completion. The call log EM currently supports seven call types, any reasonable number of organizing tabs for the call list, and some actions via an API that may be done by external scripts.
 
 ## Installing
 
@@ -22,7 +22,7 @@ Basic setup:
 
 * Fix the NTS issue
 * Major JS Cleanup
-* Imrpove text on the config page
+* Improve text on the config page
 * Speed up the config page?
 * We collect a history of requests for "No calls today", but don't display that data anywhere.
 * Switching between tabs on the call log should clear any entered data and display warning about data lost
