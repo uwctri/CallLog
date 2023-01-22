@@ -9,6 +9,22 @@ CallLog.alwaysShowCallbackCol = false;
 CallLog.earlyCall = 5 * 60 * 1000; // Grace time on early calling of 5 mins
 CallLog.pageRefresh = 1 * 60 * 1000; // Refresh page every 1 minutes
 
+CallLog.defaultDateFormat = 'MM-dd-y';
+CallLog.defaultDateTimeFormat = 'MM-dd-y hh:mma';
+
+Object.filter = (obj, predicate) =>
+    Object.keys(obj)
+        .filter(key => predicate(obj[key]))
+        .reduce((res, key) => (res[key] = obj[key], res), {});
+
+Object.filterKeys = (obj, allowedKeys) =>
+    Object.keys(obj)
+        .filter(key => (Array.isArray(allowedKeys) ? allowedKeys : [allowedKeys]).includes(key))
+        .reduce((res, key) => {
+            res[key] = obj[key];
+            return res;
+        }, {});
+
 CallLog.fn.setupSearch = function () {
 
     // Custom search options for regex and "not" (!)

@@ -7,6 +7,27 @@ use Piping;
 
 trait Configuration
 {
+    private function initGlobal()
+    {
+        $this->initializeJavascriptModuleObject();
+        $call_event = $this->getEventOfInstrument($this->instrument);
+        $meta_event = $this->getEventOfInstrument($this->instrumentMeta);
+        $data = [
+            "eventNameMap" => $this->getEventNameMap(),
+            "prefix" => $this->getPrefix(),
+            "user" => $this->getUser()->getUsername(),
+            "userNameMap" => $this->getUserNameMap(),
+            "static" => [
+                "instrument" => $this->instrument,
+                "instrumentEvent" => $call_event,
+                "record_id" => REDCap::getRecordIdField()
+            ],
+            "configError" => !($call_event && $meta_event)
+        ];
+        echo "<script>var " . $this->module_global . " = " . json_encode($data) . ";</script>";
+        echo "<script>" . $this->module_global . ".em = " . $this->getJavascriptModuleObjectName() . ";</script>";
+    }
+
     private function getCallTemplateConfig()
     {
         $eventNameMap = $this->getEventNameMap();
