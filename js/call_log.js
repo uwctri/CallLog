@@ -5,6 +5,14 @@ CallLog.fn = CallLog.fn || {};
 // Creates too many issues with features
 window.displayFormSaveBtnTooltip = function () { }
 
+CallLog.fn.to24hr = function (t) {
+    let isPM = t.includes('P');
+    t = t.toLowerCase().replaceAll(/[amp ]/g, '');
+    if (!isPM) return t;
+    let [h, m] = t.split(':');
+    return h == 12 ? t : `${parseInt(h) + 12}:${m}`;
+}
+
 // Debug function, easily save the metadata after directly editing it
 CallLog.fn.saveMetadata = function () {
     CallLog.em.ajax("metadataSave", {
@@ -15,6 +23,12 @@ CallLog.fn.saveMetadata = function () {
     }).catch(function (err) {
         console.log(err);
     });
+}
+
+CallLog.fn.goToCallList = function () {
+    appendHiddenInputToForm('save-and-redirect', $("#external_modules_panel a:contains('Call List')").prop('href'));
+    dataEntrySubmit('submit-btn-savecontinue');
+    return false;
 }
 
 // Fetch the last known contact time for a given call id
@@ -206,9 +220,6 @@ $(document).ready(function () {
 
     //Build out ad-hoc buttons 
     CallLog.fn.buildAdhocMenu();
-
-    // If we have calls then build out the call summary table
-    CallLog.fn.buildCallSummaryTable();
 
     // Fill in Call Details on Tab Change
     $("#CallLogCurrentTime").text($("input[name=call_open_date]").val() + " " + format_time($("input[name=call_open_time]").val()));

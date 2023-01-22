@@ -70,9 +70,9 @@ class CallLog extends AbstractExternalModule
     {
         if (!defined("USERID")) return;
 
-        include('templates.php');
         $this->initGlobal();
-        $this->includeJs('js/every_page.js');
+        include('templates.php');
+        $this->includeJs('js/templates.js');
 
         // EM Pages
         if ($this->isPage('ExternalModules/') && $_GET['prefix'] == 'call_log') {
@@ -87,7 +87,7 @@ class CallLog extends AbstractExternalModule
 
             // Call List
             $this->includeCss('css/list.css');
-            $this->includeJs('js/call_list.js', 'defer');
+            $this->includeJs('js/call_list.js', 'defer', 'module');
             $this->tabsConfig = $this->getTabConfig();
             $this->passArgument('tabs', $this->tabsConfig);
             $this->passArgument('usernameLists', $this->getUserNameListConfig());
@@ -109,6 +109,7 @@ class CallLog extends AbstractExternalModule
     {
         $summary = $this->getProjectSetting('call_summary');
         $this->passArgument('recentCaller', $this->recentCallStarted($project_id, $record));
+        $this->includeJs('js/data_entry.js', 'defer');
 
         // Call Log only info
         if ($instrument == $this->instrument) {
@@ -464,27 +465,6 @@ class CallLog extends AbstractExternalModule
             }
         }
         return '';
-    }
-
-    private function initGlobal()
-    {
-        $this->initializeJavascriptModuleObject();
-        $call_event = $this->getEventOfInstrument($this->instrument);
-        $meta_event = $this->getEventOfInstrument($this->instrumentMeta);
-        $data = [
-            "eventNameMap" => $this->getEventNameMap(),
-            "prefix" => $this->getPrefix(),
-            "user" => $this->getUser()->getUsername(),
-            "userNameMap" => $this->getUserNameMap(),
-            "static" => [
-                "instrument" => $this->instrument,
-                "instrumentEvent" => $call_event,
-                "record_id" => REDCap::getRecordIdField()
-            ],
-            "configError" => !($call_event && $meta_event)
-        ];
-        echo "<script>var " . $this->module_global . " = " . json_encode($data) . ";</script>";
-        echo "<script>" . $this->module_global . ".em = " . $this->getJavascriptModuleObjectName() . ";</script>";
     }
 
     private function getCallListData($project_id)
