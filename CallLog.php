@@ -114,7 +114,7 @@ class CallLog extends AbstractExternalModule
         // Call Log only info
         if ($instrument == $this->instrument) {
             $this->passArgument('adhoc', $this->getAdhocTemplateConfig());
-            $this->includeJs('js/call_log.js');
+            $this->includeJs('js/call_log.js', 'defer');
         }
 
         // Call Log + anything w/ summary table on it
