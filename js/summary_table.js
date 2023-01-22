@@ -1,6 +1,5 @@
 (() => {
     const callSummaryPageSize = 20;
-    const defaultDateTimeFormat = 'MM-dd-y hh:mma';
 
     const threeDotClick = () => {
         Swal.fire({
@@ -110,7 +109,7 @@
                     title: 'Call time',
                     data: 'datetime',
                     render: (data, type, row, meta) =>
-                        (type === 'display' || type === 'filter') ? formatDate(new Date(data), defaultDateTimeFormat).toLowerCase() : data
+                        (type === 'display' || type === 'filter') ? formatDate(new Date(data), CallLog.format.dateTime).toLowerCase() : data
                 },
                 { title: '', data: 'deleteInstance', bSortable: false }
             ],
