@@ -1,4 +1,3 @@
-CallLog.html = CallLog.html || {};
 CallLog.fn = CallLog.fn || {};
 
 // Prevent redcap from creating the tooltip on call log

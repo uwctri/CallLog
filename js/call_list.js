@@ -3,7 +3,6 @@ CallLog.hideCalls = true;
 CallLog.childRows = {};
 CallLog.colConfig = {};
 CallLog.displayedData = {};
-CallLog.packagedCallData = {};
 
 CallLog.alwaysShowCallbackCol = false;
 CallLog.earlyCall = 5 * 60 * 1000; // Grace time on early calling of 5 mins
