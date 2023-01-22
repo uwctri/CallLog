@@ -31,44 +31,47 @@ Basic setup:
 
 ## API
 
-Several actions exist for the API, all use the same end point
+Several actions exist for the API, all use a POST to the same end point.
 
 `POST redcap/api/?type=module&prefix=call_log&page=api&NOAUTH`
 
-Action: newAdhoc - Trigger when a new record is created via outside script to create New Call Logs
+Action: newAdhoc - Create a new adhoc call for a subject
 
 |**Body Parameter** |             **Description**             |   **Type**   |  **Required?**  |
 |:-----------------:|:---------------------------------------:|:------------:|:----------------:
 |   token           |   User's API token                      |  string      |    Yes          |
 |   action          |   "newAdhoc"                            |  string      |    Yes          |
-|   id              |   Event IDs or '*' for all              |  string      |    Yes          |
+|   type            |   Unique call type for the adhoc        |  string      |    Yes          |
 |   date            |   Date to contact subject (Y-M-D)       |  string      |    No           |
 |   time            |   Time to contact subject (HH:MM)       |  string      |    No           |
-|   reason          |   Text note describing reason for call  |  string      |    No           |
+|   reason          |   Adhoc code                            |  string      |    Yes          |
 |   reporter        |   Username of reporter or freetext      |  string      |    No           |
 |   record          |   Record ID                             |  string      |    Yes          |
 
-Action: resolveAdhoc - remove? Swap?
-
-|**Body Parameter** |             **Description**             |   **Type**   |  **Required?**  |
-|:-----------------:|:---------------------------------------:|:------------:|:----------------:
-|   token           |   User's API token                      |  string      |        Always   |
-|   action          |   "resolveAdhoc"                        |  string      |        Always   |
-|   id              |   Event IDs or '*' for all              |  string      |                 |
-|   records         |   Record IDs or '*' for all             |  json array  |    Yes          |
-
-Action: newEntryLoad - Trigger when a new record is created via outside script to create New Call Logs
+Action: resolveAdhoc - Resolve all adhoc calls with a
 
 |**Body Parameter** |             **Description**             |   **Type**   |  **Required?**  |
 |:-----------------:|:---------------------------------------:|:------------:|:----------------:
 |   token           |   User's API token                      |  string      |    Yes          |
-|   action          |   "newEntryLoad"                        |  string      |    Yes          |
-|   records         |   Record IDs to trigger                 |  json array  |    Yes          |
+|   action          |   "resolveAdhoc"                        |  string      |    Yes          |
+|   code            |   Adhoc code (reason)                   |  string      |    Yes          |
+|   record          |   Record ID                             |  string      |    No           |
+|   record_list     |   Above, but as a list                  |  array       |    No           |
 
-Action: scheduleLoad - Trigger when a record is scheduled to run needed metadata functions
+Action: newEntry - Trigger when a new record is created via outside script to create New Call Logs
 
 |**Body Parameter** |             **Description**             |   **Type**   |  **Required?**  |
 |:-----------------:|:---------------------------------------:|:------------:|:----------------:
 |   token           |   User's API token                      |  string      |    Yes          |
-|   action          |   "scheduleLoad"                        |  string      |    Yes          |
-|   records         |   Record IDs to trigger                 |  json array  |    Yes          |
+|   action          |   "newEntry"                            |  string      |    Yes          |
+|   record          |   Record ID                             |  string      |    No           |
+|   record_list     |   Above, but as a list                  |  array       |    No           |
+
+Action: schedule - Trigger when a record is scheduled to run needed metadata functions
+
+|**Body Parameter** |             **Description**             |   **Type**   |  **Required?**  |
+|:-----------------:|:---------------------------------------:|:------------:|:----------------:
+|   token           |   User's API token                      |  string      |    Yes          |
+|   action          |   "schedule"                            |  string      |    Yes          |
+|   record          |   Record ID                             |  string      |    No           |
+|   record_list     |   Above, but as a list                  |  array       |    No           |
