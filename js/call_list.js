@@ -108,7 +108,7 @@ CallLog.fn.projectLog = function (action, call_id, record) {
 
 CallLog.fn.childRowFormat = function (record, call_id, callStarted, childData, notesData, tab) {
     notesData = notesData.split('|||').map(x => x.split('||')).filter(x => x.length > 2);
-    return `<div class="container"><div class="row"><div class="col-4"><div class="row dtChildData"><div class="col-auto">${CallLog.childRows[tab]}</div><div class="col">${childData.map(x => '<div class="row">' + (x || "________") + '</div>').join('')}</div></div><div class="row"><div class="col"><div class="row"><a class="noCallsButton" onclick="CallLog.fn.noCallsToday(${record},\'${call_id}\')">No Calls Today</a>${!callStarted ? '' : `&emsp;<a class="endCallButton" onclick="CallLog.fn.endCall(${record},\'${call_id}\')">End Current Call</a>`}</div></div></div></div><div class="col-8 border-left"><div class="row dtChildNotes"><div class="col">${notesData.map(x => `<div class="row m-2 pb-2 border-bottom"><div class="col-auto"><div class="row">${formatDate(new Date(x[0].split(' ')[0] + "T00:00:00"), CallLog.defaultDateFormat)} ${format_time(x[0].split(' ')[1])}</div><div class="row">${x[1]}</div><div class="row">${x[2]}</div></div><div class="col"><div class="row ml-1">${x[3] == "none" ? "No Notes Taken" : x[3]}</div></div></div>`).join('') || '<div class="text-center mt-4">Call history will display here</div>'}</div></div></div></div></div>`;
+    return `<div class="container"><div class="row"><div class="col-4"><div class="row dtChildData"><div class="col-auto">${CallLog.childRows[tab]}</div><div class="col">${childData.map(x => '<div class="row">' + (x || "________") + '</div>').join('')}</div></div><div class="row"><div class="col"><div class="row"><a class="noCallsButton" onclick="CallLog.fn.noCallsToday(${record},\'${call_id}\')">No Calls Today</a>${!callStarted ? '' : `&emsp;<a class="endCallButton" onclick="CallLog.fn.endCall(${record},\'${call_id}\')">End Current Call</a>`}</div></div></div></div><div class="col-8 border-left"><div class="row dtChildNotes"><div class="col">${notesData.map(x => `<div class="row m-2 pb-2 border-bottom"><div class="col-auto"><div class="row">${formatDate(new Date(x[0].split(' ')[0] + "T00:00:00"), CallLog.format.date)} ${format_time(x[0].split(' ')[1])}</div><div class="row">${x[1]}</div><div class="row">${x[2]}</div></div><div class="col"><div class="row ml-1">${x[3] == "none" ? "No Notes Taken" : x[3]}</div></div></div>`).join('') || '<div class="text-center mt-4">Call history will display here</div>'}</div></div></div></div></div>`;
 }
 
 CallLog.fn.createColConfig = function (index, tab_id) {
@@ -279,7 +279,7 @@ CallLog.fn.createColConfig = function (index, tab_id) {
             if (row['call_requested_callback'] && row['call_requested_callback'][1] == '1') {
 
                 if (row['call_callback_date']) {
-                    displayDate += formatDate(new Date(row['call_callback_date'] + 'T00:00:00'), CallLog.defaultDateFormat) + " ";
+                    displayDate += formatDate(new Date(row['call_callback_date'] + 'T00:00:00'), CallLog.format.date) + " ";
                 }
 
                 displayDate += row['call_callback_time'] ? format_time(row['call_callback_time']) : "";

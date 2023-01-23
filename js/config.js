@@ -1,5 +1,4 @@
 (() => {
-    console.log("Loaded Call Log config");
     let configInit = false;
 
     // Setup template buttons to show correct settings
