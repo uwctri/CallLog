@@ -31,12 +31,13 @@
         })
     }
 
-    const childRowExpand = () => {
-        let table = $(this).closest('table').DataTable();
-        let row = table.row(this);
+    const childRowExpand = (event) => {
+        let target = event.currentTarget;
+        let table = $(target).closest('table').DataTable();
+        let row = table.row(target);
         if (row.child.isShown()) {
             row.child.hide();
-            $(this).removeClass('shown');
+            $(target).removeClass('shown');
             return;
         }
         let data = CallLog.data[row.data()['instance']];
@@ -46,8 +47,8 @@
         let note = data['call_notes'] ? data['call_notes'] : "No Notes Taken";
         let logClosed = data['call_outcome'] == "1" ? CallLog.templates.callClosed : "";
         row.child(`<b>${date}</b><br>${data['call_open_user_full_name']} - ${note}${logClosed}`, 'dataTableChild').show();
-        $(this).next().addClass($(this).hasClass('even') ? 'even' : 'odd');
-        $(this).addClass('shown');
+        $(target).next().addClass($(target).hasClass('even') ? 'even' : 'odd');
+        $(target).addClass('shown');
     }
 
     const openDeleteModal = () => {
