@@ -170,7 +170,10 @@ Object.filterKeys = (obj, allowedKeys) =>
             } else if (fConfig.isFormStatus) {
                 colConfig.render = (data, _type, _row, _meta) => ['Incomplete', 'Unverified', 'Complete'][data];
             } else if (colConfig.data == "call_event_name") {
-                colConfig.render = (data, _type, _row, _meta) => CallLog.eventNameMap[data] || "";
+                colConfig.render = (data, _type, _row, _meta) => {
+                    if (!data) console.log(_row);
+                    return CallLog.eventNameMap[data] || "";
+                }
             } else if (fConfig.validation == 'phone') {
                 colConfig.render = (data, type, _row, _meta) => (data && (type === 'filter')) ? data.replace(/[\\(\\)\\-\s]/g, '') : data || "";
             } else if (Object.keys(CallLog.usernameLists).includes(fConfig.field)) {

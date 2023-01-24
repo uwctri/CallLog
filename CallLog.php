@@ -477,6 +477,7 @@ class CallLog extends AbstractExternalModule
         $mcvDayOf = $this->getProjectSetting('show_mcv');
         $tabs = $this->getTabConfig();
         $adhoc = $this->getAdhocTemplateConfig();
+        $eventNameToId = array_flip(REDCap::getEventNames());
 
         // Minor Prep
         $packagedCallData = [];
@@ -510,7 +511,7 @@ class CallLog extends AbstractExternalModule
 
             foreach ($meta as $callID => $call) {
                 $fullCallID = $callID; // Full ID could be X|Y, X||Y or X|Y||Z. CALLID|EVENT||DATE
-                [$callID, $part2, $part3] = array_pad(array_filter(explode('|', $callID)), 3, "");
+                [$callID, $callID_event, $part3] = array_pad(array_filter(explode('|', $callID)), 3, "");
 
                 // Skip if call complete, debug call, or if call ID isn't assigned to a tab
                 if ($call['complete'] || substr($callID, 0, 1) == '_' || empty($tabs['call2tabMap'][$callID]))
@@ -608,10 +609,10 @@ class CallLog extends AbstractExternalModule
                 }
 
                 // Add event_id for possible link to instruments
-                $instanceData['_event'] = $call['event_id'];
+                $instanceData['_event'] = $eventNameToId[$callID_event];
 
                 // Add the Event's name for possible display (only used by MCV?)
-                $instanceData['call_event_name'] = $call['event'];
+                $instanceData['call_event_name'] = $callID_event;
 
                 // Add lower and upper windows (data is on reminders too but isn't displayed now)
                 if ($call['template'] == 'followup') {
