@@ -13,7 +13,7 @@ CallLog.saveMetadata = () => {
 // Override Redcap branching logic
 const __dbtf = dbtf;
 dbtf = (t, c) => {
-    const fields = ['call_left_message'];
+    const fields = ['call_left_message', 'call_not_answered', 'call_disconnected', 'call_requested_callback', 'call_outcome'];
     if (CallLog.disableBranchingLogic && fields.includes(c))
         return false;
     return __dbtf(t, c);
