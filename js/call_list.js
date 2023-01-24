@@ -192,13 +192,14 @@ Object.filterKeys = (obj, allowedKeys) =>
                         dt = `${today} ${rowData['call_callback_time']}`;
                     }
 
+                    const type = fConfig.link;
                     const instrument = fConfig.linkedInstrument;
                     const event = fConfig.linkedEvent;
                     const record = rowData[CallLog.static.record_id];
                     const instance = rowData['_nextInstance']
                     const id = rowData['_call_id'];
 
-                    $(td).html(`<a class="rowLink" data-record="${record}" data-call="${id}" data-date="${dt}" data-instance="${instance} data-instrument="${instrument}" data-event="${event}">${cellData}</a>`);
+                    $(td).html(`<a class="rowLink" data-type="${type}" data-record="${record}" data-call="${id}" data-date="${dt}" data-instance="${instance}" data-instrument="${instrument}" data-event="${event}">${cellData}</a>`);
                 }
             }
 
@@ -359,7 +360,7 @@ Object.filterKeys = (obj, allowedKeys) =>
         });
     }
 
-    const endCall = () => {
+    const endCall = (event) => {
         const target = event.currentTarget;
         const record = $(target).data('record');
         const call_id = $(target).data('call');
