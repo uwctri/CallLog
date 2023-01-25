@@ -474,7 +474,7 @@ class CallLog extends AbstractExternalModule
         $metaEvent = $this->getEventOfInstrument($this->instrumentMeta);
         $withdraw = $this->getWithdrawConfig();
         $autoRemoveConfig = $this->getAutoRemoveConfig();
-        $mcvDayOf = $this->getProjectSetting('show_mcv');
+        $dayOf = $this->getProjectSetting('same_day_mcv_nts');
         $tabs = $this->getTabConfig();
         $adhoc = $this->getAdhocTemplateConfig();
         $eventNameToId = array_flip(REDCap::getEventNames());
@@ -533,8 +533,12 @@ class CallLog extends AbstractExternalModule
                 if (($call['template'] == 'new') && $call['expire'] && (date('Y-m-d', strtotime($call['load'] . "+" . $call['expire'] . " days")) < $today))
                     continue;
 
-                // Skip if MCV was created today (A call attempt was already made). Only use if config allows (mcvDayOf)
-                if (($call['template'] == 'mcv') && (explode(' ', $call['appt'])[0] == $today) && !$mcvDayOf)
+                // Skip if MCV was sch for today (A call attempt was already made). Only use if config allows
+                if (($call['template'] == 'mcv') && (explode(' ', $call['appt'])[0] == $today) && !$dayOf)
+                    continue;
+
+                // Skip if NTS was created today (A call attempt was already made). Only use if config allows
+                if (($call['template'] == 'nts') && ($call['created'] == $today) && !$dayOf)
                     continue;
 
                 // Gather Instance Level Data

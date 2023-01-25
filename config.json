@@ -74,8 +74,8 @@
             "type": "form-list"
         },
         {
-            "key": "show_mcv",
-            "name": "<b>Missed/Cancelled Day of</b><br>Show MCV calls the day the visit is reported as missed. By default MCV calls are shown the next day. This is usefull if you wish to log 'will you be able to make your appointment' style calls that you may place when a subject is 5 to 15 mins late to a visit",
+            "key": "same_day_mcv_nts",
+            "name": "<b>MCV & NTS Day of</b><br>Show Missed/Cancalled Vist and Need to Scheudeled calls the day they are generated. By default the calls are shown the next day",
             "type": "checkbox"
         },
         {
