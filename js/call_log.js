@@ -256,8 +256,8 @@ dbtf = (t, c) => {
     if (getParameterByName('showReturn'))
         addGoToCallListButton();
 
-    // Select the correct tab based on URL or default
-    selectTab();
+    // Select the correct tab based on URL or default (wait for pipes to load)
+    setTimeout(selectTab, 100);
 
     // Call ID missing failsafe.
     setTimeout(() => {
