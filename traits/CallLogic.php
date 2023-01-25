@@ -193,6 +193,7 @@ trait CallLogic
     {
         global $Proj;
         $changeOccured = false;
+        $today = date('Y-m-d');
         $orderedEvents = array_combine(array_map(function ($x) {
             return $x['day_offset'];
         }, $Proj->eventInfo), array_keys($Proj->eventInfo));
@@ -207,6 +208,7 @@ trait CallLogic
                 (empty($callConfig['skip']) || (!$data[$callConfig['event']][$callConfig['skip']] && !$data[$prevEvent][$callConfig['skip']] && !$data[$callLogEvent][$callConfig['skip']] && !$data[$metadataEvent][$callConfig['skip']]))
             ) {
                 $metadata[$callConfig['id']] = [
+                    "created" => $today,
                     "template" => 'nts',
                     "event_id" => $callConfig['event'],
                     "name" => $callConfig['name'],
