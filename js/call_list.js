@@ -473,60 +473,65 @@ Object.filterKeys = (obj, allowedKeys) =>
             $(`.call-link[data-tabid=${tab_id}]`).append(`<span class="badge badge-secondary">${badge}</span>`);
     }
 
-    if (CallLog.configError) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Call Log config Issue',
-            text: 'The Call Log External Module requries the Call Long, and Call Metadata instruments to exist on one event and the former to be enable as a repeatable instrument. Please invesitage and resovle.',
+    const setup = () => {
+
+        if (CallLog.configError) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Call Log config Issue',
+                text: 'The Call Log External Module requries the Call Long, and Call Metadata instruments to exist on one event and the former to be enable as a repeatable instrument. Please invesitage and resovle.',
+            });
+            return;
+        }
+
+        // Setup search, must happen before table init
+        setupSearch();
+
+        // Main table build out
+        $('.callTable').each((index, el) => {
+
+            let tab_id = $(el).closest('.tab-pane').prop('id');
+            childRows[tab_id] = "";
+            colConfig[tab_id] = createColConfig(index, tab_id);
+
+            // Init the table
+            $(el).DataTable({
+                lengthMenu: [
+                    [25, 50, 100, -1],
+                    [25, 50, 100, "All"]
+                ],
+                language: {
+                    emptyTable: "No calls to display"
+                },
+                columns: colConfig[tab_id],
+                createdRow: (row, data, index) => $(row).addClass('dataTablesRow'),
+                sDom: 'ltpi'
+            });
+
         });
-        return;
+
+        // Insert search box, must happen after table init
+        $('.dataTables_length').after(
+            "<div class='dataTables_filter customSearch'><label>Search:<input type='search'></label></div>");
+
+        // Exactly what it looks like
+        setupLocalSettings();
+
+        // Everything is built out, show the body now
+        $(".card").fadeIn();
+
+        // Enable click to expand for rows, actions on btns etc
+        $('.callTable').on('click', '.dataTablesRow', clickToExpand);
+        $('.callTable').on('click', '.noCallsButton', noCallsToday);
+        $('.callTable').on('click', '.endCallButton', endCall);
+        $('.callTable').on('click', '.rowLink', callURLclick);
+
+        // Load the initial data
+        toggleCallBackCol();
+        refreshTableData();
+        $(".dataTables_empty").text('Loading...')
     }
 
-    // Setup search, must happen before table init
-    setupSearch();
-
-    // Main table build out
-    $('.callTable').each((index, el) => {
-
-        let tab_id = $(el).closest('.tab-pane').prop('id');
-        childRows[tab_id] = "";
-        colConfig[tab_id] = createColConfig(index, tab_id);
-
-        // Init the table
-        $(el).DataTable({
-            lengthMenu: [
-                [25, 50, 100, -1],
-                [25, 50, 100, "All"]
-            ],
-            language: {
-                emptyTable: "No calls to display"
-            },
-            columns: colConfig[tab_id],
-            createdRow: (row, data, index) => $(row).addClass('dataTablesRow'),
-            sDom: 'ltpi'
-        });
-
-    });
-
-    // Insert search box, must happen after table init
-    $('.dataTables_length').after(
-        "<div class='dataTables_filter customSearch'><label>Search:<input type='search'></label></div>");
-
-    // Exactly what it looks like
-    setupLocalSettings();
-
-    // Everything is built out, show the body now
-    $(".card").fadeIn();
-
-    // Enable click to expand for rows, actions on btns etc
-    $('.callTable').on('click', '.dataTablesRow', clickToExpand);
-    $('.callTable').on('click', '.noCallsButton', noCallsToday);
-    $('.callTable').on('click', '.endCallButton', endCall);
-    $('.callTable').on('click', '.rowLink', callURLclick);
-
-    // Load the initial data
-    toggleCallBackCol();
-    refreshTableData();
-    $(".dataTables_empty").text('Loading...')
+    setup();
 
 })();

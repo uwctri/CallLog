@@ -24,14 +24,6 @@ dbtf = (t, c) => {
     // Creates too many issues with features
     window.displayFormSaveBtnTooltip = function () { }
 
-    const to24hr = (t) => {
-        let isPM = t.includes('P');
-        t = t.toLowerCase().replaceAll(/[amp ]/g, '');
-        if (!isPM) return t;
-        let [h, m] = t.split(':');
-        return h == 12 ? t : `${parseInt(h) + 12}:${m}`;
-    }
-
     const goToCallList = () => {
         appendHiddenInputToForm('save-and-redirect', $("#external_modules_panel a:contains('Call List')").prop('href'));
         dataEntrySubmit('submit-btn-savecontinue');
@@ -40,38 +32,32 @@ dbtf = (t, c) => {
 
     // Fetch the last known contact time for a given call id
     const getPreviousCalldatetime = (callID) => {
-        if (!CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances))
-            return "";
+        if (!CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances)) return "";
         let data = CallLog.data[CallLog.metadata[callID].instances.slice(-1)[0]];
-        if (!data)
-            return "";
+        if (!data) return "";
         return formatDate(new Date(data['call_open_date'] + "T00:00:00"), 'MM-dd-y') + " " + format_time(data['call_open_time']);
     }
 
     // Fetch the checkboxes of remaining tasks from previous call given a id
     const getPreviousCallTasks = (callID) => {
-        if (!CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances))
-            return [];
-        let data = CallLog.data[CallLog.metadata[callID].instances.slice(-1)[0]];
-        if (!data)
-            return [];
         let arr = [];
+        if (!CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances)) return [];
+        let data = CallLog.data[CallLog.metadata[callID].instances.slice(-1)[0]];
+        if (!data) return [];
         for (const [key, value] of Object.entries(data['call_task_remaining'])) {
-            if (value == "1")
-                arr.push(key);
+            if (value != "1") continue;
+            arr.push(key);
         }
         return arr;
     }
 
     // Fetch all previous call notes and compile them.
     const getPreviousCallNotes = (callID) => {
-        if (!CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances))
-            return [];
+        if (!CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances)) return [];
         let notes = [];
         $.each(CallLog.metadata[callID].instances, function (_, instance) {
             let data = CallLog.data[instance];
-            if (!data)
-                return;
+            if (!data) return;
             notes.push({
                 'dt': formatDate(new Date(data['call_open_date'] + "T00:00:00"), 'MM-dd-y') + " " + format_time(data['call_open_time']),
                 'text': data['call_notes'],
@@ -122,13 +108,13 @@ dbtf = (t, c) => {
         $(".formtbody").prepend(CallLog.templates.historicDisplay);
         $("#__SUBMITBUTTONS__-tr").hide();
 
-        // Fill out call details
+        // Fill out call details for the completed call
         let instance = getParameterByName('instance') || 1;
         let id = CallLog.data[instance]['call_id'];
         let data = CallLog.data[instance];
         $("#CallLogCurrentCall").text(CallLog.metadata[id]['name']);
         $("td:contains(Current Caller)").next().text(data['call_open_user_full_name']);
-        $("#CallLogCurrentTime").text(formatDate(new Date(data['call_open_date'] + "T00:00:00"), 'MM-dd-y') + " " + format_time(data['call_open_time']));
+        $("#CallLogCurrentTime").text(formatDate(new Date(data['call_open_date'] + "T00:00:00"), CallLog.format.date) + " " + format_time(data['call_open_time']));
         $("#CallLogPreviousTime").text("Historic");
         updateCallNotes(id);
         return true;
@@ -160,7 +146,7 @@ dbtf = (t, c) => {
                     record: getParameterByName('id'),
                     id: adhoc.id,
                     date: date,
-                    time: to24hr($(`#${adhoc.id} input[name=callTime]`).val()),
+                    time: $(`#${adhoc.id} input[name=callTime]`).val(),
                     reason: $(`#${adhoc.id} select[name=reason]`).val(),
                     notes: $(`#${adhoc.id} textarea[name=notes]`).val(),
                     reporter: CallLog.user
@@ -184,114 +170,118 @@ dbtf = (t, c) => {
         $("#goto-call-list").before('<br>');
     }
 
-    // Check if there is any metadata to use
-    if (isEmpty(CallLog.metadata) && isEmpty(CallLog.adhoc)) {
-        CallLog.disableBranchingLogic = true;
-        $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
-    }
-
-    // Load some Default CSS if none exists 
-    if ($('.formHeader').css('text-align') != 'center')
-        $(".formSxnHeader, .formHeader").addClass('optionalCSS');
-
-    // Hide a few things for style
-    $("#formtop-div").hide();
-    $("td.context_msg").hide();
-    $(`#${CallLog.static.instrument}_complete-sh-tr`).hide();
-    $(`#${CallLog.static.instrument}_complete-tr`).hide();
-
-    //Build out the Notes area
-    buildNotesArea();
-
-    // If we are on a completed version of the Call Log show a warning, update the details and leave
-    if (isCompletedLog()) return;
-
-    // Build out the tabs
-    buildTabs();
-
-    // If no tabs then we have no calls. 
-    if ($(".nav-link").length == 0) {
-        CallLog.disableBranchingLogic = true;
-        $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
-        $(".formtbody").append(CallLog.templates.noCallsDisplay);
-        $("#formSaveTip").remove();
-    }
-
-    // Check if their is any data at all. We need the record to exist to continue
-    if (Object.keys(CallLog.data).length == 0) return
-
-    //Build out ad-hoc buttons 
-    buildAdhocMenu();
-
-    // Fill in Call Details on Tab Change
-    setTimeout(() => { // Wait for action tags to run
-        $("#CallLogCurrentTime").text(
-            $("input[name=call_open_date]").val() + " " + format_time($("input[name=call_open_time]").val())
-        );
-    }, 200)
-    $(".nav-link").on('click', function () {
-        $(".nav-link.active").removeClass('active');
-        $(this).addClass('active');
-        let id = $(this).data('call-id');
-        let call = CallLog.metadata[id];
-        $("#CallLogCurrentCall").text(call.name);
-        $("#CallLogPreviousTime").text(call.instances.length == 0 ? 'None' : getPreviousCalldatetime(id));
-        $("input[name=call_attempt]").val(call.instances.length + 1).blur();
-        $("input[name=call_id]").val(id).blur();
-        $("select[name=call_template]").val(call['template']).change();
-        $("input[name=call_event_name]").val(id.split('|')[1] || "");
-        updateCallNotes(id)
-    });
-
-    // Update Remaining Call Tasks (Call Outcome changes or Tab changes)
-    $("input[name^=call_outcome], .nav-link").on('click', function () {
-        if (!$("input[name$=call_task_remaining]").is(':visible')) return;
-        let tasks = getPreviousCallTasks($("input[name=call_id]").val());
-        $.each(tasks, function () {
-            $(`input[name$=call_task_remaining][code=${this}]`).click();
-        });
-    });
-
-    // Show the "Go to Call List" Button if we came from there
-    if (getParameterByName('showReturn'))
-        addGoToCallListButton();
-
-    // Select the correct tab based on URL or default (wait for pipes to load)
-    setTimeout(selectTab, 100);
-
-    // Call ID missing failsafe.
-    setTimeout(() => {
-        if (($(".nav-link").length == 0) || ($("input[name=call_id]").val() != "")) return;
-        Swal.fire({
-            icon: 'warning',
-            title: 'Issue Configuring Call Log',
-            text: "There was an issue determining what call this log is for. Please refresh the page. If this issue persists contact the REDCap administrator.",
-        });
-        $(".nav-link:visible").first().click();
-
-    }, 3000);
-
-    // Force Call Incomplete when call back is requested
-    $("input[name$=call_requested_callback]").on('click', function () {
-        $("input[name^=call_outcome][value=1]").prop('checked', false).prop('disabled', $(this).is(":checked"));
-        $("input[name^=call_outcome][value=0]").click();
-    });
-
-    // Prevent save without call outcome
-    $("#call_outcome-tr").find('input,a').on('click', function () {
-        if ($("input[name=call_outcome]").val() == "") {
-            $("#submit-btn-saverecord").prop('disabled', true).css('pointer-events', 'none');
-            $("#goto-call-list").prop('disabled', true).css('pointer-events', 'none');
-            $("#submit-btn-dropdown").parent().find('button').prop('disabled', true).css('pointer-events', 'none');
-        } else {
-            $("#submit-btn-saverecord").prop('disabled', false).css('pointer-events', 'inherit');
-            $("#goto-call-list").prop('disabled', false).css('pointer-events', 'inherit');
-            $("#submit-btn-dropdown").parent().find('button').prop('disabled', false).css('pointer-events', 'inherit');
+    const buildCallLog = () => {
+        // Check if there is any metadata to use
+        if (isEmpty(CallLog.metadata) && isEmpty(CallLog.adhoc)) {
+            CallLog.disableBranchingLogic = true;
+            $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
         }
-    });
-    $("#call_outcome-tr input").first().click()
 
-    // Flag as complete always
-    $("select[name=call_log_complete]").val('2');
+        // Load some Default CSS if none exists 
+        if ($('.formHeader').css('text-align') != 'center')
+            $(".formSxnHeader, .formHeader").addClass('optionalCSS');
+
+        // Hide a few things for style
+        $("#formtop-div").hide();
+        $("td.context_msg").hide();
+        $(`#${CallLog.static.instrument}_complete-sh-tr`).hide();
+        $(`#${CallLog.static.instrument}_complete-tr`).hide();
+
+        //Build out the Notes area
+        buildNotesArea();
+
+        // If we are on a completed version of the Call Log show a warning, update the details and leave
+        if (isCompletedLog()) return;
+
+        // Build out the tabs
+        buildTabs();
+
+        // If no tabs then we have no calls. 
+        if ($(".nav-link").length == 0) {
+            CallLog.disableBranchingLogic = true;
+            $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
+            $(".formtbody").append(CallLog.templates.noCallsDisplay);
+            $("#formSaveTip").remove();
+        }
+
+        // Check if their is any data at all. We need the record to exist to continue
+        if (Object.keys(CallLog.data).length == 0) return
+
+        //Build out ad-hoc buttons 
+        buildAdhocMenu();
+
+        // Fill in Call Details on Tab Change
+        setTimeout(() => { // Wait for action tags to run
+            $("#CallLogCurrentTime").text(
+                $("input[name=call_open_date]").val() + " " + format_time($("input[name=call_open_time]").val())
+            );
+        }, 200)
+        $(".nav-link").on('click', (event) => {
+            const el = event.target;
+            $(".nav-link.active").removeClass('active');
+            $(el).addClass('active');
+            let id = $(el).data('call-id');
+            let call = CallLog.metadata[id];
+            $("#CallLogCurrentCall").text(call.name);
+            $("#CallLogPreviousTime").text(call.instances.length == 0 ? 'None' : getPreviousCalldatetime(id));
+            $("input[name=call_attempt]").val(call.instances.length + 1).blur();
+            $("input[name=call_id]").val(id).blur();
+            $("select[name=call_template]").val(call['template']).change();
+            $("input[name=call_event_name]").val(id.split('|')[1] || "");
+            updateCallNotes(id)
+        });
+
+        // Update Remaining Call Tasks (Call Outcome changes or Tab changes)
+        $("input[name^=call_outcome], .nav-link").on('click', () => {
+            if (!$("input[name$=call_task_remaining]").is(':visible')) return;
+            const id = $("input[name=call_id]").val();
+            getPreviousCallTasks(id).forEach((code) => {
+                $(`input[name$=call_task_remaining][code=${code}]`).click();
+            });
+        });
+
+        // Show the "Go to Call List" Button if we came from there
+        if (getParameterByName('showReturn'))
+            addGoToCallListButton();
+
+        // Select the correct tab based on URL or default (wait for pipes to load)
+        setTimeout(selectTab, 100);
+
+        // Call ID missing failsafe.
+        setTimeout(() => {
+            if (($(".nav-link").length == 0) || ($("input[name=call_id]").val() != "")) return;
+            Swal.fire({
+                icon: 'warning',
+                title: 'Issue Configuring Call Log',
+                text: "There was an issue determining what call this log is for. Please refresh the page. If this issue persists contact the REDCap administrator.",
+            });
+            $(".nav-link:visible").first().click();
+        }, 3000);
+
+        // Force Call Incomplete when call back is requested
+        $("input[name$=call_requested_callback]").on('click', function () {
+            $("input[name^=call_outcome][value=1]").prop('checked', false).prop('disabled', $(this).is(":checked"));
+            $("input[name^=call_outcome][value=0]").click();
+        });
+
+        // Prevent save without call outcome
+        $("#call_outcome-tr").find('input,a').on('click', function () {
+            if ($("input[name=call_outcome]").val() == "") {
+                $("#submit-btn-saverecord").prop('disabled', true).css('pointer-events', 'none');
+                $("#goto-call-list").prop('disabled', true).css('pointer-events', 'none');
+                $("#submit-btn-dropdown").parent().find('button').prop('disabled', true).css('pointer-events', 'none');
+            } else {
+                $("#submit-btn-saverecord").prop('disabled', false).css('pointer-events', 'inherit');
+                $("#goto-call-list").prop('disabled', false).css('pointer-events', 'inherit');
+                $("#submit-btn-dropdown").parent().find('button').prop('disabled', false).css('pointer-events', 'inherit');
+            }
+        });
+        $("#call_outcome-tr input").first().click()
+
+        // Flag as complete always
+        $("select[name=call_log_complete]").val('2');
+    }
+
+    buildCallLog();
 
 })();
