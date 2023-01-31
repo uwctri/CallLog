@@ -2,7 +2,7 @@
 
 ## What does it do?
 
-The Call Log Redcap External Module is resonsible for the generation of calls associated with a redcap record, listing those calls on a convient call list, and tracking progress of those calls to completion. The call log EM currently supports seven call types, any reasonable number of organizing tabs for the call list, and some actions via an API that may be done by external scripts.
+The Call Log Redcap External Module is resonsible for the generation of calls associated with a redcap record, listing those calls on a convient call list, and tracking progress of those calls to completion. The call log EM currently supports seven call types, any reasonable number of organizing tabs for the call list, and some actions via an API that may be done by external scripts. The EM is highly opinionated, but offers some level of flexability via the API.
 
 ## Installing
 
@@ -10,24 +10,19 @@ This EM isn't yet available to install via redcap's EM database so you'll need t
 
 ## Configuration
 
-Configuration for this module is extensive and complex. Full documentation will exist on offical public release, but this has no current planned date.
+Configuration for this module is extensive and complex. Full documentation will exist on offical public release.
 
-Basic setup:
+* Deploy the instrument via the module configuration modal. Assign the two created instruments (Call Log and Metadata) to ONE event each. The metadata form is never intended to be visited by an end-user, it can be placed on un-used hidden event. The Call Log will be used to record instances of interacting with a subject on the phone. It may be a good idea to strucutre your project wit a "Study Management" event that represents used-only-once and special forms, if you do then then that event is a good place for both instruemnts.
+* Review the module's config. You will need atleast one unique call and one call tab.
+* The end user is expected to complete a call log after every attemp to reach a subject. It is recommended that you link end-users to the call log at the end of each event if appropriate (i.e. with an HTML button).
 
-* Deploy the instrument csv to the project you want to use the EM on, you will probably want to deploy this instrument to a "Study Management" event. The call log should exist only on one event and be enabled as repeatable.
-* Review the EM config
-* The end user is expected to complete a call log after every attemp to reach a subject. It is recommended that you link end-users to the call log at the end of each event that would make sense.
+## Ongoing Issues
 
-## Feature Requests & Issues
-
-* Fix the NTS issue
-* Major JS Cleanup
-* Improve text on the config page
-* Speed up the config page?
+* Major code cleanup needed
+* Improve text on the config page and documentation in general
 * We collect a history of requests for "No calls today", but don't display that data anywhere.
-* Switching between tabs on the call log should clear any entered data and display warning about data lost
+* Metadata report page is currently trivial and visible to everyone
 * Currently many configs are copied to the metadata of a call. Could we instead load the config and refrence it via template name to avoid this bloat? That would mean a potiental re-pull of data and recalculation of ranges.
-* Improve metadata report page
 
 ## API
 
