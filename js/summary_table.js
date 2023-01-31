@@ -43,7 +43,7 @@
         let data = CallLog.data[row.data()['instance']];
         const opt = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
         let date = new Date(data['call_open_datetime']);
-        date = date.toLocaleDateString('en-uk', opt).replace(',', '')
+        date = date.toLocaleDateString(undefined, opt).replace(',', '')
         let note = data['call_notes'] ? data['call_notes'] : "No Notes Taken";
         let logClosed = data['call_outcome'] == "1" ? CallLog.templates.callClosed : "";
         row.child(`<b>${date}</b><br>${data['call_open_user_full_name']} - ${note}${logClosed}`, 'dataTableChild').show();
