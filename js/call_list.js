@@ -13,6 +13,7 @@ Object.filterKeys = (obj, allowedKeys) =>
 
 (() => {
 
+    const module = ExternalModules.UWMadison.CallLog;
     const earlyCall = 5 * 60 * 1000; // Grace time on early calling of 5 mins
     const pageRefresh = 1 * 60 * 1000; // Refresh page every 1 minutes
 
@@ -83,7 +84,7 @@ Object.filterKeys = (obj, allowedKeys) =>
             return;
         }
         let data = row.data()
-        let record = data[CallLog.static.record_id];
+        let record = data[module.static.record_id];
         let call = data['_call_id'];
         let tab_id = $(target).closest('.tab-pane').prop('id');
         let notes = data['_callNotes'];
@@ -95,7 +96,7 @@ Object.filterKeys = (obj, allowedKeys) =>
     }
 
     const projectLog = (action, call_id, record) => {
-        CallLog.em.ajax("log", {
+        module.ajax("log", {
             text: `${action}\nCall ID: ${call_id}`,
             record: record,
             event: null
@@ -108,7 +109,7 @@ Object.filterKeys = (obj, allowedKeys) =>
 
     const childRowFormat = (record, call_id, callStarted, childData, notesData, tab) => {
         notesData = notesData.split('|||').map(x => x.split('||')).filter(x => x.length > 2);
-        return `<div class="container"><div class="row"><div class="col-4"><div class="row dtChildData"><div class="col-auto">${childRows[tab]}</div><div class="col">${childData.map(x => '<div class="row">' + (x || "________") + '</div>').join('')}</div></div><div class="row"><div class="col"><div class="row"><a class="noCallsButton" data-record="${record}" data-call="${call_id}">No Calls Today</a>${!callStarted ? '' : `&emsp;<a class="endCallButton" data-record="${record}" data-call="${call_id}">End Current Call</a>`}</div></div></div></div><div class="col-8 border-left"><div class="row dtChildNotes"><div class="col">${notesData.map(x => `<div class="row m-2 pb-2 border-bottom"><div class="col-auto"><div class="row">${formatDate(new Date(x[0].split(' ')[0] + "T00:00:00"), CallLog.format.date)} ${format_time(x[0].split(' ')[1])}</div><div class="row">${x[1]}</div><div class="row">${x[2]}</div></div><div class="col"><div class="row ml-1">${x[3] == "none" ? "No Notes Taken" : x[3]}</div></div></div>`).join('') || '<div class="text-center mt-4">Call history will display here</div>'}</div></div></div></div></div>`;
+        return `<div class="container"><div class="row"><div class="col-4"><div class="row dtChildData"><div class="col-auto">${childRows[tab]}</div><div class="col">${childData.map(x => '<div class="row">' + (x || "________") + '</div>').join('')}</div></div><div class="row"><div class="col"><div class="row"><a class="noCallsButton" data-record="${record}" data-call="${call_id}">No Calls Today</a>${!callStarted ? '' : `&emsp;<a class="endCallButton" data-record="${record}" data-call="${call_id}">End Current Call</a>`}</div></div></div></div><div class="col-8 border-left"><div class="row dtChildNotes"><div class="col">${notesData.map(x => `<div class="row m-2 pb-2 border-bottom"><div class="col-auto"><div class="row">${formatDate(new Date(x[0].split(' ')[0] + "T00:00:00"), module.format.date)} ${format_time(x[0].split(' ')[1])}</div><div class="row">${x[1]}</div><div class="row">${x[2]}</div></div><div class="col"><div class="row ml-1">${x[3] == "none" ? "No Notes Taken" : x[3]}</div></div></div>`).join('') || '<div class="text-center mt-4">Call history will display here</div>'}</div></div></div></div></div>`;
     }
 
     const createColConfig = (index, tab_id) => {
@@ -120,14 +121,14 @@ Object.filterKeys = (obj, allowedKeys) =>
             className: 'leftListIcon',
             render: (data, type, row, meta) => {
                 const record = row['record_id'];
-                if (CallLog.activeCallCache.includes(record)) return CallLog.templates.phoneIcon;
-                const multi = CallLog.multiTabCache[record];
-                if (multi) return CallLog.templates.manyTabIcons.replace('LIST', multi.map(el => CallLog.tabs.tabNameMap[el]).join('&#010;'));
+                if (module.activeCallCache.includes(record)) return module.templates.phoneIcon;
+                const multi = module.multiTabCache[record];
+                if (multi) return module.templates.manyTabIcons.replace('LIST', multi.map(el => module.tabs.tabNameMap[el]).join('&#010;'));
                 return "";
             }
         }];
 
-        $.each(CallLog.tabs['config'][index]['fields'], function (colIndex, fConfig) {
+        $.each(module.tabs['config'][index]['fields'], function (colIndex, fConfig) {
 
             // Standard Config for all fields
             let colConfig = {
@@ -172,12 +173,12 @@ Object.filterKeys = (obj, allowedKeys) =>
             } else if (colConfig.data == "call_event_name") {
                 colConfig.render = (data, _type, _row, _meta) => {
                     if (!data) console.log(_row);
-                    return CallLog.eventNameMap[data] || "";
+                    return module.eventNameMap[data] || "";
                 }
             } else if (fConfig.validation == 'phone') {
                 colConfig.render = (data, type, _row, _meta) => (data && (type === 'filter')) ? data.replace(/[\\(\\)\\-\s]/g, '') : data || "";
-            } else if (Object.keys(CallLog.usernameLists).includes(fConfig.field)) {
-                colConfig.render = (data, _type, _row, _meta) => data ? data.includes(CallLog.user) ? CallLog.usernameLists[fConfig.field]['include'] : CallLog.usernameLists[fConfig.field]['exclude'] : "";
+            } else if (Object.keys(module.usernameLists).includes(fConfig.field)) {
+                colConfig.render = (data, _type, _row, _meta) => data ? data.includes(module.user) ? module.usernameLists[fConfig.field]['include'] : module.usernameLists[fConfig.field]['exclude'] : "";
             }
 
             // Build out any links
@@ -198,7 +199,7 @@ Object.filterKeys = (obj, allowedKeys) =>
                     const type = fConfig.link;
                     const instrument = fConfig.linkedInstrument;
                     const event = fConfig.linkedEvent;
-                    const record = rowData[CallLog.static.record_id];
+                    const record = rowData[module.static.record_id];
                     const instance = rowData['_nextInstance']
                     const id = rowData['_call_id'];
 
@@ -218,30 +219,30 @@ Object.filterKeys = (obj, allowedKeys) =>
         });
 
         // Tack on Lower and Upper windows for Follow ups
-        if (CallLog.tabs['config'][index]['showFollowupWindows']) {
+        if (module.tabs['config'][index]['showFollowupWindows']) {
             cols.push({ title: 'Start Calling', data: '_windowLower' });
             cols.push({ title: 'Complete By', data: '_windowUpper' });
         }
 
         // Tack on Missed Appt date
-        if (CallLog.tabs['config'][index]['showMissedDateTime']) {
+        if (module.tabs['config'][index]['showMissedDateTime']) {
             cols.push({
                 title: 'Missed Date',
                 data: '_appt_dt',
                 render: (data, type, _row, _meta) =>
-                    (type === 'display' || type === 'filter') ? formatDate(new Date(data), CallLog.format.dateTime).toLowerCase() || "Not Specified" : data || "Not Specified"
+                    (type === 'display' || type === 'filter') ? formatDate(new Date(data), module.format.dateTime).toLowerCase() || "Not Specified" : data || "Not Specified"
             });
         }
 
         // Tack on Adhoc call info
-        if (CallLog.tabs['config'][index]['showAdhocDates']) {
+        if (module.tabs['config'][index]['showAdhocDates']) {
             cols.push({ title: 'Reason', data: '_adhocReason' });
             cols.push({
                 title: 'Call on',
                 data: '_adhocContactOn',
                 render: function (data, type, _row, _meta) {
                     if (type === 'display' || type === 'filter') {
-                        let format = data.length <= 10 ? CallLog.format.date : CallLog.format.dateTime;
+                        let format = data.length <= 10 ? module.format.date : module.format.dateTime;
                         data = data.length <= 10 ? data + "T00:00" : data;
                         return formatDate(new Date(data), format).toLowerCase() || "Not Specified";
                     } else {
@@ -269,7 +270,7 @@ Object.filterKeys = (obj, allowedKeys) =>
                 if (row['call_requested_callback'] && row['call_requested_callback'][1] == '1') {
 
                     if (row['call_callback_date']) {
-                        displayDate += formatDate(new Date(row['call_callback_date'] + 'T00:00:00'), CallLog.format.date) + " ";
+                        displayDate += formatDate(new Date(row['call_callback_date'] + 'T00:00:00'), module.format.date) + " ";
                     }
 
                     displayDate += row['call_callback_time'] ? format_time(row['call_callback_time']) : "";
@@ -282,13 +283,13 @@ Object.filterKeys = (obj, allowedKeys) =>
                 if (type === 'display') {
                     let display = '';
                     if (row['_noCallsToday']) {
-                        display += CallLog.templates.noCallsToday;
+                        display += module.templates.noCallsToday;
                     }
                     if (row['_atMaxAttempts']) {
-                        display += CallLog.templates.atMaxAttempts;
+                        display += module.templates.atMaxAttempts;
                     }
                     if (displayDate) {
-                        display += CallLog.templates.callBack
+                        display += module.templates.callBack
                             .replace('DISPLAYDATE', displayDate)
                             .replace('REQUESTEDBY', requestedBy)
                             .replace('LETTER', requestedBy[0]);
@@ -311,7 +312,7 @@ Object.filterKeys = (obj, allowedKeys) =>
         const de = "../DataEntry/";
         const map = {
             "home": () => `${de}record_home.php?pid=${pid}&id=${record}`,
-            "call": () => `${de}index.php?pid=${pid}&id=${record}&event_id=${CallLog.static.instrumentEvent}&page=${CallLog.static.instrument}&instance=${instance}&call_id=${call_id}&showReturn=1`,
+            "call": () => `${de}index.php?pid=${pid}&id=${record}&event_id=${module.static.instrumentEvent}&page=${module.static.instrument}&instance=${instance}&call_id=${call_id}&showReturn=1`,
             "instrument": () => `${de}index.php?pid=${pid}&id=${record}&event_id=${event}&page=${instruemnt}`
         };
         map[""] = map["home"];
@@ -349,10 +350,10 @@ Object.filterKeys = (obj, allowedKeys) =>
 
     const startCall = (record, call_id, url) => {
         projectLog("Started Call", call_id, record);
-        CallLog.em.ajax("setCallStarted", {
+        module.ajax("setCallStarted", {
             record: record,
             id: call_id,
-            user: CallLog.user
+            user: module.user
         }).then((response) => {
             console.log(response);
             window.location = url;
@@ -367,7 +368,7 @@ Object.filterKeys = (obj, allowedKeys) =>
         const target = event.currentTarget;
         const record = $(target).data('record');
         const call_id = $(target).data('call');
-        CallLog.em.ajax("setCallEnded", {
+        module.ajax("setCallEnded", {
             record: record,
             id: call_id
         }).then((response) => {
@@ -388,7 +389,7 @@ Object.filterKeys = (obj, allowedKeys) =>
 
     const refreshTableData = () => {
         console.time('getData');
-        CallLog.em.ajax("getData", {}).then(function (response) {
+        module.ajax("getData", {}).then(function (response) {
             if (!response.success) {
                 Swal.fire({
                     title: 'Unable to Load Data',
@@ -401,16 +402,16 @@ Object.filterKeys = (obj, allowedKeys) =>
             alwaysShowCallbackCol = result.showCallback;
 
             // Keep track of users in multiple tabs
-            CallLog.multiTabCache = {};
-            CallLog.activeCallCache = [];
+            module.multiTabCache = {};
+            module.activeCallCache = [];
             $.each(result.data, (tab, data) => {
                 data.forEach((el) => {
-                    CallLog.multiTabCache[el.record_id] ||= [];
-                    CallLog.multiTabCache[el.record_id].push(tab);
-                    if (el._callStarted) CallLog.activeCallCache.push(el.record_id);
+                    module.multiTabCache[el.record_id] ||= [];
+                    module.multiTabCache[el.record_id].push(tab);
+                    if (el._callStarted) module.activeCallCache.push(el.record_id);
                 });
             });
-            CallLog.multiTabCache = Object.fromEntries(Object.entries(CallLog.multiTabCache).filter((el) => el[1].length > 1));
+            module.multiTabCache = Object.fromEntries(Object.entries(module.multiTabCache).filter((el) => el[1].length > 1));
 
             $('.callTable').each(function (_index, el) {
                 let table = $(el).DataTable();
@@ -447,7 +448,7 @@ Object.filterKeys = (obj, allowedKeys) =>
         const record = $(target).data('record');
         const call_id = $(target).data('call');
         projectLog("No Calls Today", call_id, record);
-        CallLog.em.ajax("setNoCallsToday", {
+        module.ajax("setNoCallsToday", {
             record: record,
             id: call_id
         }).then((response) => {
@@ -467,15 +468,15 @@ Object.filterKeys = (obj, allowedKeys) =>
 
     const updateBadges = (tab_id) => {
         let badge = 0;
-        let user = $("#impersonate-user-select").val() || CallLog.user;
-        displayedData[tab_id].forEach(x => Object.values(x).includes(CallLog.userNameMap[user]) && badge++);
+        let user = $("#impersonate-user-select").val() || module.user;
+        displayedData[tab_id].forEach(x => Object.values(x).includes(module.userNameMap[user]) && badge++);
         if (badge > 0)
             $(`.call-link[data-tabid=${tab_id}]`).append(`<span class="badge badge-secondary">${badge}</span>`);
     }
 
     const setup = () => {
 
-        if (CallLog.configError) {
+        if (module.configError) {
             Swal.fire({
                 icon: 'error',
                 title: 'Call Log config Issue',

@@ -1,5 +1,6 @@
 (() => {
     let configInit = false;
+    const module = ExternalModules.UWMadison.CallLog;
 
     // Setup template buttons to show correct settings
     $("body").on('click', ".callConfig input[name^=call_template____]", function () {
@@ -18,7 +19,7 @@
     $modal.on('show.bs.modal', function () {
 
         // Making sure we are overriding this modules's modal only.
-        if ($(this).data('module') !== CallLog.prefix) return;
+        if ($(this).data('module') !== module.prefix) return;
 
         if (typeof ExternalModules.Settings.prototype.resetConfigInstancesOld === 'undefined')
             ExternalModules.Settings.prototype.resetConfigInstancesOld = ExternalModules.Settings.prototype.resetConfigInstances;
@@ -26,7 +27,7 @@
         ExternalModules.Settings.prototype.resetConfigInstances = function () {
 
             ExternalModules.Settings.prototype.resetConfigInstancesOld();
-            if ($modal.data('module') !== CallLog.prefix) return;
+            if ($modal.data('module') !== module.prefix) return;
 
             $modal.addClass('callConfig');
 
@@ -53,7 +54,7 @@
             $modal.find("[field=intro_text] label").after('<button class="setupCallLog" style="float:right">Deploy Call Long Instruments</button>')
             $modal.find(".setupCallLog").on("click", () => {
                 $(".setupCallLog").attr("disabled", true);
-                CallLog.em.ajax("deployInstruments", {}).then((response) => {
+                module.ajax("deployInstruments", {}).then((response) => {
                     location.reload();
                 }).catch((err) => {
                     console.log(err)
@@ -95,7 +96,7 @@
 
     $modal.on('hide.bs.modal', function () {
         // Making sure we are overriding this modules's modal only.
-        if ($(this).data('module') !== CallLog.prefix) return;
+        if ($(this).data('module') !== module.prefix) return;
 
         $(this).removeClass('callConfig');
         configInit = false;

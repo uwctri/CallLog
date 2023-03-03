@@ -1,10 +1,11 @@
 (() => {
     const callSummaryPageSize = 20;
+    const module = ExternalModules.UWMadison.CallLog;
 
     const threeDotClick = () => {
         Swal.fire({
             title: 'Call Metadata Settings',
-            html: CallLog.templates.callHistorySettings,
+            html: module.templates.callHistorySettings,
             showCancelButton: true,
             focusCancel: true
         }).then((result) => {
@@ -12,15 +13,15 @@
             if (!result.isConfirmed)
                 return;
 
-            // Edit the CallLog.metadata
+            // Edit the module.metadata
             $(".callMetadataEdit").each(function () {
-                CallLog.metadata[$(this).data('call')].complete = $(this).is(':checked');
+                module.metadata[$(this).data('call')].complete = $(this).is(':checked');
             });
 
             // Write back the metadata
-            CallLog.em.ajax("metadataSave", {
+            module.ajax("metadataSave", {
                 record: getParameterByName('id'),
-                metadata: JSON.stringify(CallLog.metadata)
+                metadata: JSON.stringify(module.metadata)
             }).then(function (response) {
                 console.log(response);
                 window.onbeforeunload = function () { };
@@ -40,12 +41,12 @@
             $(target).removeClass('shown');
             return;
         }
-        let data = CallLog.data[row.data()['instance']];
+        let data = module.data[row.data()['instance']];
         const opt = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
         let date = new Date(data['call_open_datetime']);
         date = date.toLocaleDateString(undefined, opt).replace(',', '')
         let note = data['call_notes'] ? data['call_notes'] : "No Notes Taken";
-        let logClosed = data['call_outcome'] == "1" ? CallLog.templates.callClosed : "";
+        let logClosed = data['call_outcome'] == "1" ? module.templates.callClosed : "";
         row.child(`<b>${date}</b><br>${data['call_open_user_full_name']} - ${note}${logClosed}`, 'dataTableChild').show();
         $(target).next().addClass($(target).hasClass('even') ? 'even' : 'odd');
         $(target).addClass('shown');
@@ -70,7 +71,7 @@
             let instance = getParameterByName('instance') > 1 ? getParameterByName('instance') - 1 : 1;
 
             // Post to delete, removes metadata too
-            CallLog.em.ajax("callDelete", {
+            module.ajax("callDelete", {
                 record: getParameterByName('id')
             }).then(function (response) {
                 console.log(response);
@@ -87,17 +88,17 @@
 
     const buildCallSummaryTable = () => {
         // Check if we have anything to actually build
-        if (isEmpty(CallLog.metadata) || !(Object.keys(CallLog.data).length > 1 || !CallLog.data[1] || CallLog.data[1]['call_id']))
+        if (isEmpty(module.metadata) || !(Object.keys(module.data).length > 1 || !module.data[1] || module.data[1]['call_id']))
             return;
 
         // Insert the table, lock its location
-        $("#center").append(CallLog.templates.callHistoryTable);
+        $("#center").append(module.templates.callHistoryTable);
         $('.callHistoryContainer').css('top', $("#record_id-tr").offset().top);
 
         // Init the DataTable
         $('.callSummaryTable').DataTable({
             pageLength: 20,
-            dom: Object.keys(CallLog.data).length > callSummaryPageSize ? 'rtp' : 'rt',
+            dom: Object.keys(module.data).length > callSummaryPageSize ? 'rtp' : 'rt',
             order: [
                 [0, "desc"]
             ],
@@ -110,19 +111,19 @@
                     title: 'Call time',
                     data: 'datetime',
                     render: (data, type, row, meta) =>
-                        (type === 'display' || type === 'filter') ? formatDate(new Date(data), CallLog.format.dateTime).toLowerCase() : data
+                        (type === 'display' || type === 'filter') ? formatDate(new Date(data), module.format.dateTime).toLowerCase() : data
                 },
                 { title: '', data: 'deleteInstance', bSortable: false }
             ],
-            data: $.map(CallLog.data, (data, index) => {
-                let m = CallLog.metadata[data['call_id']];
-                let allowDelete = (Object.keys(CallLog.data)[Object.keys(CallLog.data).length - 1] == index);
+            data: $.map(module.data, (data, index) => {
+                let m = module.metadata[data['call_id']];
+                let allowDelete = (Object.keys(module.data)[Object.keys(module.data).length - 1] == index);
                 return {
                     instance: index,
                     name: m && m['name'] ? m['name'] : (data['call_id'] || "Unknown"),
                     datetime: data['call_open_datetime'],
                     leftMessage: data['call_left_message'][1] == "1" ? 'Yes' : 'No',
-                    deleteInstance: allowDelete ? CallLog.templates.deleteLog : ''
+                    deleteInstance: allowDelete ? module.templates.deleteLog : ''
                 };
             })
         });
@@ -131,22 +132,22 @@
         $(".callHistoryContainer").css('width', $(".callHistoryContainer").css('width').slice(0, -2) * 1.1)
 
         // Build the "settings" menu, used for un-completing any calls
-        $(".callHistoryContainer .sorting_disabled").html(CallLog.templates.settingsButton);
+        $(".callHistoryContainer .sorting_disabled").html(module.templates.settingsButton);
         let callHistroyRows = "";
-        $.each(CallLog.metadata, (k, v) => {
-            callHistroyRows += CallLog.templates.callHistoryRow
+        $.each(module.metadata, (k, v) => {
+            callHistroyRows += module.templates.callHistoryRow
                 .replace('CALLID', k)
                 .replace('CALLNAME', v.name)
                 .replace('checked', v.complete ? 'checked' : '');
         });
-        CallLog.templates.callHistorySettings += callHistroyRows;
+        module.templates.callHistorySettings += callHistroyRows;
         $(".callSummarySettings").on('click', threeDotClick);
 
         // Enable click to expand child row
         $('body').on('click', '.dataTablesRow', childRowExpand);
 
         // If not on the call log then we are done
-        if (getParameterByName('page') != CallLog.static.instrument)
+        if (getParameterByName('page') != module.static.instrument)
             return;
 
         // Allow deleting the most recent version of the call log

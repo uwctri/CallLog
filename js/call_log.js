@@ -1,20 +1,8 @@
-// Debug function, easily save the metadata after directly editing it
-CallLog.saveMetadata = () => {
-    CallLog.em.ajax("metadataSave", {
-        record: getParameterByName('id'),
-        metadata: JSON.stringify(CallLog.metadata)
-    }).then(function (response) {
-        console.log(response)
-    }).catch(function (err) {
-        console.log(err);
-    });
-}
-
 // Override Redcap branching logic
 const __dbtf = dbtf;
 dbtf = (t, c) => {
     const fields = ['call_left_message', 'call_not_answered', 'call_disconnected', 'call_requested_callback', 'call_outcome'];
-    if (CallLog.disableBranchingLogic && fields.includes(c))
+    if (ExternalModules.UWMadison.CallLog.disableBranchingLogic && fields.includes(c))
         return false;
     return __dbtf(t, c);
 }
@@ -24,6 +12,20 @@ dbtf = (t, c) => {
     // Creates too many issues with features
     window.displayFormSaveBtnTooltip = function () { }
 
+    const module = ExternalModules.UWMadison.CallLog;
+
+    // Debug function, easily save the metadata after directly editing it
+    module.saveMetadata = () => {
+        module.ajax("metadataSave", {
+            record: getParameterByName('id'),
+            metadata: JSON.stringify(module.metadata)
+        }).then(function (response) {
+            console.log(response)
+        }).catch(function (err) {
+            console.log(err);
+        });
+    }
+
     const goToCallList = () => {
         appendHiddenInputToForm('save-and-redirect', $("#external_modules_panel a:contains('Call List')").prop('href'));
         dataEntrySubmit('submit-btn-savecontinue');
@@ -32,8 +34,8 @@ dbtf = (t, c) => {
 
     // Fetch the last known contact time for a given call id
     const getPreviousCalldatetime = (callID) => {
-        if (!CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances)) return "";
-        let data = CallLog.data[CallLog.metadata[callID].instances.slice(-1)[0]];
+        if (!module.metadata[callID] || isEmpty(module.metadata[callID].instances)) return "";
+        let data = module.data[module.metadata[callID].instances.slice(-1)[0]];
         if (!data) return "";
         return formatDate(new Date(data['call_open_date'] + "T00:00:00"), 'MM-dd-y') + " " + format_time(data['call_open_time']);
     }
@@ -41,8 +43,8 @@ dbtf = (t, c) => {
     // Fetch the checkboxes of remaining tasks from previous call given a id
     const getPreviousCallTasks = (callID) => {
         let arr = [];
-        if (!CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances)) return [];
-        let data = CallLog.data[CallLog.metadata[callID].instances.slice(-1)[0]];
+        if (!module.metadata[callID] || isEmpty(module.metadata[callID].instances)) return [];
+        let data = module.data[module.metadata[callID].instances.slice(-1)[0]];
         if (!data) return [];
         for (const [key, value] of Object.entries(data['call_task_remaining'])) {
             if (value != "1") continue;
@@ -53,10 +55,10 @@ dbtf = (t, c) => {
 
     // Fetch all previous call notes and compile them.
     const getPreviousCallNotes = (callID) => {
-        if (!CallLog.metadata[callID] || isEmpty(CallLog.metadata[callID].instances)) return [];
+        if (!module.metadata[callID] || isEmpty(module.metadata[callID].instances)) return [];
         let notes = [];
-        $.each(CallLog.metadata[callID].instances, function (_, instance) {
-            let data = CallLog.data[instance];
+        $.each(module.metadata[callID].instances, function (_, instance) {
+            let data = module.data[instance];
             if (!data) return;
             notes.push({
                 'dt': formatDate(new Date(data['call_open_date'] + "T00:00:00"), 'MM-dd-y') + " " + format_time(data['call_open_time']),
@@ -91,7 +93,7 @@ dbtf = (t, c) => {
 
     const buildNotesArea = () => {
         $("#call_notes-tr td").hide();
-        $("#call_notes-tr").append(CallLog.templates.notesEntry);
+        $("#call_notes-tr").append(module.templates.notesEntry);
         $(".panel-left").resizable({
             handleSelector: ".splitter",
             resizeHeight: false,
@@ -101,55 +103,55 @@ dbtf = (t, c) => {
     }
 
     const isCompletedLog = () => {
-        if ($(`select[name=${CallLog.static.instrument}_complete]`).val() == "0")
+        if ($(`select[name=${module.static.instrument}_complete]`).val() == "0")
             return false;
 
         // Prevent editing
-        $(".formtbody").prepend(CallLog.templates.historicDisplay);
+        $(".formtbody").prepend(module.templates.historicDisplay);
         $("#__SUBMITBUTTONS__-tr").hide();
 
         // Fill out call details for the completed call
         let instance = getParameterByName('instance') || 1;
-        let id = CallLog.data[instance]['call_id'];
-        let data = CallLog.data[instance];
-        $("#CallLogCurrentCall").text(CallLog.metadata[id]['name']);
+        let id = module.data[instance]['call_id'];
+        let data = module.data[instance];
+        $("#CallLogCurrentCall").text(module.metadata[id]['name']);
         $("td:contains(Current Caller)").next().text(data['call_open_user_full_name']);
-        $("#CallLogCurrentTime").text(formatDate(new Date(data['call_open_date'] + "T00:00:00"), CallLog.format.date) + " " + format_time(data['call_open_time']));
+        $("#CallLogCurrentTime").text(formatDate(new Date(data['call_open_date'] + "T00:00:00"), module.format.date) + " " + format_time(data['call_open_time']));
         $("#CallLogPreviousTime").text("Historic");
         updateCallNotes(id);
         return true;
     }
 
     const buildTabs = () => {
-        $("#questiontable tr[id]").first().before(CallLog.templates.callWrapper);
-        $.each(CallLog.metadata, function (callID, callData) {
+        $("#questiontable tr[id]").first().before(module.templates.callWrapper);
+        $.each(module.metadata, function (callID, callData) {
             // Hide completed calls, blank call IDs (errors), future calls, and follow-ups that were never completed (auto remove)
             if (this.complete || (callID[0] == "_") || (callID == "") ||
                 (callData.start && (callData.start > today)) ||
                 (callData.autoRemove && callData.end && (callData.end < today)))
                 return;
-            $(".card-header-tabs").append(CallLog.templates.callLogTab.replace('CALLID', callID).replace('TABNAME', callData.name || "Unknown"));
+            $(".card-header-tabs").append(module.templates.callLogTab.replace('CALLID', callID).replace('TABNAME', callData.name || "Unknown"));
         });
     }
 
     const buildAdhocMenu = () => {
-        $.each(CallLog.adhoc, function (index, adhoc) {
-            $("div.card-header").after(CallLog.templates.adhocBtn.replace('TEXT', 'New ' + adhoc.name).replace('MODALID', adhoc.id));
+        $.each(module.adhoc, function (index, adhoc) {
+            $("div.card-header").after(module.templates.adhocBtn.replace('TEXT', 'New ' + adhoc.name).replace('MODALID', adhoc.id));
             $(".adhocButton").first().css('transform', 'translate(' + (790 - $(".adhocButton").first().outerWidth()) + 'px,-34px)');
-            $(".formtbody tr").first().append(CallLog.templates.adhocModal.replace('MODALID', adhoc.id).replace('MODAL TITLE', 'New ' + adhoc.name));
+            $(".formtbody tr").first().append(module.templates.adhocModal.replace('MODALID', adhoc.id).replace('MODAL TITLE', 'New ' + adhoc.name));
             $.each(adhoc.reasons, (code, value) => $(`#${adhoc.id} select[name=reason]`).append(`<option value="${code}">${value}</option>`));
             $(`#${adhoc.id} input[name=callDate]`).datepicker();
             $(`#${adhoc.id} .callModalSave`).on('click', function () {
                 let date = $(`#${adhoc.id} input[name=callDate]`).val(); //redcap format function
                 date = date ? formatDate(new Date(date), 'y-MM-dd') : "";
-                CallLog.em.ajax("newAdhoc", {
+                module.ajax("newAdhoc", {
                     record: getParameterByName('id'),
                     id: adhoc.id,
                     date: date,
                     time: $(`#${adhoc.id} input[name=callTime]`).val(),
                     reason: $(`#${adhoc.id} select[name=reason]`).val(),
                     notes: $(`#${adhoc.id} textarea[name=notes]`).val(),
-                    reporter: CallLog.user
+                    reporter: module.user
                 }).then(function (response) {
                     console.log(response);
                     window.onbeforeunload = function () { };
@@ -172,8 +174,8 @@ dbtf = (t, c) => {
 
     const buildCallLog = () => {
         // Check if there is any metadata to use
-        if (isEmpty(CallLog.metadata) && isEmpty(CallLog.adhoc)) {
-            CallLog.disableBranchingLogic = true;
+        if (isEmpty(module.metadata) && isEmpty(module.adhoc)) {
+            module.disableBranchingLogic = true;
             $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
         }
 
@@ -184,8 +186,8 @@ dbtf = (t, c) => {
         // Hide a few things for style
         $("#formtop-div").hide();
         $("td.context_msg").hide();
-        $(`#${CallLog.static.instrument}_complete-sh-tr`).hide();
-        $(`#${CallLog.static.instrument}_complete-tr`).hide();
+        $(`#${module.static.instrument}_complete-sh-tr`).hide();
+        $(`#${module.static.instrument}_complete-tr`).hide();
 
         //Build out the Notes area
         buildNotesArea();
@@ -198,14 +200,14 @@ dbtf = (t, c) => {
 
         // If no tabs then we have no calls. 
         if ($(".nav-link").length == 0) {
-            CallLog.disableBranchingLogic = true;
+            module.disableBranchingLogic = true;
             $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
-            $(".formtbody").append(CallLog.templates.noCallsDisplay);
+            $(".formtbody").append(module.templates.noCallsDisplay);
             $("#formSaveTip").remove();
         }
 
         // Check if their is any data at all. We need the record to exist to continue
-        if (Object.keys(CallLog.data).length == 0) return
+        if (Object.keys(module.data).length == 0) return
 
         //Build out ad-hoc buttons 
         buildAdhocMenu();
@@ -221,7 +223,7 @@ dbtf = (t, c) => {
             $(".nav-link.active").removeClass('active');
             $(el).addClass('active');
             let id = $(el).data('call-id');
-            let call = CallLog.metadata[id];
+            let call = module.metadata[id];
             $("#CallLogCurrentCall").text(call.name);
             $("#CallLogPreviousTime").text(call.instances.length == 0 ? 'None' : getPreviousCalldatetime(id));
             $("input[name=call_attempt]").val(call.instances.length + 1).blur();
