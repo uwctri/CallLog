@@ -18,7 +18,7 @@ Configuration for this module is extensive and complex. Full documentation will 
 
 ## Ongoing Issues
 
-* Major code cleanup needed
+* General code cleanup
 * Improve text on the config page and documentation in general
 * We collect a history of requests for "No calls today", but don't display that data anywhere.
 * Metadata report page is currently trivial and visible to everyone

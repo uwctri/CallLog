@@ -1,5 +1,6 @@
 (() => {
-    CallLog.templates = {};
+    const module = ExternalModules.UWMadison.CallLog;
+    module.templates = {};
     $.each($("template[id=CallLog]").prop('content').children, (_, el) => {
         let html = $(el).prop('outerHTML')
         let id = $(el).prop('id')
@@ -10,6 +11,6 @@
                 html = html.replace("<tr>", "").replace("</tr>", "")
             }
         }
-        CallLog.templates[id] = html;
+        module.templates[id] = html;
     });
 })();

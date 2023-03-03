@@ -21,7 +21,6 @@ class CallLog extends AbstractExternalModule
     use Utility;
     use Configuration;
 
-    private $module_global = 'CallLog';
     public $tabsConfig;
 
     // Hard Coded Data Dictionary Values

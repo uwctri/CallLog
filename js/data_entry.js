@@ -1,4 +1,7 @@
 (() => {
+
+    const module = ExternalModules.UWMadison.CallLog;
+
     const isCallLogNext = () => {
         return $(".form_menu_selected").parent().nextAll().filter(function () {
             return $(this).find('a').css('pointer-events') != "none";
@@ -35,7 +38,7 @@
     }
 
     const formatNavbar = () => {
-        let a = `#form\\[${CallLog.static.instrument}\\]`;
+        let a = `#form\\[${module.static.instrument}\\]`;
         if ($(a).next().length) {
             $(a).next().hide();
             $(a).prev().prop('href', $(a).next().prop('href'));
@@ -51,7 +54,7 @@
     formatNavbar();
     addGoToCallLogButton();
     modifyRequiredPopup();
-    if (CallLog.recentCaller) {
-        $("#questiontable").before(CallLog.templates.callStartedWarning.replace("USERNAME", CallLog.userNameMap[CallLog.recentCaller]));
+    if (module.recentCaller) {
+        $("#questiontable").before(module.templates.callStartedWarning.replace("USERNAME", module.userNameMap[module.recentCaller]));
     }
 })();

@@ -13,7 +13,7 @@ trait Configuration
         $call_event = $this->getEventOfInstrument($this->instrument);
         $meta_event = $this->getEventOfInstrument($this->instrumentMeta);
         $username = $this->getUser()->getUsername();
-        $data = [
+        $data = json_encode([
             "eventNameMap" => $this->getEventNameMap(),
             "prefix" => $this->getPrefix(),
             "user" => $username,
@@ -25,9 +25,8 @@ trait Configuration
                 "record_id" => REDCap::getRecordIdField()
             ],
             "configError" => !($call_event && $meta_event)
-        ];
-        echo "<script>var " . $this->module_global . " = " . json_encode($data) . ";</script>";
-        echo "<script>" . $this->module_global . ".em = " . $this->getJavascriptModuleObjectName() . ";</script>";
+        ]);
+        echo "<script>Object.assign({$this->getJavascriptModuleObjectName()}, {$data});</script>";
     }
 
     private function getCallTemplateConfig()

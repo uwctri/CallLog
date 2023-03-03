@@ -23,7 +23,7 @@ trait Utility
 
     private function passArgument($name, $value)
     {
-        echo "<script>" . $this->module_global . "." . $name . " = " . json_encode($value) . ";</script>";
+        echo "<script>" . $this->getJavascriptModuleObjectName() . "." . $name . " = " . json_encode($value) . ";</script>";
     }
 
     private function isNotBlank($value)
