@@ -34,7 +34,6 @@
         ]
     },
     "no-auth-pages": [
-        "router",
         "api"
     ],
     "no-csrf-pages": [
