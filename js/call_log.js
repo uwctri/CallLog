@@ -18,7 +18,7 @@ dbtf = (t, c) => {
     module.saveMetadata = () => {
         module.ajax("metadataSave", {
             record: getParameterByName('id'),
-            metadata: JSON.stringify(module.metadata)
+            metadata: JSON.stringify(ExternalModules.UWMadison.CallLog.metadata)
         }).then(function (response) {
             console.log(response)
         }).catch(function (err) {
@@ -150,7 +150,7 @@ dbtf = (t, c) => {
                     date: date,
                     time: $(`#${adhoc.id} input[name=callTime]`).val(),
                     reason: $(`#${adhoc.id} select[name=reason]`).val(),
-                    notes: $(`#${adhoc.id} textarea[name=notes]`).val(),
+                    notes: $(`#${adhoc.id} textarea[name=notes]`).val().replaceAll("\"", "'"),
                     reporter: module.user
                 }).then(function (response) {
                     console.log(response);
