@@ -11,7 +11,7 @@
 
     // Setup link buttons to show correct settings for link
     $("body").on('click', ".callConfig input[name^=tab_link____]", function () {
-        let $el = $(this).closest('tr').nextUntil('.sub_end');
+        let $el = $(this).closest('tr').nextUntil('.sub_start');
         $(this).val() == "instrument" ? $el.show() : $el.hide();
     });
 
