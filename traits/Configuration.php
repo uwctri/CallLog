@@ -83,7 +83,7 @@ trait Configuration
                 $days = (int)$settings["followup_days"][$i][0];
                 $length = (int)$settings["followup_length"][$i][0];
                 $end = $settings["followup_end"][$i][0];
-                if (!empty($field) && !empty($event) && !empty($days)) {
+                if (!empty($field) && !empty($event)) {
                     $followupConfig[] = array_merge([
                         "event" => $event,
                         "field" => $field,
@@ -91,7 +91,7 @@ trait Configuration
                         "length" => $length,
                         "end" => $end
                     ], $commonConfig);
-                } elseif (!empty($field) && (!empty($days) || $days == "0")) {
+                } elseif (!empty($field)) {
                     $includeEvents = array_map('trim', explode(',', $settings["followup_include_events"][$i][0]));
                     foreach ($includeEvents as $eventName) {
                         $arr = array_merge([
