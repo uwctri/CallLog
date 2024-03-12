@@ -383,6 +383,7 @@ class CallLog extends AbstractExternalModule
             "hideAfterAttempt" => $config['hideAfterAttempt'],
             "complete" => false
         ];
+
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
