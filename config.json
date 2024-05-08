@@ -59,6 +59,13 @@
             "method": "cronNeedToSchedule",
             "cron_frequency": "86400",
             "cron_max_run_time": "3600"
+        },
+        {
+            "cron_name": "call_log_followup_generate",
+            "cron_description": "Runs daily to generate Follow Up calls",
+            "method": "cronFollowUp",
+            "cron_frequency": "86400",
+            "cron_max_run_time": "3600"
         }
     ],
     "project-settings": [

@@ -277,11 +277,71 @@ class CallLog extends AbstractExternalModule
         ]);
     }
 
+    public function cronFollowUp($cronInfo)
+    {
+        global $Proj;
+        $today = Date('Y-m-d');
+        if (!defined("PROJECT_ID"))
+            define("PROJECT_ID", 1); // Not used, but getEventNames needs it set.
+
+        foreach ($this->getProjectsWithModuleEnabled() as $project_id) {
+            $_GET['pid'] = $project_id;
+            $Proj = new Project($project_id);
+            $project_record_id = $this->getRecordIdField($project_id);
+
+            $config = $this->getCallTemplateConfig()["followup"];
+            if (empty($config)) continue;
+            foreach ($config as $callConfig) {
+
+                $fields = [$project_record_id, $callConfig['field'], $callConfig['followup_end']];
+                $project_data = REDCap::getData($project_id, 'array', null, $fields);
+
+                foreach ($project_data as $record => $data) {
+
+                    $meta = $this->getCallMetadata($project_id, $record);
+                    $event = $callConfig['event'];
+
+                    // Call ID already exists
+                    if ($meta[$callConfig["id"]])
+                        continue;
+
+                    // Calc start day
+                    $start = $data[$event][$callConfig["field"]];
+                    if ($callConfig["days"])
+                        $start = date('Y-m-d', strtotime($start . ' + ' . $callConfig["days"] . ' days'));
+
+                    // Calc end day or use a default
+                    $end = $data[$event][$callConfig["end"]];
+                    if ($callConfig['length'])
+                        $end = date('Y-m-d', strtotime($start . ' + ' . $callConfig["length"] . ' days'));
+
+                    if (($today >= $start) && ($today <= $end)) {
+                        $meta[$callConfig['id']] = [
+                            "start" => $start,
+                            "end" => $end,
+                            "template" => 'followup',
+                            "event_id" => $callConfig['event'],
+                            "name" => $callConfig['name'],
+                            "instances" => [],
+                            "voiceMails" => 0,
+                            "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
+                            "complete" => false
+                        ];
+                        $this->saveCallMetadata($project_id, $record, $meta);
+                        $this->projectLog("Need to Schedue call {$callConfig['id']} created during cron", $record, $event, $project_id);
+                    }
+                }
+            }
+        }
+        return "The \"{$cronInfo['cron_description']}\" cron job completed successfully.";
+    }
+
     public function cronNeedToSchedule($cronInfo)
     {
         global $Proj;
         $today = Date('Y-m-d');
-        define("PROJECT_ID", 1); // Not used, but getEventNames needs it set.
+        if (!defined("PROJECT_ID"))
+            define("PROJECT_ID", 1); // Not used, but getEventNames needs it set.
 
         foreach ($this->getProjectsWithModuleEnabled() as $project_id) {
             $_GET['pid'] = $project_id;
@@ -322,6 +382,7 @@ class CallLog extends AbstractExternalModule
                             "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
                             "complete" => false
                         ];
+                        $this->saveCallMetadata($project_id, $record, $meta);
                         $this->projectLog("Need to Schedue call {$callConfig['id']} created during cron", $record, $event, $project_id);
                     }
                 }
