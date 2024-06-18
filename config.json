@@ -77,7 +77,8 @@
         {
             "key": "trigger_save",
             "name": "<b>Trigger Call Log Generation on...</b><br>Fire some call log generation (MCV, NTS, Follow Up, Reminders) only when this form is saved",
-            "type": "form-list"
+            "type": "form-list",
+            "repeatable": true
         },
         {
             "key": "same_day_mcv_nts",
