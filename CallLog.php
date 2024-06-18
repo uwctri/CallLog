@@ -45,9 +45,9 @@ class CallLog extends AbstractExternalModule
 
         // Call Metadata updates
         $config = $this->getCallTemplateConfig();
-        $triggerForm = $this->getProjectSetting('trigger_save');
+        $triggerForms = $this->getProjectSetting('trigger_save');
         $changes = [];
-        if (empty($triggerForm) || ($instrument == $triggerForm)) {
+        if (empty($triggerForms) || in_array($instrument, $triggerForms)) {
             $a = $this->metadataFollowup($project_id, $record, $metadata, $config['followup']);
             $b = $this->metadataReminder($project_id, $record, $metadata, $config['reminder']);
             $c = $this->metadataMissedCancelled($project_id, $record, $metadata, $config['mcv']);
