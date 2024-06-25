@@ -643,12 +643,14 @@ class CallLog extends AbstractExternalModule
                 // Check if the call was recently opened
                 $instanceData['_callStarted'] = strtotime($call['callStarted']) > strtotime('-' . $this->startedCallGrace . ' minutes');
 
-                // Check if No Calls Today flag is set ( TODO - remove the '==', we don't use strings here anymore )
-                if ($today == $call['noCallsToday'] || in_array($today, $call['noCallsToday']))
+                // Check if No Calls Today flag is set
+                if (!is_array($call['noCallsToday'])) // Old use of noCallsToday was as a string
+                    $call['noCallsToday'] = [$call['noCallsToday']];
+                if (in_array($today, $call['noCallsToday']))
                     $instanceData['_noCallsToday'] = true;
 
                 // Save the no call history
-                $instanceData['_noCallHistory'] = $call['noCallsToday'];
+                $instanceData['_noCallHistory'][] = $call['noCallsToday'];
 
                 // Check if we are at max call attempts for the day
                 // While we are at it, assemble all of the note data too
