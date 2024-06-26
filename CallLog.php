@@ -341,6 +341,8 @@ class CallLog extends AbstractExternalModule
     public function cronNeedToSchedule($cronInfo)
     {
         global $Proj;
+        global $longitudinal;
+        $longitudinal = True;
         $today = Date('Y-m-d');
         if (!defined("PROJECT_ID"))
             define("PROJECT_ID", 1); // Not used, but getEventNames needs it set.
