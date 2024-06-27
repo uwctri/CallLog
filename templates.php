@@ -122,11 +122,11 @@
                 <div class="row mb-3 mt-2 font-weight-bold"> Notes </div>
                 <div class="row panel-container">
                     <div class="panel-left">
-                        <textarea class="notesOld" readonly placeholder="Previous notes will display here"></textarea>
+                        <textarea class="notesOld maxWidthOverride" readonly placeholder="Previous notes will display here"></textarea>
                     </div>
                     <div class="splitter"></div>
                     <div class="panel-right">
-                        <textarea class="notesNew" placeholder="Enter any notes here"></textarea>
+                        <textarea class="notesNew maxWidthOverride" placeholder="Enter any notes here"></textarea>
                     </div>
                 </div>
             </div>
