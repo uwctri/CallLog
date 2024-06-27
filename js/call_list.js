@@ -68,10 +68,14 @@ Object.filterKeys = (obj, allowedKeys) =>
         let storage = localStorage.getItem(key);
         storage = storage ? JSON.parse(storage) : false;
         if (storage) {
-            $(`.call-link[data-tabid=${storage.tab}]`).click();
+            $("document").ready(() => {
+                $(`.call-link[data-tabid=${storage.tab}]`).tab('show');
+            });
             return;
         }
-        $(".call-link").first().click();
+        $("document").ready(() => {
+            $(".call-link").first().tab('show');
+        });
     }
 
     const clickToExpand = (event) => {
