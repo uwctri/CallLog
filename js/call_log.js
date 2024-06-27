@@ -82,11 +82,11 @@ dbtf = (t, c) => {
         if ($("input[name=call_id]").val() != "")
             return;
         if (getParameterByName('call_id')) {
-            $(`.nav-link[data-call-id=${decodeURI(getParameterByName('call_id')).replace(/\|/g, "\\|").replace(/\:/g, "\\:").replace(/\s/g, "\\ ")}]`).click();
+            $(`.callTab[data-call-id=${decodeURI(getParameterByName('call_id')).replace(/\|/g, "\\|").replace(/\:/g, "\\:").replace(/\s/g, "\\ ")}]`).click();
         } else {
-            $(".nav-link:visible").first().click();
+            $(".callTab:visible").first().click();
         }
-        if (!$(".nav-link.active:visible").length) {
+        if (!$(".callTab.active:visible").length) {
             setTimeout(selectTab, 500);
         }
     }
@@ -199,7 +199,7 @@ dbtf = (t, c) => {
         buildTabs();
 
         // If no tabs then we have no calls. 
-        if ($(".nav-link").length == 0) {
+        if ($(".callTab").length == 0) {
             module.disableBranchingLogic = true;
             $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
             $(".formtbody").append(module.templates.noCallsDisplay);
@@ -218,9 +218,9 @@ dbtf = (t, c) => {
                 $("input[name=call_open_date]").val() + " " + format_time($("input[name=call_open_time]").val())
             );
         }, 200)
-        $(".nav-link").on('click', (event) => {
+        $(".callTab").on('click', (event) => {
             const el = event.target;
-            $(".nav-link.active").removeClass('active');
+            $(".callTab.active").removeClass('active');
             $(el).addClass('active');
             let id = $(el).data('call-id');
             let call = module.metadata[id];
@@ -234,7 +234,7 @@ dbtf = (t, c) => {
         });
 
         // Update Remaining Call Tasks (Call Outcome changes or Tab changes)
-        $("input[name^=call_outcome], .nav-link").on('click', () => {
+        $("input[name^=call_outcome], .callTab").on('click', () => {
             if (!$("input[name$=call_task_remaining]").is(':visible')) return;
             const id = $("input[name=call_id]").val();
             getPreviousCallTasks(id).forEach((code) => {
@@ -251,13 +251,13 @@ dbtf = (t, c) => {
 
         // Call ID missing failsafe.
         setTimeout(() => {
-            if (($(".nav-link").length == 0) || ($("input[name=call_id]").val() != "")) return;
+            if (($(".callTab").length == 0) || ($("input[name=call_id]").val() != "")) return;
             Swal.fire({
                 icon: 'warning',
                 title: 'Issue Configuring Call Log',
                 text: "There was an issue determining what call this log is for. Please refresh the page. If this issue persists contact the REDCap administrator.",
             });
-            $(".nav-link:visible").first().click();
+            $(".callTab:visible").first().click();
         }, 3000);
 
         // Force Call Incomplete when call back is requested

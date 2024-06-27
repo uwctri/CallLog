@@ -87,7 +87,7 @@
     </table>
 
     <li id="callLogTab" class="nav-item call-tab">
-        <a class="nav-link mr-1" href="#" data-call-id="CALLID">TABNAME</a>
+        <a class="nav-link mr-1 callTab" href="#" data-call-id="CALLID">TABNAME</a>
     </li>
 
     <table id="historicDisplay">
