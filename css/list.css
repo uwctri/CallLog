@@ -22,7 +22,7 @@
 
 .call-tab {
     background-color: transparent;
-    margin-bottom: 10px !important;
+    margin-bottom: 7px !important;
 }
 
 .card-header {
@@ -86,6 +86,14 @@
     background: white !important;
 }
 
+table.callTable tbody tr.even td {
+    background: #eeeeee !important;
+}
+
+table.callTable tbody tr.odd td {
+    background: white !important;
+}
+
 .callTable tbody td {
     padding-left: 15px !important;
 }
@@ -136,8 +144,9 @@
     border: 1px solid #aaa;
     border-radius: 4px;
     padding: 4px;
-    cursor: pointer;
     color: black;
+    width: max-content;
+    text-decoration: none;
 }
 
 .callTable tbody td.firstDataCol {
@@ -150,6 +159,7 @@
 
 .callTable .rowLink {
     color: black;
+    text-decoration: none;
 }
 
 .infocircle {
