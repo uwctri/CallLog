@@ -256,7 +256,7 @@ trait CallLogic
         $instance = end(array_keys($data));
         $data = end($data); // get the data of the newest instance only
         $id = $data['call_id'];
-        if (in_array($instance, $metadata[$id]["instances"])) return false;
+        if (in_array($instance, $metadata[$id]["instances"] ?? [])) return false;
         $metadata[$id]["instances"][] = $instance;
         if ($data['call_left_message'][1] == '1')
             $metadata[$id]["voiceMails"]++;
