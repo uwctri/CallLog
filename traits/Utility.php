@@ -55,7 +55,7 @@ trait Utility
     // Returns a map from unique:display name
     private function getEventNameMap()
     {
-        $eventNames = array_values(REDCap::getEventNames());
+        $eventNames = array_values(REDCap::getEventNames() ?? []);
         foreach (array_values(REDCap::getEventNames(true)) as $i => $unique)
             $eventMap[$unique] = $eventNames[$i];
         return $eventMap;
