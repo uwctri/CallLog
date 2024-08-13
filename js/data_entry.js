@@ -13,8 +13,12 @@
         $("#__SUBMITBUTTONS__-div .btn-group").hide();
         let el = $("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
         el.clone(true).off().prop('id', 'goto-call-log').text('Save & Go To Call Log').insertAfter(el);
-        el.next().on('click', goToCallLog);
+        $("[id=goto-call-log]").off().on('click', goToCallLog);
         $("#goto-call-log").before('<br>');
+        setInterval(() => {
+            $("#submit-btn-savenextform").parent().remove();
+            $("[id=goto-call-log]").off().on('click', goToCallLog);
+        }, 100);
     }
 
     const modifyRequiredPopup = () => {
