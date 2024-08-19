@@ -12,8 +12,8 @@
         if (!isCallLogNext()) return;
         $("#__SUBMITBUTTONS__-div .btn-group").hide();
         let el = $("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
-        el.clone(true).off().prop('id', 'goto-call-log').text('Save & Go To Call Log').insertAfter(el);
-        $("[id=goto-call-log]").off().on('click', goToCallLog);
+        el.clone(true).off().attr("onclick","").prop('id', 'goto-call-log').text('Save & Go To Call Log').insertAfter(el);
+        $("[id=goto-call-log]").on('click', goToCallLog);
         $("#goto-call-log").before('<br>');
         setInterval(() => {
             $("#submit-btn-savenextform").parent().remove();
