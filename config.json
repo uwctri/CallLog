@@ -388,6 +388,11 @@
                             "key": "nts_window_start_cron",
                             "name": "<b>Window Start Date</b>",
                             "type": "field-list"
+                        },
+                        {
+                            "key": "nts_window_days_before",
+                            "name": "<b>Days before window to show call:</b><br>By default the calls generated will alway show, or you can show them only N days before the window start",
+                            "type": "textbox"
                         }
                     ]
                 },
