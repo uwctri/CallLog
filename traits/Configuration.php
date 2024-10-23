@@ -132,6 +132,7 @@ trait Configuration
                 $dateField = $settings["nts_date"][$i][0];
                 $skipField = $settings["nts_skip"][$i][0];
                 $window = $settings["nts_window_start_cron"][$i][0];
+                $window_days = $settings["nts_window_days_before"][$i][0];
                 if (empty($indicator) || empty($dateField)) continue;
                 $includeEvents = array_map('trim', explode(',', $settings["nts_include_events"][$i][0]));
                 foreach ($includeEvents as $eventName) {
@@ -140,7 +141,8 @@ trait Configuration
                         "indicator" => $indicator,
                         "apptDate" => $dateField,
                         "skip" => $skipField,
-                        "window" => $window
+                        "window" => $window,
+                        "windowDaysBefore" => intval($window_days)
                     ], $commonConfig);
                     $arr['id'] = $arr['id'] . '|' . $eventName;
                     $arr['name'] = $arr['name'] . ' - ' . $eventNameMap[$eventName];

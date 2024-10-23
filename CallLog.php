@@ -363,6 +363,7 @@ class CallLog extends AbstractExternalModule
 
                     $meta = $this->getCallMetadata($project_id, $record);
                     $event = $callConfig['event'];
+                    $days = $callConfig['windowDaysBefore'];
                     // Call ID already exists
                     if ($meta[$callConfig["id"]])
                         continue;
@@ -375,8 +376,8 @@ class CallLog extends AbstractExternalModule
                     // Appt has already been attended
                     if ($data[$event][$callConfig['indicator']])
                         continue;
-
-                    if ($data[$event][$callConfig["window"]] >= $today) {
+                    
+                    if ($data[$event][$callConfig["window"]] <= date('Y-m-d', strtotime("$today - $days days"))) {
                         $meta[$callConfig['id']] = [
                             "template" => 'nts',
                             "event_id" => $event,
@@ -605,7 +606,7 @@ class CallLog extends AbstractExternalModule
                 // Skip if NTS was created today (A call attempt was already made). Only use if config allows
                 if (($call['template'] == 'nts') && ($call['created'] == $today) && !$dayOf)
                     continue;
-
+                    
                 // Gather Instance Level Data
                 // This first line could be empty for New Entry calls, but it won't matter.
                 $instanceData = $recordData['repeat_instances'][$callEvent][$this->instrument][end($call['instances'])];
