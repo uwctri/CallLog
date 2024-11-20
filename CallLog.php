@@ -376,6 +376,12 @@ class CallLog extends AbstractExternalModule
                     // Appt has already been attended
                     if ($data[$event][$callConfig['indicator']])
                         continue;
+                    // Make sure a window exists
+                    if (empty($callConfig["window"]))
+                        continue;
+                    // Make sure data is in that window
+                    if (empty($data[$event][$callConfig["window"]]))
+                        continue;
                     
                     if ($data[$event][$callConfig["window"]] <= date('Y-m-d', strtotime("$today - $days days"))) {
                         $meta[$callConfig['id']] = [
