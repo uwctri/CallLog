@@ -382,7 +382,7 @@ class CallLog extends AbstractExternalModule
                     // Make sure data is in that window
                     if (empty($data[$event][$callConfig["window"]]))
                         continue;
-                    
+
                     if ($data[$event][$callConfig["window"]] <= date('Y-m-d', strtotime("$today - $days days"))) {
                         $meta[$callConfig['id']] = [
                             "template" => 'nts',
@@ -506,7 +506,8 @@ class CallLog extends AbstractExternalModule
 
     private function saveCallMetadata($project_id, $record, $data)
     {
-        $sql = "SELECT field_name FROM redcap_data WHERE project_id = ? and record = ? LIMIT 1";
+        $table = REDCap::getDataTable($project_id);
+        $sql = "SELECT field_name FROM $table WHERE project_id = ? and record = ? LIMIT 1";
         $result = $this->query($sql, [$project_id, $record]);
         if (empty($result->fetch_assoc())) return false;
         return REDCap::saveData(
@@ -561,8 +562,22 @@ class CallLog extends AbstractExternalModule
         // Construct the needed feilds (This is needed to save time. Loading all data takes a while)
         $fields = array_merge(
             [
-                REDCap::getRecordIdField(), $this->metadataField, $withdraw['var'], $withdraw['tmp']['var'],
-                'call_open_date', 'call_left_message', 'call_requested_callback', 'call_callback_requested_by', 'call_notes', 'call_open_datetime', 'call_open_user_full_name', 'call_attempt', 'call_template', 'call_event_name', 'call_callback_date', 'call_callback_time'
+                REDCap::getRecordIdField(),
+                $this->metadataField,
+                $withdraw['var'],
+                $withdraw['tmp']['var'],
+                'call_open_date',
+                'call_left_message',
+                'call_requested_callback',
+                'call_callback_requested_by',
+                'call_notes',
+                'call_open_datetime',
+                'call_open_user_full_name',
+                'call_attempt',
+                'call_template',
+                'call_event_name',
+                'call_callback_date',
+                'call_callback_time'
             ],
             array_values($autoRemoveConfig),
             $tabs['allFields']
@@ -612,7 +627,7 @@ class CallLog extends AbstractExternalModule
                 // Skip if NTS was created today (A call attempt was already made). Only use if config allows
                 if (($call['template'] == 'nts') && ($call['created'] == $today) && !$dayOf)
                     continue;
-                    
+
                 // Gather Instance Level Data
                 // This first line could be empty for New Entry calls, but it won't matter.
                 $instanceData = $recordData['repeat_instances'][$callEvent][$this->instrument][end($call['instances'])];
