@@ -486,7 +486,8 @@ class CallLog extends AbstractExternalModule
                 $metadata[$index]['complete'] = false;
         }
         $fields = array_values(array_intersect(REDCap::getFieldNames($this->instrument), array_keys($data[$record][$event])));
-        db_query('DELETE FROM redcap_data WHERE project_id=' . $project_id . ' AND record=' . $record . $instanceText . ' AND (field_name="' . implode('" OR field_name="', $fields) . '");');
+        $table = REDCap::getDataTable($project_id);
+        db_query('DELETE FROM ' . $table . ' WHERE project_id=' . $project_id . ' AND record=' . $record . $instanceText . ' AND (field_name="' . implode('" OR field_name="', $fields) . '");');
         return $this->saveCallMetadata($project_id, $record, $metadata);
     }
 
