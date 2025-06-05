@@ -583,12 +583,16 @@ class CallLog extends AbstractExternalModule
             array_values($autoRemoveConfig),
             $tabs['allFields']
         );
+        $fields = array_filter($fields, function ($field) {
+            return is_string($field);
+        });
 
         // Main Loop
         $user_id = USERID ?? null;
         $records = empty($user_id) ? '-1' : null;
         $events = null;
         $group = REDCap::getUserRights($user_id)[$user_id]['group_id'];
+        $group = empty($group) ? null : $group;
         $dataLoad = REDCap::getData($project_id, 'array', $records, $fields, $events, $group);
         foreach ($dataLoad as $record => $recordData) {
 
