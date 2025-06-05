@@ -403,6 +403,7 @@ Object.filterKeys = (obj, allowedKeys) =>
                 return;
             }
             let result = response.data;
+            console.log(result.debug)
             alwaysShowCallbackCol = result.showCallback;
 
             // Keep track of users in multiple tabs
