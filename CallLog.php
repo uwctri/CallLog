@@ -69,7 +69,13 @@ class CallLog extends AbstractExternalModule
     {
         if (!defined("USERID")) return;
 
-        $this->initGlobal();
+        try {
+            $this->initGlobal();
+        } catch (\Exception $e) {
+            // Probably on the 2fa page, bail
+            return;
+        }
+
         include('templates.php');
         $this->includeJs('js/templates.js');
 
