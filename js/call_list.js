@@ -224,8 +224,8 @@ Object.filterKeys = (obj, allowedKeys) =>
 
         // Tack on Lower and Upper windows for Follow ups
         if (module.tabs['config'][index]['showFollowupWindows']) {
-            cols.push({ title: 'Start Calling', data: '_windowLower' });
-            cols.push({ title: 'Complete By', data: '_windowUpper' });
+            cols.push({ title: 'Start Calling', data: '_windowLower', defaultContent: "Not Specified", });
+            cols.push({ title: 'Complete By', data: '_windowUpper', defaultContent: "Not Specified", });
         }
 
         // Tack on Missed Appt date
@@ -403,7 +403,7 @@ Object.filterKeys = (obj, allowedKeys) =>
                 return;
             }
             let result = response.data;
-            console.log(result.debug)
+            console.log(result.data)
             alwaysShowCallbackCol = result.showCallback;
 
             // Keep track of users in multiple tabs
