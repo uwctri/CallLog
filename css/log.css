@@ -26,6 +26,10 @@
     transform: translate(0, 1px);
 }
 
+.rc-form-status-link.btn.btn-link {
+    display: none;
+}
+
 
 /* Call Log Notes area*/
 
