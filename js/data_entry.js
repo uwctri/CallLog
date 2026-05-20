@@ -3,16 +3,16 @@
     const module = ExternalModules.UWMadison.CallLog;
 
     const isCallLogNext = () => {
-        return $(".form_menu_selected").parent().nextAll().filter(function () {
+        return $(".rc-form-menu-current").parent().parent().nextAll().filter(function () {
             return $(this).find('a').css('pointer-events') != "none";
-        }).first().find('#form\\[call_log\\]').length > 0
+        }).first().attr('data-form') == 'call_log';
     }
 
     const addGoToCallLogButton = () => {
         if (!isCallLogNext()) return;
         $("#__SUBMITBUTTONS__-div .btn-group").hide();
         let el = $("#__SUBMITBUTTONS__-div #submit-btn-saverecord");
-        el.clone(true).off().attr("onclick","").prop('id', 'goto-call-log').text('Save & Go To Call Log').insertAfter(el);
+        el.clone(true).off().attr("onclick", "").prop('id', 'goto-call-log').text('Save & Go To Call Log').insertAfter(el);
         $("[id=goto-call-log]").on('click', goToCallLog);
         $("#goto-call-log").before('<br>');
         setInterval(() => {
@@ -30,13 +30,15 @@
         }
         let $btn = $("#reqPopup").parent().find('.ui-dialog-buttonpane button').first();
         $btn.off().on('click', () => {
-            window.location.href = $('#form\\[call_log\\]').prop('href');
+            let href = $('div[data-form=call_log] a').map((i, el) => el.href).filter((i, el) => el != "javascript:;").get(0);
+            window.location.href = href;
         });
         $btn.text('Ignore and go to Call Log');
     }
 
     const goToCallLog = () => {
-        appendHiddenInputToForm('save-and-redirect', $('#form\\[call_log\\]').prop('href'));
+        let href = $('div[data-form=call_log] a').map((i, el) => el.href).filter((i, el) => el != "javascript:;").get(0)
+        appendHiddenInputToForm('save-and-redirect', href);
         dataEntrySubmit('submit-btn-savecontinue');
         return false;
     }
