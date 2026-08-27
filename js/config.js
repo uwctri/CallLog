@@ -1,27 +1,8 @@
 (() => {
     const module = ExternalModules.UWMadison.CallLog;
-
-    function toArray(val) {
-        if (!val) return [];
-        if (Array.isArray(val)) {
-            if (val.length === 1 && Array.isArray(val[0])) return val[0].map(s => String(s).trim()).filter(Boolean);
-            return val.map(s => String(s).trim()).filter(Boolean);
-        }
-        if (typeof val === 'string') return val.split(',').map(s => s.trim()).filter(Boolean);
-        return [String(val).trim()];
-    }
-
-    function getVal(arr, i, fallback = '') {
-        if (!arr) return fallback;
-        const item = arr[i];
-        if (item === undefined || item === null) return fallback;
-        if (Array.isArray(item)) return item[0] !== undefined ? String(item[0]) : fallback;
-        return String(item);
-    }
+    const { toArray, getVal } = module.utils || {};
 
     function registerComponent() {
-        if (typeof Alpine === 'undefined') return;
-
         Alpine.data('callLogConfig', () => ({
             raw: module.rawConfig || {},
             meta: module.metaInfo || {},
@@ -79,6 +60,59 @@
 
             closeDropdown(key) {
                 this.openDropdowns[key] = false;
+            },
+
+            fieldSelect(targetObj, propKey, placeholder = '-- Select Field --') {
+                const self = this;
+                return {
+                    open: false,
+                    filter: '',
+                    placeholder: placeholder,
+                    get val() { return targetObj[propKey] || ''; },
+                    set val(v) { targetObj[propKey] = v; },
+                    select(id) {
+                        targetObj[propKey] = id;
+                        this.open = false;
+                    },
+                    get filteredFields() {
+                        const f = this.filter ? this.filter.toLowerCase() : '';
+                        const fields = self.meta.fields || [];
+                        if (!f) return fields;
+                        return fields.filter(item =>
+                            (item.id && item.id.toLowerCase().includes(f)) ||
+                            (item.label && item.label.toLowerCase().includes(f))
+                        );
+                    }
+                };
+            },
+
+            eventSelect(targetArr) {
+                const self = this;
+                return {
+                    open: false,
+                    get singleEvent() {
+                        return self.meta.events && self.meta.events.length === 1;
+                    },
+                    toggle(id) {
+                        self.toggleMultiselectItem(targetArr, id);
+                    },
+                    isSelected(id) {
+                        return (targetArr || []).includes(String(id));
+                    }
+                };
+            },
+
+            multiSelect(targetArr) {
+                const self = this;
+                return {
+                    open: false,
+                    toggle(id) {
+                        self.toggleMultiselectItem(targetArr, id);
+                    },
+                    isSelected(id) {
+                        return (targetArr || []).includes(String(id));
+                    }
+                };
             },
 
             loadFromRaw() {
@@ -330,20 +364,6 @@
 
             dragTabEnd() {
                 this.draggedTabIdx = null;
-            },
-
-            moveTabUp(index) {
-                if (index <= 0) return;
-                const temp = this.callTabs[index];
-                this.callTabs[index] = this.callTabs[index - 1];
-                this.callTabs[index - 1] = temp;
-            },
-
-            moveTabDown(index) {
-                if (index >= this.callTabs.length - 1) return;
-                const temp = this.callTabs[index];
-                this.callTabs[index] = this.callTabs[index + 1];
-                this.callTabs[index + 1] = temp;
             },
 
             addTabField(tabIndex) {

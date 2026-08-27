@@ -338,3 +338,22 @@
     color: #0f172a;
     box-sizing: border-box !important;
 }
+
+/* Drag and Drop Tab Reordering Grab Handles */
+.call-config-dashboard .drag-handle,
+.call-config-dashboard .cursor-grab {
+    cursor: grab !important;
+    cursor: -webkit-grab !important;
+}
+
+.call-config-dashboard .drag-handle:hover,
+.call-config-dashboard .cursor-grab:hover {
+    color: #0f172a !important;
+}
+
+.call-config-dashboard .drag-handle:active,
+.call-config-dashboard .cursor-grab:active,
+.call-config-dashboard .call-tab-card.dragging .drag-handle {
+    cursor: grabbing !important;
+    cursor: -webkit-grabbing !important;
+}

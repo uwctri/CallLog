@@ -6,8 +6,7 @@
     let colConfig = {};
 
     function registerComponent() {
-        if (typeof Alpine === 'undefined') return;
-
+        
         Alpine.data('callListDashboard', () => ({
             activeTab: '',
             hideCalls: true,

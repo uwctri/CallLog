@@ -1,6 +1,7 @@
 (() => {
     const callSummaryPageSize = 20;
     const module = ExternalModules.UWMadison.CallLog;
+    const getParam = (name) => (module.utils && module.utils.getParam) ? module.utils.getParam(name) : (typeof window.getParameterByName === 'function' ? window.getParameterByName(name) : null);
 
     const threeDotClick = () => {
         if (typeof Swal === 'undefined') return;
@@ -30,7 +31,7 @@
             });
 
             module.ajax("metadataSave", {
-                record: getParameterByName('id'),
+                record: getParam('id'),
                 metadata: JSON.stringify(module.metadata)
             }).then(function () {
                 window.onbeforeunload = function () { };
@@ -78,10 +79,10 @@
         }).then((result) => {
             if (!result.isConfirmed) return;
 
-            let instance = getParameterByName('instance') > 1 ? getParameterByName('instance') - 1 : 1;
+            let instance = getParam('instance') > 1 ? getParam('instance') - 1 : 1;
 
             module.ajax("callDelete", {
-                record: getParameterByName('id')
+                record: getParam('id')
             }).then(function () {
                 let url = new URL(location.href);
                 url.searchParams.set('instance', instance);
@@ -138,7 +139,7 @@
 
         $('body').on('click', '.dataTablesRow', childRowExpand);
 
-        if (getParameterByName('page') !== module.static.instrument) return;
+        if (getParam('page') !== module.static.instrument) return;
 
         $('.deleteInstance').on('click', openDeleteModal);
     };
