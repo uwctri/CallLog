@@ -1,179 +1,261 @@
-/* Redcap Corrections */
+/* Call List Dashboard Styles - Modern SaaS Redesign */
 
-#south {
-    position: absolute;
+.call-list-dashboard {
+    --cl-bg-light: #f8fafc;
+    --cl-border-color: #cbd5e1;
+    --cl-primary-color: #0d6efd;
+    --cl-row-even: #ffffff;
+    --cl-row-odd: #f8fafc;
+    --cl-row-hover: #edf2f7;
+    --cl-text-dark: #0f172a;
+    --cl-text-muted: #64748b;
+
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--cl-text-dark);
 }
 
-#west {
-    height: min-content !important;
+/* Scoped Button Text Color Overrides */
+.call-list-dashboard .btn-primary,
+.call-list-dashboard a.btn-primary,
+.call-list-dashboard .btn-primary:hover,
+.call-list-dashboard a.btn-primary:hover,
+.call-list-dashboard .btn-primary:focus,
+.call-list-dashboard a.btn-primary:focus,
+.call-list-dashboard .btn-primary:active,
+.call-list-dashboard a.btn-primary:active {
+    color: #ffffff !important;
 }
 
-
-/* Boot strap corrections */
-
-.nav-link.call-link.active {
-    background-color: #f7f7f7 !important;
-    border-bottom-color: transparent !important;
+.call-list-dashboard .call-list-card {
+    border: 1px solid var(--cl-border-color) !important;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    background-color: #ffffff;
+    overflow: hidden;
 }
 
-.nav-link.call-link:hover {
-    border-bottom-color: transparent !important;
+/* Segmented Pill Tabs Navigation */
+.call-list-dashboard .call-list-nav-pills {
+    background-color: #f1f5f9;
+    border-radius: 8px;
+    padding: 4px;
 }
 
-.call-tab {
+.call-list-dashboard .call-list-nav-pills .nav-link.call-link {
+    color: #475569;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    transition: all 0.15s ease-in-out;
     background-color: transparent;
-    margin-bottom: 7px !important;
-}
-
-.card-header {
-    background-color: #f7f7f7 !important;
-}
-
-.card {
-    margin-right: 20px;
-    max-width: 1600px;
-}
-
-.card input[type=search] {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-/* Tooltips */
-.ui-tooltip {
-    white-space: pre-line;
-}
-
-.ui-tooltip-content {
-    white-space: pre-line;
-}
-
-/* Call Badges */
-
-.nav-tabs .badge {
-    position: absolute;
-    top: 10px;
-}
-
-
-/* Call Table CSS */
-
-#hiddenToggle {
-    margin-right: 1em;
-}
-
-.tab-header {
-    background-color: white !important;
-    padding-bottom: 0;
-}
-
-.toggleHiddenCalls {
-    border: 1px solid #aaa;
-    float: right;
-    margin-top: 0.25rem !important;
-}
-
-.callTable th {
-    border-left: none !important;
-    border-right: none !important;
-}
-
-.callTable tr.even {
-    background: #eeeeee !important;
-}
-
-.callTable tr.odd {
-    background: white !important;
-}
-
-table.callTable tbody tr.even td {
-    background: #eeeeee !important;
-}
-
-table.callTable tbody tr.odd td {
-    background: white !important;
-}
-
-.callTable tbody td {
-    padding-left: 15px !important;
-}
-
-.callTable tbody td a {
     cursor: pointer;
 }
 
-.callTable thead th {
-    padding-left: 15px !important;
+.call-list-dashboard .call-list-nav-pills .nav-link.call-link:hover {
+    color: #0f172a;
+    background-color: #e2e8f0;
 }
 
-.dataTableChild {
-    padding-top: 0;
-    padding-bottom: 1.5em;
+.call-list-dashboard .call-list-nav-pills .nav-link.call-link.active {
+    color: #0d6efd !important;
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
 }
 
-.dataTableChild .container {
-    max-width: 95%;
+/* Control Bar & Search Input */
+.call-list-dashboard .search-input-group input.customSearch {
+    border: 1px solid #cbd5e1;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.875rem;
 }
 
-.dtChildData .row {
-    padding: 0.5em;
+.call-list-dashboard .search-input-group .input-group-text {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px 0 0 6px;
+    background-color: #f8fafc;
 }
 
-.callTable tbody td.callbackCol {
-    border-left: 1px solid #dee2e6;
-    padding-left: 10px !important;
+.call-list-dashboard .caller-filter-select {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    color: #334155;
+    background-color: #ffffff;
 }
 
-.callTable thead th.callbackCol {
-    padding-left: 10px !important;
+.call-list-dashboard .toggleHiddenCalls {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #475569;
+    background-color: #ffffff;
+    transition: all 0.15s ease;
 }
 
-.callTable tbody td.leftListIcon {
-    padding-left: 5px !important;
-    padding-right: 5px !important;
+.call-list-dashboard .toggleHiddenCalls:hover,
+.call-list-dashboard .toggleHiddenCalls:focus,
+.call-list-dashboard .toggleHiddenCalls:active {
+    background-color: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+    box-shadow: 0 0 0 0.2rem rgba(148, 163, 184, 0.25) !important;
+    outline: none !important;
+}
+
+/* Call Table Styling */
+.call-list-dashboard .callTable {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+.call-list-dashboard .callTable thead th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 16px;
+    border-bottom: 2px solid #cbd5e1;
+    border-top: none;
+}
+
+.call-list-dashboard .callTable tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.875rem;
+    color: #1e293b;
+}
+
+.call-list-dashboard .callTable tr.even td {
+    background-color: #ffffff;
+}
+
+.call-list-dashboard .callTable tr.odd td {
+    background-color: #f8fafc;
+}
+
+.call-list-dashboard .callTable tbody tr:hover td {
+    background-color: var(--cl-row-hover) !important;
+    cursor: pointer;
+}
+
+.call-list-dashboard .callTable tbody td.firstDataCol,
+.call-list-dashboard .callTable thead th.firstDataCol {
+    padding-left: 12px;
+}
+
+.call-list-dashboard .callTable tbody td.callbackCol,
+.call-list-dashboard .callTable thead th.callbackCol {
+    border-left: 1px solid #e2e8f0;
+    padding-left: 14px;
+}
+
+.call-list-dashboard .callTable tbody td.leftListIcon,
+.call-list-dashboard .callTable thead th.leftListIcon {
+    padding-left: 10px;
+    padding-right: 10px;
     text-align: center;
+    width: 36px;
 }
 
-.callTable thead th.leftListIcon {
-    padding-left: 5px !important;
-    padding-right: 5px !important;
-}
-
-.noCallsButton,
-.endCallButton {
-    border: 1px solid #aaa;
-    border-radius: 4px;
-    padding: 4px;
-    color: black;
-    width: max-content;
+.call-list-dashboard .callTable .rowLink {
+    color: #0d6efd;
     text-decoration: none;
+    font-weight: 600;
 }
 
-.callTable tbody td.firstDataCol {
-    padding-left: 7px !important;
+.call-list-dashboard .callTable .rowLink:hover {
+    color: #0b5ed7;
+    text-decoration: underline;
 }
 
-.callTable thead th.firstDataCol {
-    padding-left: 5px !important;
-}
-
-.callTable .rowLink {
-    color: black;
+/* Action Buttons in Table */
+.call-list-dashboard .noCallsButton {
+    border: 1px solid #fd7e14;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #d97706;
+    background-color: #fffbeb;
     text-decoration: none;
+    transition: all 0.15s ease;
 }
 
-.infocircle {
-    margin-right: 0.25rem;
-    margin-top: 0.225rem;
+.call-list-dashboard .noCallsButton:hover,
+.call-list-dashboard .noCallsButton:focus {
+    background-color: #fef3c7 !important;
+    border-color: #b45309 !important;
+    color: #b45309 !important;
+    text-decoration: none;
+    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2);
 }
 
-.callbackRequestor {
-    font-weight: bold;
-    margin-left: 0.25rem;
-    cursor: default;
+/* Child Row Inset Drawer */
+.call-list-dashboard .dataTableChild {
+    background-color: #f8fafc !important;
+    padding: 12px 16px !important;
+    border-left: 4px solid #0d6efd;
+    border-bottom: 1px solid #cbd5e1;
 }
 
-.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-    color: #333 !important;
-    background: white !important;
+.call-list-dashboard .dataTableChild .dtChildData {
+    font-size: 0.875rem;
+    color: #334155;
+}
+
+/* DataTables Controls & Pagination */
+.call-list-dashboard .dataTables_wrapper {
+    padding: 0;
+}
+
+.call-list-dashboard .dataTables_wrapper .dataTables_info,
+.call-list-dashboard .dataTables_wrapper .dataTables_length {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.call-list-dashboard .dataTables_wrapper .dataTables_paginate {
+    padding: 12px 16px;
+}
+
+.call-list-dashboard .dataTables_wrapper .dataTables_paginate .paginate_button {
+    border-radius: 6px !important;
+    padding: 4px 10px !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    border: 1px solid #cbd5e1 !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    margin: 0 2px;
+}
+
+.call-list-dashboard .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    color: #0f172a !important;
+    background: #e2e8f0 !important;
+    border-color: #94a3b8 !important;
+}
+
+.call-list-dashboard .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.call-list-dashboard .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: #0d6efd !important;
+    color: #ffffff !important;
+    border-color: #0d6efd !important;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.25) !important;
+}
+
+/* Universal Scoped Button Focus Overrides */
+.call-list-dashboard button:focus,
+.call-list-dashboard .btn:focus,
+.call-list-dashboard .btn:active:focus {
+    outline: none !important;
 }

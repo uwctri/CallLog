@@ -1,10 +1,10 @@
 {
     "name": "Call Log",
     "namespace": "UWMadison\\CallLog",
-    "description": "A configurable, searchable, call list dashboard for Reminders, Follow ups, Missed Vists and more.",
+    "description": "A configurable, searchable, call list dashboard for Reminders, Follow ups, Missed Visits and more.",
     "authors": [
         {
-            "name": "Adam nunez",
+            "name": "Adam Nunez",
             "email": "adam.Nunez@ctri.wisc.edu",
             "institution": "UW Madison - Center for Tobacco Research and Intervention"
         }
@@ -18,19 +18,33 @@
                 "show-header-and-footer": true
             },
             {
-                "name": "Call Metadata Reports",
-                "icon": "fas fa-receipt",
-                "url": "index.php?metaReport",
+                "name": "Call Log Settings",
+                "icon": "fas fa-cog",
+                "url": "config.php",
                 "show-header-and-footer": true
             }
         ]
     },
-    "no-auth-pages": [
-        "api"
-    ],
-    "no-csrf-pages": [
-        "api"
-    ],
+    "api-actions": {
+        "newAdhoc": {
+            "description": "Create a new ad-hoc call for specified record(s). Requires 'record' (or 'record_list'), 'call_type_id', and 'reason_id'.",
+            "access": [
+                "auth"
+            ]
+        },
+        "resolveAdhoc": {
+            "description": "Resolve and complete open ad-hoc calls matching a call type and reason code for specified record(s). Requires 'record' (or 'record_list'), 'call_type_id', and 'reason_id'.",
+            "access": [
+                "auth"
+            ]
+        },
+        "generate": {
+            "description": "Triggers background evaluation for all configured call types (New Entry, Reminder, Follow-up, MCV, NTS, Visit) across the project to generate active calls.",
+            "access": [
+                "auth"
+            ]
+        }
+    },
     "auth-ajax-actions": [
         "log",
         "getData",
@@ -40,568 +54,33 @@
         "setCallEnded",
         "setCallStarted",
         "setNoCallsToday",
-        "deployInstruments"
+        "deployInstruments",
+        "saveConfig",
+        "generate"
     ],
     "framework-version": 16,
     "enable-ajax-logging": true,
     "crons": [
         {
-            "cron_name": "call_log_nts_generate",
-            "cron_description": "Runs daily to generate NTS calls",
-            "method": "cronNeedToSchedule",
+            "cron_name": "call_log_generate_all",
+            "cron_description": "Periodically generates and updates active call logs across enabled projects",
+            "method": "cronGenerateAllCalls",
             "cron_frequency": "86400",
             "cron_max_run_time": "3600"
         },
         {
-            "cron_name": "call_log_followup_generate",
-            "cron_description": "Runs daily to generate Follow Up calls",
-            "method": "cronFollowUp",
-            "cron_frequency": "86400",
-            "cron_max_run_time": "3600"
+            "cron_name": "call_log_new_entry",
+            "cron_description": "Runs hourly to generate New Entry calls for imported or newly created records across enabled projects",
+            "method": "cronNewEntry",
+            "cron_frequency": "3600",
+            "cron_max_run_time": "1800"
         }
     ],
     "project-settings": [
         {
             "key": "intro_text",
-            "name": "Settings such as 'call scripts' (for reminder calls) and 'tasks remaining' must be edited directly in the data dictionary. Further customization of the call log should be kept minimal with mostly additions. Reporting disconnected phone numbers can be hidden if not used, as can call backs, and remaining tasks.",
+            "name": "Settings such as 'call scripts' (for reminder calls) and 'tasks remaining' must be edited directly in the data dictionary. All Call Log configuration (Call Types, Tabs, Row Expansion) is managed via the project-level Call Log Settings link.",
             "type": "descriptive"
-        },
-        {
-            "key": "trigger_save",
-            "name": "<b>Trigger Call Log Generation on...</b><br>Fire some call log generation (MCV, NTS, Follow Up, Reminders) only when this form is saved",
-            "type": "form-list",
-            "repeatable": true
-        },
-        {
-            "key": "same_day_mcv_nts",
-            "name": "<b>MCV & NTS Day of</b><br>Show Missed/Cancalled Vist and Need to Scheudeled calls the day they are generated. By default the calls are shown the next day",
-            "type": "checkbox"
-        },
-        {
-            "key": "withdraw_event",
-            "name": "<b>Withdraw Condition</b>",
-            "type": "event-list"
-        },
-        {
-            "key": "withdraw_var",
-            "name": "<b>Withdraw Field</b>",
-            "type": "field-list"
-        },
-        {
-            "key": "withdraw_tmp_event",
-            "name": "<b>Temporary Withdraw Date</b>",
-            "type": "event-list"
-        },
-        {
-            "key": "withdraw_tmp_var",
-            "name": "<b>Withdraw Field</b>",
-            "type": "field-list"
-        },
-        {
-            "key": "call_summary",
-            "name": "<b>Include call summary on</b>",
-            "repeatable": true,
-            "type": "form-list"
-        },
-        {
-            "key": "bad_phone_collection",
-            "name": "<b>Bad Phone Reporting</b>",
-            "type": "sub_settings",
-            "sub_settings": [
-                {
-                    "key": "bad_phone_event",
-                    "name": "<b>Event</b>",
-                    "type": "event-list"
-                },
-                {
-                    "key": "bad_phone_flag",
-                    "name": "<b>Flag</b><br>Text field set when their is an issue. Hidden.",
-                    "type": "field-list"
-                },
-                {
-                    "key": "bad_phone_notes",
-                    "name": "<b>Notes</b><br>Textarea with call notes copied into it",
-                    "type": "field-list"
-                },
-                {
-                    "key": "bad_phone_resolved",
-                    "name": "<b>Resolved</b><br>Checkbox ticked by used when issue is resolved",
-                    "type": "field-list"
-                }
-            ]
-        },
-        {
-            "key": "username_list_collection",
-            "name": "<b>Username Lists</b>",
-            "type": "sub_settings",
-            "repeatable": true,
-            "sub_settings": [
-                {
-                    "key": "username_text",
-                    "name": "A field listed here can be included on a call tab as a static value depending on if the user is included or excluded from the list. This is useful for suggesting callers for a particular subject. The list of usernames can be constructed via shazam or DET.",
-                    "type": "descriptive"
-                },
-                {
-                    "key": "username_field",
-                    "name": "<b>Field</b><br>Field that contains a username list",
-                    "type": "field-list"
-                },
-                {
-                    "key": "username_include",
-                    "name": "<b>Include Value</b><br>Value to display if the current user is in the list",
-                    "type": "textbox"
-                },
-                {
-                    "key": "username_exclude",
-                    "name": "<b>Exclude Value</b><br>Value to dispplay if the current user is not in the list",
-                    "type": "textbox"
-                }
-            ]
-        },
-        {
-            "key": "call_collection",
-            "name": "<b>Unique Call Type</b>",
-            "type": "sub_settings",
-            "repeatable": true,
-            "sub_settings": [
-                {
-                    "key": "call_id",
-                    "name": "<b>Unique ID</b><br>Short with no spaces, used in metadata and backend",
-                    "required": true,
-                    "type": "textbox"
-                },
-                {
-                    "key": "call_name",
-                    "name": "<b>Call Name</b><br>Used for display to user",
-                    "required": true,
-                    "type": "textbox"
-                },
-                {
-                    "key": "hide_after_attempts",
-                    "name": "<b>Hide after N attempts</b><br>Remove from call list for remainder of day",
-                    "type": "textbox"
-                },
-                {
-                    "key": "call_template",
-                    "name": "<b>Template</b>",
-                    "type": "radio",
-                    "choices": [
-                        {
-                            "value": "new",
-                            "name": "New Entry"
-                        },
-                        {
-                            "value": "reminder",
-                            "name": "Reminder"
-                        },
-                        {
-                            "value": "followup",
-                            "name": "Follow Up"
-                        },
-                        {
-                            "value": "mcv",
-                            "name": "Missed / Cancelled Visit"
-                        },
-                        {
-                            "value": "nts",
-                            "name": "Need to Schedule Visit"
-                        },
-                        {
-                            "value": "adhoc",
-                            "name": "Ad-hoc"
-                        },
-                        {
-                            "value": "visit",
-                            "name": "Schedualed Phone Visit"
-                        }
-                    ]
-                },
-                {
-                    "key": "new_settings",
-                    "name": "<b>New Entry Settings</b>",
-                    "type": "sub_settings",
-                    "sub_settings": [
-                        {
-                            "key": "new_text",
-                            "name": "New Entry calls are added when a record is created. If loading records from an outside source you'll need to configure your import scripts to POST to the newEntryLoad URL.",
-                            "type": "descriptive"
-                        },
-                        {
-                            "key": "new_expire_days",
-                            "name": "<b>Expire after N days:</b><br>Remove from call log after this many days",
-                            "type": "textbox"
-                        }
-                    ]
-                },
-                {
-                    "key": "reminder_settings",
-                    "name": "<b>Reminder Settings</b>",
-                    "type": "sub_settings",
-                    "sub_settings": [
-                        {
-                            "key": "reminder_text",
-                            "name": "You will want to configure a custom DET to POST to the scheduleLoad URL to add new reminders to the call list immediately. Reminders are placed on the call log some number of days before the reminder date and are removed ON THE REMINDER DATE. Calls removed in this manner are not marked as completed.",
-                            "type": "descriptive"
-                        },
-                        {
-                            "key": "reminder_variable",
-                            "name": "<b>Reminder Date</b><br>Date of appointment the reminder is for",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "reminder_days",
-                            "name": "<b>Days before</b><br>Work day lead time to add to call list.<br>If zero then the call will not be removed from the call list until completed.",
-                            "type": "textbox"
-                        },
-                        {
-                            "key": "reminder_include_events",
-                            "name": "<b>Reminders For Event(s)</b><br>Comma seperated list of unique event names",
-                            "type": "textbox"
-                        },
-                        {
-                            "key": "reminder_remove_event",
-                            "name": "<b>Alt Record Remove (event)</b><br>Skip the whole record if value is truthy. Used for Text and Email reminder consent",
-                            "type": "event-list"
-                        },
-                        {
-                            "key": "reminder_remove_var",
-                            "name": "<b>Alt Record Remove (field)</b>",
-                            "type": "field-list"
-                        }
-                    ]
-                },
-                {
-                    "key": "followup_settings",
-                    "name": "<b>Followup Settings</b>",
-                    "type": "sub_settings",
-                    "sub_settings": [
-                        {
-                            "key": "followup_text",
-                            "name": "Any tab with a follow up call in it will show the Lower and Upper windows of the call as the last two columns titled 'Start Calling' and 'Complete by'. ",
-                            "type": "descriptive"
-                        },
-                        {
-                            "key": "followup_event",
-                            "name": "<b>Follow Up Anchor</b>",
-                            "type": "event-list"
-                        },
-                        {
-                            "key": "followup_date",
-                            "name": "<b>Follow Up Anchor</b>",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "followup_include_events",
-                            "name": "<b>Follow up For Events</b><br>If no event is specified above then list which events should be used here. Comma seperated list of unique event names",
-                            "type": "textbox"
-                        },
-                        {
-                            "key": "followup_days",
-                            "name": "<b>Days After</b><br>Days after the above date to show the follow up call",
-                            "type": "textbox"
-                        },
-                        {
-                            "key": "followup_length",
-                            "name": "<b>Window Size</b><br>Number of days the call has to be completed",
-                            "type": "textbox"
-                        },
-                        {
-                            "key": "followup_end",
-                            "name": "<b>Window End</b><br>Optional - If Window Size is blank then this field on the event will be used as the end date",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "followup_auto_remove",
-                            "name": "<b>Auto Remove</b><br>Remove the call from the call list and call log once out-of-window. If not checked the 'complete by' date is more of a suggestion or soft-stop",
-                            "type": "checkbox"
-                        }
-                    ]
-                },
-                {
-                    "key": "mcv_settings",
-                    "name": "<b>Missed/Cancelled Visit Settings</b>",
-                    "type": "sub_settings",
-                    "sub_settings": [
-                        {
-                            "key": "mcv_text",
-                            "name": "You will want to configure a custom DET to POST to the scheduleLoad URL to add new reminders to the call list immediately. Any tab with a Missed/Cancelled visit call will have the Missed Appt Date/Time added as the last column. The missed event can be displayed with 'call_event_name'",
-                            "type": "descriptive"
-                        },
-                        {
-                            "key": "mcv_indicator",
-                            "name": "<b>Indicator</b><br>Any truthy value indicates that the visit was missed or cancelled. Should be set false when the appt is rescheduled.",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "mcv_date",
-                            "name": "<b>Schedualed Date</b><br>Date of missed/canceld appointment",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "mcv_include_events",
-                            "name": "<b>Missed/Cancelled calls for</b><br>Comma seperated list of unique event names",
-                            "type": "textbox"
-                        },
-                        {
-                            "key": "mcv_auto_remove",
-                            "name": "<b>Auto Remove</b><br>Remove the call from the call list and call log once past this date. This date field should be the end window for the visit. This field is not automatically displayed on the call list",
-                            "type": "field-list"
-                        }
-                    ]
-                },
-                {
-                    "key": "nts_settings",
-                    "name": "<b>Need to Schedule Visit Settings</b>",
-                    "type": "sub_settings",
-                    "sub_settings": [
-                        {
-                            "key": "nts_text",
-                            "name": "Need to Schedule calls are generated for an event when the previous event has a truthy indicator, but the current event has no schedulaed date.",
-                            "type": "descriptive"
-                        },
-                        {
-                            "key": "nts_indicator",
-                            "name": "<b>Visit Complete Indicator</b><br>Any truthy value indicates that the visit was completed",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "nts_date",
-                            "name": "<b>Schedualed Date</b><br>Date of appointments",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "nts_include_events",
-                            "name": "<b>Need to Schedule for:</b><br>Comma seperated list of unique event names",
-                            "type": "textbox"
-                        },
-                        {
-                            "key": "nts_skip",
-                            "name": "<b>Skip NTS if:</b><br>Skip if value is truthy",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "nts_cron_text",
-                            "name": "As an alternative, or in addition to, the above you can generate an NTS when a call window has started, but the appointment is not schedualed.",
-                            "type": "descriptive"
-                        },
-                        {
-                            "key": "nts_window_start_cron",
-                            "name": "<b>Window Start Date</b>",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "nts_window_days_before",
-                            "name": "<b>Days before window to show call:</b><br>By default the calls generated will alway show, or you can show them only N days before the window start",
-                            "type": "textbox"
-                        }
-                    ]
-                },
-                {
-                    "key": "adhoc_settings",
-                    "name": "<b>Ah-hoc Settings</b>",
-                    "type": "sub_settings",
-                    "sub_settings": [
-                        {
-                            "key": "adhoc_text",
-                            "name": "Ad-hoc calls are added by an end user on the call log screen. Any tab with an adhoc call in it will show the Reason and Preferred call back date as the last two columns.",
-                            "type": "descriptive"
-                        },
-                        {
-                            "key": "adhoc_reason",
-                            "name": "<b>Reason for call</b><br>Format as a redcap coded value list",
-                            "type": "textarea"
-                        }
-                    ]
-                },
-                {
-                    "key": "visit_settings",
-                    "name": "<b>Schedualed Phone Visit Settings</b>",
-                    "type": "sub_settings",
-                    "sub_settings": [
-                        {
-                            "key": "visit_text",
-                            "name": "Schedualed Phone Visits are for phone-based encounters that just need a way to record a call log at checkout time. They are not typically used on the call log. ",
-                            "type": "descriptive"
-                        },
-                        {
-                            "key": "visit_indicator",
-                            "name": "<b>Visit Started Indicator</b><br>Any truthy value indicates that the visit was started",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "visit_include_events",
-                            "name": "<b>Schedualed Phone Visits for:</b><br>Comma seperated list of unique event names",
-                            "type": "textbox"
-                        },
-                        {
-                            "key": "visit_auto_remove",
-                            "name": "<b>Auto Remove</b><br>Remove the call from the call list and call log once past this date. This date field should be the end window for the visit. This field is not automatically displayed on the call list",
-                            "type": "field-list"
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "key": "call_tab",
-            "name": "<b>Unique Call Tab</b>",
-            "type": "sub_settings",
-            "repeatable": true,
-            "sub_settings": [
-                {
-                    "key": "tab_includes_followup",
-                    "name": "<b>Flag set</b><br>Hidden via JS",
-                    "type": "textbox"
-                },
-                {
-                    "key": "tab_includes_mcv",
-                    "name": "<b>Flag set</b><br>Hidden via JS",
-                    "type": "textbox"
-                },
-                {
-                    "key": "tab_includes_adhoc",
-                    "name": "<b>Flag set</b><br>Hidden via JS",
-                    "type": "textbox"
-                },
-                {
-                    "key": "tab_name",
-                    "name": "<b>Tab name</b>",
-                    "type": "textbox"
-                },
-                {
-                    "key": "tab_calls_included",
-                    "name": "<b>Calls to include</b><br>Comma sperated list of unique call IDs",
-                    "type": "textbox"
-                },
-                {
-                    "key": "tab_order",
-                    "name": "<b>Tab Order</b>",
-                    "type": "textbox"
-                },
-                {
-                    "key": "tab_link",
-                    "name": "<b>Link</b><br>Linking to an instrument isn't possbile on New Entry calls",
-                    "type": "radio",
-                    "choices": [
-                        {
-                            "value": "none",
-                            "name": "None"
-                        },
-                        {
-                            "value": "home",
-                            "name": "Record Home Page"
-                        },
-                        {
-                            "value": "call",
-                            "name": "New Call Log"
-                        },
-                        {
-                            "value": "instrument",
-                            "name": "Instrument"
-                        }
-                    ]
-                },
-                {
-                    "key": "tab_link_event",
-                    "name": "<b>Linked Instrument</b>",
-                    "type": "event-list"
-                },
-                {
-                    "key": "tab_link_instrument",
-                    "name": "<b>Linked Instrument</b>",
-                    "type": "form-list"
-                },
-                {
-                    "key": "tab_headers",
-                    "name": "<b>Element</b>",
-                    "type": "sub_settings",
-                    "repeatable": true,
-                    "sub_settings": [
-                        {
-                            "key": "tab_field",
-                            "name": "<b>Field</b>",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "tab_field_name",
-                            "name": "<b>Field Name</b><br>Defaults to field label",
-                            "type": "textbox"
-                        },
-                        {
-                            "key": "tab_field_default",
-                            "name": "<b>Default</b><br>Ignores all formatting rules",
-                            "type": "textbox"
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "key": "tab_expands_group",
-            "name": "<b>Row Expanded Area</b>",
-            "type": "sub_settings",
-            "repeatable": false,
-            "sub_settings": [
-                {
-                    "key": "tab_expands_text",
-                    "name": "These fields will show up in the expanded info area when a row is clicked along with call log notes. These fields are uniform across all tabs.",
-                    "type": "descriptive"
-                },
-                {
-                    "key": "tab_expands",
-                    "name": "<b>Element</b>",
-                    "type": "sub_settings",
-                    "repeatable": true,
-                    "sub_settings": [
-                        {
-                            "key": "tab_expands_field",
-                            "name": "<b>Field</b>",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "tab_expands_field_name",
-                            "name": "<b>Field Name</b><br>Defaults to field label",
-                            "type": "textbox"
-                        },
-                        {
-                            "key": "tab_expands_field_default",
-                            "name": "<b>Default</b><br>Ignores all formatting rules",
-                            "type": "textbox"
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "key": "call_metadata_reports",
-            "name": "<b>Metadata Reports</b>",
-            "type": "sub_settings",
-            "repeatable": false,
-            "sub_settings": [
-                {
-                    "key": "report_text",
-                    "name": "By default reports include record_id, the record label, and data needed for the report. You may include additional data below.",
-                    "type": "descriptive"
-                },
-                {
-                    "key": "report_headers",
-                    "name": "<b>Element</b>",
-                    "type": "sub_settings",
-                    "repeatable": true,
-                    "sub_settings": [
-                        {
-                            "key": "report_field",
-                            "name": "<b>Field</b>",
-                            "type": "field-list"
-                        },
-                        {
-                            "key": "report_field_name",
-                            "name": "<b>Field Name</b><br>Defaults to field label",
-                            "type": "textbox"
-                        }
-                    ]
-                }
-            ]
         }
     ]
 }

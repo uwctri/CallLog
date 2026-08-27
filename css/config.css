@@ -1,87 +1,229 @@
-.callConfig thead {
-    display: none;
+/* Call Log Custom Configuration Dashboard Styling */
+
+/* Drag and Drop Tab Reordering Handles */
+.drag-handle {
+    cursor: grab;
+}
+.drag-handle:active {
+    cursor: grabbing;
+}
+.call-tab-card.dragging {
+    opacity: 0.4;
+    border: 2px dashed #0d6efd !important;
 }
 
-.callConfig tr[field=metadata] {
-    display: none;
+/* Eliminate blue focus rings and blue hover borders for non-primary buttons */
+button:focus,
+.btn:focus,
+.btn:active:focus,
+.btn.active:focus {
+    outline: none !important;
 }
 
-.callConfig tr[field$=_settings] {
-    display: none;
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus,
+.btn-outline-secondary:active,
+.btn-outline-secondary.active {
+    border-color: #6c757d !important;
+    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25) !important;
+    outline: none !important;
 }
 
-.callConfig tr[field=withdraw_var] label {
-    display: none;
+.btn-outline-danger:hover,
+.btn-outline-danger:focus,
+.btn-outline-danger:active,
+.btn-outline-danger.active {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+    outline: none !important;
 }
 
-.callConfig tr[field=withdraw_event] td {
-    padding-top: 1.5rem;
-    padding-bottom: 0.25rem;
+.btn-light:hover,
+.btn-light:focus,
+.btn-light:active,
+.btn-light.active {
+    border-color: #ced4da !important;
+    box-shadow: 0 0 0 0.2rem rgba(206, 212, 218, 0.5) !important;
+    outline: none !important;
 }
 
-.callConfig tr[field=withdraw_var] td {
+.btn-success:hover,
+.btn-success:focus,
+.btn-success:active,
+.btn-success.active {
+    border-color: #198754 !important;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25) !important;
+    outline: none !important;
+}
+
+.nav-pills .nav-link:focus,
+.nav-tabs .nav-link:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* Card Grounding & Prominent Border Definition */
+.call-config-dashboard {
+    background-color: #f8fafc;
+    border-radius: 8px;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.call-config-dashboard label,
+.call-config-dashboard .form-label {
+    font-weight: 600 !important;
+    color: #0f172a !important;
+}
+
+.call-config-dashboard h3,
+.call-config-dashboard h4,
+.call-config-dashboard h5,
+.call-config-dashboard h6,
+.call-config-dashboard .card-header {
+    font-weight: 700 !important;
+    color: #0f172a !important;
+}
+
+.call-config-dashboard .setting-blurb {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #475569;
+    line-height: 1.5;
+    background-color: transparent;
     border: none;
-    padding-top: 0.25rem;
-    padding-bottom: 1.5rem;
+    padding: 0;
+    margin-bottom: 12px;
 }
 
-.callConfig tr[field=withdraw_tmp_var] label {
+.call-config-dashboard .card,
+.call-config-dashboard .call-type-card,
+.call-config-dashboard .call-tab-card {
+    border: 1px solid #b0bec5 !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.07) !important;
+    border-radius: 6px;
+    background-color: #ffffff;
+}
+
+.call-config-dashboard .card-header {
+    background-color: #e2e8f0 !important;
+    border-bottom: 1px solid #b0bec5 !important;
+    color: #0f172a !important;
+    font-weight: 700;
+}
+
+.call-config-dashboard .list-group-item {
+    border-color: #cbd5e1 !important;
+}
+
+.withdraw-rule-row,
+.expands-field-row,
+.tab-field-row,
+.username-list-row {
+    background-color: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    padding: 12px 16px !important;
+    margin-bottom: 12px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+.call-config-dashboard .nav-pills {
+    background-color: #e2e8f0 !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+.call-config-dashboard .nav-pills .nav-link {
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    font-weight: 600;
+}
+
+.call-config-dashboard .nav-pills .nav-link.active {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+    border-color: #0d6efd !important;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.25) !important;
+}
+
+/* Uniform Input Text, Select & Custom Multi-Select Height and Alignment */
+.call-config-dashboard select.form-select,
+.call-config-dashboard select.form-select-sm,
+.call-config-dashboard input.form-control,
+.call-config-dashboard input.form-control-sm,
+.call-config-dashboard input[type="text"],
+.call-config-dashboard input[type="number"],
+.call-config-dashboard .custom-multiselect-box {
+    height: 38px !important;
+    min-height: 38px !important;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 4px !important;
+    font-size: 0.875rem !important;
+    line-height: 1.5 !important;
+    padding: 6px 12px !important;
+    box-sizing: border-box !important;
+}
+
+.call-config-dashboard textarea.form-control,
+.call-config-dashboard textarea.form-control-sm,
+.call-config-dashboard textarea {
+    min-height: 38px !important;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 4px !important;
+    font-size: 0.875rem !important;
+    line-height: 1.5 !important;
+    padding: 6px 12px !important;
+    box-sizing: border-box !important;
+}
+
+.custom-multiselect-container {
+    position: relative;
+}
+.custom-multiselect-box {
+    cursor: pointer;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+    background-color: #ffffff;
+}
+.custom-multiselect-box.disabled {
+    background-color: #e9ecef;
+    opacity: 0.75;
+    cursor: not-allowed;
+    border-color: #dee2e6 !important;
+}
+.custom-multiselect-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    max-height: 220px;
+    overflow-y: auto;
+    background-color: #ffffff;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     display: none;
+    padding: 4px 0;
 }
-
-.callConfig tr[field=withdraw_tmp_event] td {
-    padding-top: 1.5rem;
-    padding-bottom: 0.25rem;
+.custom-multiselect-menu.show {
+    display: block;
 }
-
-.callConfig tr[field=withdraw_tmp_var] td {
-    border: none;
-    padding-top: 0.25rem;
-    padding-bottom: 1.5rem;
+.custom-multiselect-option {
+    padding: 6px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    user-select: none;
 }
-
-.callConfig tr[field=followup_date] label {
-    display: none;
+.custom-multiselect-option:hover {
+    background-color: #f8f9fa;
 }
-
-.callConfig tr[field=followup_date] span {
-    display: none;
-}
-
-.callConfig tr[field=followup_event] td {
-    padding-top: 1.5rem;
-    padding-bottom: 0.25rem;
-}
-
-.callConfig tr[field=followup_date] td {
-    border: none;
-    padding-top: 0.25rem;
-    padding-bottom: 1.5rem;
-}
-
-.callConfig tr[field=tab_field_link_instrument] label {
-    display: none;
-}
-
-.callConfig tr[field=tab_field_link_instrument] span {
-    display: none;
-}
-
-.callConfig tr[field=tab_field_link_event] td {
-    padding-top: 1.5rem;
-    padding-bottom: 0.25rem;
-}
-
-.callConfig tr[field=tab_field_link_instrument] td {
-    border: none;
-    padding-top: 0.25rem;
-    padding-bottom: 1.5rem;
-}
-
-.callConfig tr[field^=tab_includes_] {
-    display: none;
-}
-
-.callConfig tr.sub_parent td {
-    background-color: #e6e6e6;
+.remove-badge {
+    cursor: pointer;
+    margin-left: 4px;
 }

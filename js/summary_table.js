@@ -3,34 +3,43 @@
     const module = ExternalModules.UWMadison.CallLog;
 
     const threeDotClick = () => {
+        if (typeof Swal === 'undefined') return;
+
+        let settingsHtml = module.renderers ? module.renderers.renderCallHistorySettings() : '';
+        let callHistoryRows = "";
+        $.each(module.metadata, (k, v) => {
+            if (module.renderers && module.renderers.renderCallHistoryRow) {
+                callHistoryRows += module.renderers.renderCallHistoryRow(v.name || '', k, !!v.complete);
+            }
+        });
+        settingsHtml += callHistoryRows;
+
         Swal.fire({
             title: 'Call Metadata Settings',
-            html: module.templates.callHistorySettings,
+            html: settingsHtml,
             showCancelButton: true,
             focusCancel: true
         }).then((result) => {
+            if (!result.isConfirmed) return;
 
-            if (!result.isConfirmed)
-                return;
-
-            // Edit the module.metadata
             $(".callMetadataEdit").each(function () {
-                module.metadata[$(this).data('call')].complete = $(this).is(':checked');
+                const callId = $(this).data('call');
+                if (module.metadata && module.metadata[callId]) {
+                    module.metadata[callId].complete = $(this).is(':checked');
+                }
             });
 
-            // Write back the metadata
             module.ajax("metadataSave", {
                 record: getParameterByName('id'),
                 metadata: JSON.stringify(module.metadata)
-            }).then(function (response) {
-                console.log(response);
+            }).then(function () {
                 window.onbeforeunload = function () { };
-                window.location = window.location;
+                window.location.reload();
             }).catch(function (err) {
-                console.log(err);
+                console.error(err);
             });
-        })
-    }
+        });
+    };
 
     const childRowExpand = (event) => {
         let target = event.currentTarget;
@@ -41,18 +50,20 @@
             $(target).removeClass('shown');
             return;
         }
-        let data = module.data[row.data()['instance']];
-        const opt = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-        let date = new Date(data['call_open_datetime']);
-        date = date.toLocaleDateString(undefined, opt).replace(',', '')
+        let data = (module.data && module.data[row.data()['instance']]) ? module.data[row.data()['instance']] : {};
+        let date = data['call_open_datetime'] || '';
         let note = data['call_notes'] ? data['call_notes'] : "No Notes Taken";
-        let logClosed = data['call_outcome'] == "1" ? module.templates.callClosed : "";
-        row.child(`<b>${date}</b><br>${data['call_open_user_full_name']} - ${note}${logClosed}`, 'dataTableChild').show();
+        let logClosed = data['call_outcome'] === "1" ? (module.renderers ? module.renderers.renderCallClosed() : '') : "";
+        let userName = data['call_open_user_full_name'] || '';
+
+        row.child(`<b>${date}</b><br>${userName} - ${note}${logClosed}`, 'dataTableChild').show();
         $(target).next().addClass($(target).hasClass('even') ? 'even' : 'odd');
         $(target).addClass('shown');
-    }
+    };
 
     const openDeleteModal = () => {
+        if (typeof Swal === 'undefined') return;
+
         Swal.fire({
             icon: 'warning',
             title: 'Are you sure?',
@@ -65,94 +76,72 @@
             cancelButtonText: 'Close',
             confirmButtonText: 'Delete Call Log'
         }).then((result) => {
-            if (!result.isConfirmed)
-                return;
+            if (!result.isConfirmed) return;
 
             let instance = getParameterByName('instance') > 1 ? getParameterByName('instance') - 1 : 1;
 
-            // Post to delete, removes metadata too
             module.ajax("callDelete", {
                 record: getParameterByName('id')
-            }).then(function (response) {
-                console.log(response);
+            }).then(function () {
                 let url = new URL(location.href);
                 url.searchParams.set('instance', instance);
                 window.onbeforeunload = function () { };
-                window.location = url;
+                window.location.href = url.toString();
             }).catch(function (err) {
-                console.log(err);
+                console.error(err);
             });
-
         });
-    }
+    };
 
     const buildCallSummaryTable = () => {
-        // Check if we have anything to actually build
-        if (isEmpty(module.metadata) || !(Object.keys(module.data).length > 1 || !module.data[1] || module.data[1]['call_id']))
-            return;
+        if (!module.metadata || !module.renderers || !module.renderers.renderCallHistoryTable) return;
+        if (!module.data || !(Object.keys(module.data).length > 1 || !module.data[1] || module.data[1]['call_id'])) return;
 
-        // Insert the table, lock its location
-        $("#center").append(module.templates.callHistoryTable);
-        $('.callHistoryContainer').css('top', $("#record_id-tr").offset().top);
+        if ($("#center").length && !$(".callHistoryContainer").length) {
+            $("#center").append(module.renderers.renderCallHistoryTable());
+            let targetOffset = $("#record_id-tr").length ? $("#record_id-tr").offset().top : 0;
+            if (targetOffset) {
+                $('.callHistoryContainer').css('top', targetOffset);
+            }
+        }
 
-        // Init the DataTable
         $('.callSummaryTable').DataTable({
             pageLength: 20,
             dom: Object.keys(module.data).length > callSummaryPageSize ? 'rtp' : 'rt',
             order: [
                 [0, "desc"]
             ],
-            createdRow: (row, data, index) => $(row).addClass('dataTablesRow'),
+            createdRow: (row) => $(row).addClass('dataTablesRow'),
             columns: [
                 { title: '#', data: 'instance', className: 'dt-center' },
                 { title: 'Call', data: 'name' },
                 { title: 'Msg', data: 'leftMessage', className: 'dt-body-center' },
-                {
-                    title: 'Call time',
-                    data: 'datetime',
-                    render: (data, type, row, meta) =>
-                        (type === 'display' || type === 'filter') ? formatDate(new Date(data), module.format.dateTime).toLowerCase() : data
-                },
+                { title: 'Call time', data: 'datetime' },
                 { title: '', data: 'deleteInstance', bSortable: false }
             ],
             data: $.map(module.data, (data, index) => {
                 let m = module.metadata[data['call_id']];
-                let allowDelete = (Object.keys(module.data)[Object.keys(module.data).length - 1] == index);
+                let dataKeys = Object.keys(module.data);
+                let allowDelete = (dataKeys[dataKeys.length - 1] == index);
                 return {
                     instance: index,
-                    name: m && m['name'] ? m['name'] : (data['call_id'] || "Unknown"),
-                    datetime: data['call_open_datetime'],
-                    leftMessage: data['call_left_message'][1] == "1" ? 'Yes' : 'No',
-                    deleteInstance: allowDelete ? module.templates.deleteLog : ''
+                    name: (m && m['name']) ? m['name'] : (data['call_id'] || "Unknown"),
+                    datetime: data['call_open_datetime'] || '',
+                    leftMessage: (data['call_left_message'] && data['call_left_message'][1] === "1") ? 'Yes' : 'No',
+                    deleteInstance: allowDelete ? (module.renderers ? module.renderers.renderDeleteLog() : '') : ''
                 };
             })
         });
 
-        // Adjust width upward by 10% for a little extra room
-        $(".callHistoryContainer").css('width', $(".callHistoryContainer").css('width').slice(0, -2) * 1.1)
-
-        // Build the "settings" menu, used for un-completing any calls
-        $(".callHistoryContainer .sorting_disabled").html(module.templates.settingsButton);
-        let callHistroyRows = "";
-        $.each(module.metadata, (k, v) => {
-            callHistroyRows += module.templates.callHistoryRow
-                .replace('CALLID', k)
-                .replace('CALLNAME', v.name)
-                .replace('checked', v.complete ? 'checked' : '');
-        });
-        module.templates.callHistorySettings += callHistroyRows;
+        $(".callHistoryContainer .sorting_disabled").html(module.renderers ? module.renderers.renderSettingsButton() : '');
         $(".callSummarySettings").on('click', threeDotClick);
 
-        // Enable click to expand child row
         $('body').on('click', '.dataTablesRow', childRowExpand);
 
-        // If not on the call log then we are done
-        if (getParameterByName('page') != module.static.instrument)
-            return;
+        if (getParameterByName('page') !== module.static.instrument) return;
 
-        // Allow deleting the most recent version of the call log
         $('.deleteInstance').on('click', openDeleteModal);
-    }
+    };
 
     buildCallSummaryTable();
 })();

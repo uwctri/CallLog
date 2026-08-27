@@ -1,38 +1,41 @@
-
 (() => {
-
     let callLogLink = "";
     const module = ExternalModules.UWMadison.CallLog;
-    const callIcon = `<a class="CallLogLink"><i class="fa fa-phone"></i></a>`;
+    const callIcon = `<a class="CallLogLink" title="Go to Call Log"><i class="fa fa-phone"></i></a>`;
+
     const systemTable = $(`.sysManTable [data-mlm-name=${module.static.instrument}]`).closest('td');
     const redcapTable = $(`#event_grid_table [data-mlm-name=${module.static.instrument}]`).closest('tr');
 
-    // Prep the styled button
-    $('head').append(`<style>.CallLogLink { cursor: pointer; }</style>`)
-    $("body").on("click", ".CallLogLink", () => { location.href = callLogLink; });
+    if (!document.getElementById('callLogLinkStyle')) {
+        const style = document.createElement('style');
+        style.id = 'callLogLinkStyle';
+        style.textContent = '.CallLogLink { cursor: pointer; margin-left: 4px; }';
+        document.head.appendChild(style);
+    }
 
-    // Hide the Call Log repeating instrument table
+    $("body").off('click.callLogLink').on("click.callLogLink", ".CallLogLink", () => {
+        if (callLogLink) location.href = callLogLink;
+    });
+
     $(`#repeat_instrument_table-${module.static.instrumentEvent}-${module.static.instrument}`).parent().remove();
 
-    // Replace Call Log icons with the phone
     systemTable.add(redcapTable).find('button, a').each((_, el) => {
-        if ($(el).hasClass("invis")) {
-            return;
-        }
-        // First instance, deprioritized
+        if ($(el).hasClass("invis")) return;
+
         if ($(el).is('a') && !callLogLink) {
             callLogLink = $(el).prop('href');
         }
-        // Any other instance
-        if ($(el).is('button')) {
-            callLogLink = $(el).attr('onclick').split(`='`)[1].replace(`';`, '');
+
+        if ($(el).is('button') && $(el).attr('onclick')) {
+            const parts = $(el).attr('onclick').split(`='`);
+            if (parts.length > 1) {
+                callLogLink = parts[1].replace(`';`, '');
+            }
         }
-        // Insert the button
+
         if ($(".CallLogLink").length < 1) {
             $(el).after(callIcon);
         }
         $(el).hide();
     });
-
 })();
-
