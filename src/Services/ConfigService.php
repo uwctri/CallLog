@@ -171,6 +171,7 @@ class ConfigService
 
                 $fields[] = [
                     'id' => $fieldName,
+                    'name' => !empty($cleanLabel) ? $cleanLabel : $fieldName,
                     'label' => $displayText,
                     'type' => $type,
                     'form' => $fieldInfo['form_name'] ?? ''
@@ -181,11 +182,15 @@ class ConfigService
         $metadataRepo = new CallMetadataRepository();
         $totalCalls = $metadataRepo->getTotalCallsCount($projectId);
 
+        $deployService = new InstrumentDeploymentService();
+        $isDeployed = $deployService->isDeployed($projectId);
+
         return [
             'events' => $events,
             'instruments' => $instruments,
             'fields' => $fields,
             'totalCalls' => $totalCalls,
+            'instrumentsDeployed' => $isDeployed,
             'defaultHolidayMap' => DateMathService::$defaultHolidayMap,
             'callTemplateOptions' => CallTemplateType::getOptions(),
             'fieldLinkOptions' => [
@@ -541,7 +546,7 @@ class ConfigService
     private function explodeCodedValueText(string $str): array
     {
         $map = [];
-        $lines = explode("\\n", $str);
+        $lines = preg_split('/\r\n|\r|\n|\\\\n|\|/', $str);
         foreach ($lines as $line) {
             $parts = explode(",", $line, 2);
             if (count($parts) === 2) {

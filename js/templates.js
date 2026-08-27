@@ -1,7 +1,7 @@
 (() => {
     const module = ExternalModules.UWMadison.CallLog;
 
-    module.renderers = {
+    const renderers = {
         renderNotesIcon: function() {
             return `<span class="notes-icon-badge text-primary" title="Call notes logged"><i class="fas fa-sticky-note"></i></span>`;
         },
@@ -22,4 +22,12 @@
             return `<a href="${url}" class="form-status-link" title="${s.title}"><i class="fas fa-${s.icon}" style="color: ${s.color};"></i></a>`;
         }
     };
+
+    module.renderers = renderers;
+
+    document.addEventListener('alpine:init', () => {
+        if (typeof Alpine !== 'undefined') {
+            Alpine.store('templates', renderers);
+        }
+    });
 })();
