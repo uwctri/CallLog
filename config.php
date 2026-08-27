@@ -177,7 +177,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                         <div class="setting-blurb mb-3">
                             Select project data entry forms that should trigger automated call generation whenever saved by research staff.
                         </div>
-                        <div class="custom-multiselect-container" :class="{ 'is-open': open }" x-data="{ open: false }" @click.outside="open = false">
+                        <div class="custom-multiselect-container" :class="{ 'is-open': open }" x-data="multiSelect(triggerSave)" @click.outside="open = false">
                             <div class="custom-multiselect-box" :class="{ 'is-open': open }" @click="open = !open">
                                 <div class="d-flex flex-wrap align-items-center">
                                     <template x-if="triggerSave.length === 0">
@@ -186,7 +186,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <template x-for="instId in triggerSave" :key="instId">
                                         <span class="multiselect-chip chip-blue">
                                             <span x-text="getInstrumentLabel(instId)"></span>
-                                            <i class="fas fa-times close-icon" @click.stop="toggleMultiselectItem(triggerSave, instId)"></i>
+                                            <i class="fas fa-times close-icon" @click.stop="toggle(instId)"></i>
                                         </span>
                                     </template>
                                 </div>
@@ -194,9 +194,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                             </div>
                             <div class="custom-multiselect-menu" x-show="open" x-transition>
                                 <template x-for="inst in meta.instruments" :key="inst.id">
-                                    <div class="custom-multiselect-item" @click.stop="toggleMultiselectItem(triggerSave, inst.id)">
+                                    <div class="custom-multiselect-item" @click.stop="toggle(inst.id)">
                                         <span x-text="`${inst.label || inst.name} (${inst.id})`"></span>
-                                        <i class="fas" :class="triggerSave.includes(String(inst.id)) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
+                                        <i class="fas" :class="isSelected(inst.id) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
                                     </div>
                                 </template>
                             </div>
@@ -218,7 +218,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                         <div class="setting-blurb mb-3">
                             Choose which data entry instruments will render the interactive Call Summary widget, giving study staff quick access to caller notes and attempt history directly on participant records.
                         </div>
-                        <div class="custom-multiselect-container" :class="{ 'is-open': open }" x-data="{ open: false }" @click.outside="open = false">
+                        <div class="custom-multiselect-container" :class="{ 'is-open': open }" x-data="multiSelect(callSummary)" @click.outside="open = false">
                             <div class="custom-multiselect-box" :class="{ 'is-open': open }" @click="open = !open">
                                 <div class="d-flex flex-wrap align-items-center">
                                     <template x-if="callSummary.length === 0">
@@ -227,7 +227,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <template x-for="instId in callSummary" :key="instId">
                                         <span class="multiselect-chip chip-green">
                                             <span x-text="getInstrumentLabel(instId)"></span>
-                                            <i class="fas fa-times close-icon" @click.stop="toggleMultiselectItem(callSummary, instId)"></i>
+                                            <i class="fas fa-times close-icon" @click.stop="toggle(instId)"></i>
                                         </span>
                                     </template>
                                 </div>
@@ -235,9 +235,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                             </div>
                             <div class="custom-multiselect-menu" x-show="open" x-transition>
                                 <template x-for="inst in meta.instruments" :key="inst.id">
-                                    <div class="custom-multiselect-item" @click.stop="toggleMultiselectItem(callSummary, inst.id)">
+                                    <div class="custom-multiselect-item" @click.stop="toggle(inst.id)">
                                         <span x-text="`${inst.label || inst.name} (${inst.id})`"></span>
-                                        <i class="fas" :class="callSummary.includes(String(inst.id)) ? 'fa-check-square text-success fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
+                                        <i class="fas" :class="isSelected(inst.id) ? 'fa-check-square text-success fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
                                     </div>
                                 </template>
                             </div>
@@ -341,18 +341,18 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <label class="form-label small fw-bold text-dark mb-1">Withdrawal Indicator Field</label>
                                     
                                     <!-- Searchable Field Select Component -->
-                                    <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="{ open: false, filter: '' }" @click.outside="open = false">
+                                    <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(rule, 'var', '-- Select or Type Field --')" @click.outside="open = false">
                                         <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
-                                            <span class="small text-truncate" :class="rule.var ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(rule.var) || '-- Select or Type Field --'"></span>
+                                            <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                             <i class="fas fa-search text-muted small ms-2"></i>
                                         </div>
                                         <div class="searchable-field-menu shadow-lg p-2" x-show="open" x-transition>
                                             <input type="text" class="form-control form-control-sm mb-2" x-model="filter" placeholder="Type to search fields..." @click.stop>
-                                            <div class="searchable-field-item text-muted small" @click="rule.var = ''; open = false">-- Clear Selection --</div>
-                                            <template x-for="f in meta.fields.filter(item => !filter || item.id.toLowerCase().includes(filter.toLowerCase()) || (item.label && item.label.toLowerCase().includes(filter.toLowerCase())))" :key="f.id">
-                                                <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': rule.var === f.id }" @click="rule.var = f.id; open = false">
+                                            <div class="searchable-field-item text-muted small" @click="select('')">-- Clear Selection --</div>
+                                            <template x-for="f in filteredFields" :key="f.id">
+                                                <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': val === f.id }" @click="select(f.id)">
                                                     <span x-text="f.label || `${f.id} (${f.name})`"></span>
-                                                    <i class="fas fa-check text-primary" x-show="rule.var === f.id"></i>
+                                                    <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                 </div>
                                             </template>
                                         </div>
@@ -389,18 +389,18 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <label class="form-label small fw-bold text-dark mb-1">Field</label>
                                     
                                     <!-- Searchable Field Select -->
-                                    <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="{ open: false, filter: '' }" @click.outside="open = false">
+                                    <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(exp, 'field', '-- Select or Type Field --')" @click.outside="open = false">
                                         <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
-                                            <span class="small text-truncate" :class="exp.field ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(exp.field) || '-- Select or Type Field --'"></span>
+                                            <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                             <i class="fas fa-search text-muted small ms-2"></i>
                                         </div>
                                         <div class="searchable-field-menu shadow-lg p-2" x-show="open" x-transition>
                                             <input type="text" class="form-control form-control-sm mb-2" x-model="filter" placeholder="Type to search fields..." @click.stop>
-                                            <div class="searchable-field-item text-muted small" @click="exp.field = ''; open = false">-- Clear Selection --</div>
-                                            <template x-for="f in meta.fields.filter(item => !filter || item.id.toLowerCase().includes(filter.toLowerCase()) || (item.label && item.label.toLowerCase().includes(filter.toLowerCase())))" :key="f.id">
-                                                <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': exp.field === f.id }" @click="exp.field = f.id; open = false">
+                                            <div class="searchable-field-item text-muted small" @click="select('')">-- Clear Selection --</div>
+                                            <template x-for="f in filteredFields" :key="f.id">
+                                                <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': val === f.id }" @click="select(f.id)">
                                                     <span x-text="f.label || `${f.id} (${f.name})`"></span>
-                                                    <i class="fas fa-check text-primary" x-show="exp.field === f.id"></i>
+                                                    <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                 </div>
                                             </template>
                                         </div>
@@ -497,18 +497,18 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-5">
                                             <label class="form-label small fw-bold text-dark mb-1">Target Date Field</label>
-                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="{ open: false, filter: '' }" @click.outside="open = false">
+                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'reminderVariable', '-- Select Date Field --')" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
-                                                    <span class="small text-truncate" :class="callType.reminderVariable ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(callType.reminderVariable) || '-- Select Date Field --'"></span>
+                                                    <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                     <i class="fas fa-search text-muted small ms-2"></i>
                                                 </div>
                                                 <div class="searchable-field-menu shadow-lg p-2" x-show="open" x-transition>
                                                     <input type="text" class="form-control form-control-sm mb-2" x-model="filter" placeholder="Type to search date fields..." @click.stop>
-                                                    <div class="searchable-field-item text-muted small" @click="callType.reminderVariable = ''; open = false">-- Clear Selection --</div>
-                                                    <template x-for="f in meta.fields.filter(item => !filter || item.id.toLowerCase().includes(filter.toLowerCase()) || (item.label && item.label.toLowerCase().includes(filter.toLowerCase())))" :key="f.id">
-                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': callType.reminderVariable === f.id }" @click="callType.reminderVariable = f.id; open = false">
+                                                    <div class="searchable-field-item text-muted small" @click="select('')">-- Clear Selection --</div>
+                                                    <template x-for="f in filteredFields" :key="f.id">
+                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': val === f.id }" @click="select(f.id)">
                                                             <span x-text="f.label || `${f.id} (${f.name})`"></span>
-                                                            <i class="fas fa-check text-primary" x-show="callType.reminderVariable === f.id"></i>
+                                                            <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                         </div>
                                                     </template>
                                                 </div>
@@ -518,15 +518,15 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                             <label class="form-label small fw-bold text-dark mb-1">Days Before Date</label>
                                             <input type="number" class="form-control form-control-sm" x-model="callType.reminderDays" placeholder="e.g. 3">
                                         </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-4" x-data="eventSelect(callType.reminderEvents)">
                                             <label class="form-label small fw-bold text-dark mb-1">Include Events</label>
-                                            <template x-if="meta.events && meta.events.length === 1">
+                                            <template x-if="singleEvent">
                                                 <select class="form-select form-select-sm bg-light text-muted fw-semibold" disabled>
                                                     <option selected>🔒 Only one event exists on this project</option>
                                                 </select>
                                             </template>
-                                            <template x-if="meta.events && meta.events.length > 1">
-                                                <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" x-data="{ open: false }" @click.outside="open = false">
+                                            <template x-if="!singleEvent">
+                                                <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" @click.outside="open = false">
                                                     <div class="custom-multiselect-box" :class="{ 'is-open': open }" @click="open = !open">
                                                         <div class="d-flex flex-wrap align-items-center">
                                                             <template x-if="!callType.reminderEvents || callType.reminderEvents.length === 0">
@@ -535,7 +535,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                             <template x-for="eId in callType.reminderEvents" :key="eId">
                                                                 <span class="multiselect-chip chip-blue">
                                                                     <span x-text="getEventLabel(eId)"></span>
-                                                                    <i class="fas fa-times close-icon" @click.stop="toggleMultiselectItem(callType.reminderEvents, eId)"></i>
+                                                                    <i class="fas fa-times close-icon" @click.stop="toggle(eId)"></i>
                                                                 </span>
                                                             </template>
                                                         </div>
@@ -543,9 +543,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                     </div>
                                                     <div class="custom-multiselect-menu" x-show="open" x-transition>
                                                         <template x-for="evt in meta.events" :key="evt.id">
-                                                            <div class="custom-multiselect-item" @click.stop="toggleMultiselectItem(callType.reminderEvents, evt.id)">
+                                                            <div class="custom-multiselect-item" @click.stop="toggle(evt.id)">
                                                                 <span x-text="`${evt.name} (${evt.unique})`"></span>
-                                                                <i class="fas" :class="callType.reminderEvents.includes(String(evt.id)) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
+                                                                <i class="fas" :class="isSelected(evt.id) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
                                                             </div>
                                                         </template>
                                                     </div>
@@ -561,18 +561,18 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-5">
                                             <label class="form-label small fw-bold text-dark mb-1">Baseline Date Field</label>
-                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="{ open: false, filter: '' }" @click.outside="open = false">
+                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'followupDate', '-- Select Date Field --')" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
-                                                    <span class="small text-truncate" :class="callType.followupDate ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(callType.followupDate) || '-- Select Date Field --'"></span>
+                                                    <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                     <i class="fas fa-search text-muted small ms-2"></i>
                                                 </div>
                                                 <div class="searchable-field-menu shadow-lg p-2" x-show="open" x-transition>
                                                     <input type="text" class="form-control form-control-sm mb-2" x-model="filter" placeholder="Type to search date fields..." @click.stop>
-                                                    <div class="searchable-field-item text-muted small" @click="callType.followupDate = ''; open = false">-- Clear Selection --</div>
-                                                    <template x-for="f in meta.fields.filter(item => !filter || item.id.toLowerCase().includes(filter.toLowerCase()) || (item.label && item.label.toLowerCase().includes(filter.toLowerCase())))" :key="f.id">
-                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': callType.followupDate === f.id }" @click="callType.followupDate = f.id; open = false">
+                                                    <div class="searchable-field-item text-muted small" @click="select('')">-- Clear Selection --</div>
+                                                    <template x-for="f in filteredFields" :key="f.id">
+                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': val === f.id }" @click="select(f.id)">
                                                             <span x-text="f.label || `${f.id} (${f.name})`"></span>
-                                                            <i class="fas fa-check text-primary" x-show="callType.followupDate === f.id"></i>
+                                                            <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                         </div>
                                                     </template>
                                                 </div>
@@ -582,15 +582,15 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                             <label class="form-label small fw-bold text-dark mb-1">Days After Date</label>
                                             <input type="number" class="form-control form-control-sm" x-model="callType.followupDays" placeholder="e.g. 7">
                                         </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-4" x-data="eventSelect(callType.followupEvents)">
                                             <label class="form-label small fw-bold text-dark mb-1">Include Events</label>
-                                            <template x-if="meta.events && meta.events.length === 1">
+                                            <template x-if="singleEvent">
                                                 <select class="form-select form-select-sm bg-light text-muted fw-semibold" disabled>
                                                     <option selected>🔒 Only one event exists on this project</option>
                                                 </select>
                                             </template>
-                                            <template x-if="meta.events && meta.events.length > 1">
-                                                <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" x-data="{ open: false }" @click.outside="open = false">
+                                            <template x-if="!singleEvent">
+                                                <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" @click.outside="open = false">
                                                     <div class="custom-multiselect-box" :class="{ 'is-open': open }" @click="open = !open">
                                                         <div class="d-flex flex-wrap align-items-center">
                                                             <template x-if="!callType.followupEvents || callType.followupEvents.length === 0">
@@ -599,7 +599,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                             <template x-for="eId in callType.followupEvents" :key="eId">
                                                                 <span class="multiselect-chip chip-blue">
                                                                     <span x-text="getEventLabel(eId)"></span>
-                                                                    <i class="fas fa-times close-icon" @click.stop="toggleMultiselectItem(callType.followupEvents, eId)"></i>
+                                                                    <i class="fas fa-times close-icon" @click.stop="toggle(eId)"></i>
                                                                 </span>
                                                             </template>
                                                         </div>
@@ -607,9 +607,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                     </div>
                                                     <div class="custom-multiselect-menu" x-show="open" x-transition>
                                                         <template x-for="evt in meta.events" :key="evt.id">
-                                                            <div class="custom-multiselect-item" @click.stop="toggleMultiselectItem(callType.followupEvents, evt.id)">
+                                                            <div class="custom-multiselect-item" @click.stop="toggle(evt.id)">
                                                                 <span x-text="`${evt.name} (${evt.unique})`"></span>
-                                                                <i class="fas" :class="callType.followupEvents.includes(String(evt.id)) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
+                                                                <i class="fas" :class="isSelected(evt.id) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
                                                             </div>
                                                         </template>
                                                     </div>
@@ -625,18 +625,18 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-dark mb-1">Indicator Field</label>
-                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="{ open: false, filter: '' }" @click.outside="open = false">
+                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'mcvIndicator', '-- Select Indicator Field --')" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
-                                                    <span class="small text-truncate" :class="callType.mcvIndicator ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(callType.mcvIndicator) || '-- Select Indicator Field --'"></span>
+                                                    <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                     <i class="fas fa-search text-muted small ms-2"></i>
                                                 </div>
                                                 <div class="searchable-field-menu shadow-lg p-2" x-show="open" x-transition>
                                                     <input type="text" class="form-control form-control-sm mb-2" x-model="filter" placeholder="Type to search fields..." @click.stop>
-                                                    <div class="searchable-field-item text-muted small" @click="callType.mcvIndicator = ''; open = false">-- Clear Selection --</div>
-                                                    <template x-for="f in meta.fields.filter(item => !filter || item.id.toLowerCase().includes(filter.toLowerCase()) || (item.label && item.label.toLowerCase().includes(filter.toLowerCase())))" :key="f.id">
-                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': callType.mcvIndicator === f.id }" @click="callType.mcvIndicator = f.id; open = false">
+                                                    <div class="searchable-field-item text-muted small" @click="select('')">-- Clear Selection --</div>
+                                                    <template x-for="f in filteredFields" :key="f.id">
+                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': val === f.id }" @click="select(f.id)">
                                                             <span x-text="f.label || `${f.id} (${f.name})`"></span>
-                                                            <i class="fas fa-check text-primary" x-show="callType.mcvIndicator === f.id"></i>
+                                                            <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                         </div>
                                                     </template>
                                                 </div>
@@ -644,32 +644,32 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-dark mb-1">Appointment Date Field</label>
-                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="{ open: false, filter: '' }" @click.outside="open = false">
+                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'mcvDate', '-- Select Date Field --')" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
-                                                    <span class="small text-truncate" :class="callType.mcvDate ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(callType.mcvDate) || '-- Select Date Field --'"></span>
+                                                    <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                     <i class="fas fa-search text-muted small ms-2"></i>
                                                 </div>
                                                 <div class="searchable-field-menu shadow-lg p-2" x-show="open" x-transition>
                                                     <input type="text" class="form-control form-control-sm mb-2" x-model="filter" placeholder="Type to search date fields..." @click.stop>
-                                                    <div class="searchable-field-item text-muted small" @click="callType.mcvDate = ''; open = false">-- Clear Selection --</div>
-                                                    <template x-for="f in meta.fields.filter(item => !filter || item.id.toLowerCase().includes(filter.toLowerCase()) || (item.label && item.label.toLowerCase().includes(filter.toLowerCase())))" :key="f.id">
-                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': callType.mcvDate === f.id }" @click="callType.mcvDate = f.id; open = false">
+                                                    <div class="searchable-field-item text-muted small" @click="select('')">-- Clear Selection --</div>
+                                                    <template x-for="f in filteredFields" :key="f.id">
+                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': val === f.id }" @click="select(f.id)">
                                                             <span x-text="f.label || `${f.id} (${f.name})`"></span>
-                                                            <i class="fas fa-check text-primary" x-show="callType.mcvDate === f.id"></i>
+                                                            <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                         </div>
                                                     </template>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-4" x-data="eventSelect(callType.mcvEvents)">
                                             <label class="form-label small fw-bold text-dark mb-1">Include Events</label>
-                                            <template x-if="meta.events && meta.events.length === 1">
+                                            <template x-if="singleEvent">
                                                 <select class="form-select form-select-sm bg-light text-muted fw-semibold" disabled>
                                                     <option selected>🔒 Only one event exists on this project</option>
                                                 </select>
                                             </template>
-                                            <template x-if="meta.events && meta.events.length > 1">
-                                                <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" x-data="{ open: false }" @click.outside="open = false">
+                                            <template x-if="!singleEvent">
+                                                <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" @click.outside="open = false">
                                                     <div class="custom-multiselect-box" :class="{ 'is-open': open }" @click="open = !open">
                                                         <div class="d-flex flex-wrap align-items-center">
                                                             <template x-if="!callType.mcvEvents || callType.mcvEvents.length === 0">
@@ -678,7 +678,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                             <template x-for="eId in callType.mcvEvents" :key="eId">
                                                                 <span class="multiselect-chip chip-blue">
                                                                     <span x-text="getEventLabel(eId)"></span>
-                                                                    <i class="fas fa-times close-icon" @click.stop="toggleMultiselectItem(callType.mcvEvents, eId)"></i>
+                                                                    <i class="fas fa-times close-icon" @click.stop="toggle(eId)"></i>
                                                                 </span>
                                                             </template>
                                                         </div>
@@ -686,9 +686,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                     </div>
                                                     <div class="custom-multiselect-menu" x-show="open" x-transition>
                                                         <template x-for="evt in meta.events" :key="evt.id">
-                                                            <div class="custom-multiselect-item" @click.stop="toggleMultiselectItem(callType.mcvEvents, evt.id)">
+                                                            <div class="custom-multiselect-item" @click.stop="toggle(evt.id)">
                                                                 <span x-text="`${evt.name} (${evt.unique})`"></span>
-                                                                <i class="fas" :class="callType.mcvEvents.includes(String(evt.id)) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
+                                                                <i class="fas" :class="isSelected(evt.id) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
                                                             </div>
                                                         </template>
                                                     </div>
@@ -704,18 +704,18 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-dark mb-1">Indicator Field</label>
-                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="{ open: false, filter: '' }" @click.outside="open = false">
+                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'ntsIndicator', '-- Select Indicator Field --')" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
-                                                    <span class="small text-truncate" :class="callType.ntsIndicator ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(callType.ntsIndicator) || '-- Select Indicator Field --'"></span>
+                                                    <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                     <i class="fas fa-search text-muted small ms-2"></i>
                                                 </div>
                                                 <div class="searchable-field-menu shadow-lg p-2" x-show="open" x-transition>
                                                     <input type="text" class="form-control form-control-sm mb-2" x-model="filter" placeholder="Type to search fields..." @click.stop>
-                                                    <div class="searchable-field-item text-muted small" @click="callType.ntsIndicator = ''; open = false">-- Clear Selection --</div>
-                                                    <template x-for="f in meta.fields.filter(item => !filter || item.id.toLowerCase().includes(filter.toLowerCase()) || (item.label && item.label.toLowerCase().includes(filter.toLowerCase())))" :key="f.id">
-                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': callType.ntsIndicator === f.id }" @click="callType.ntsIndicator = f.id; open = false">
+                                                    <div class="searchable-field-item text-muted small" @click="select('')">-- Clear Selection --</div>
+                                                    <template x-for="f in filteredFields" :key="f.id">
+                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': val === f.id }" @click="select(f.id)">
                                                             <span x-text="f.label || `${f.id} (${f.name})`"></span>
-                                                            <i class="fas fa-check text-primary" x-show="callType.ntsIndicator === f.id"></i>
+                                                            <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                         </div>
                                                     </template>
                                                 </div>
@@ -723,32 +723,32 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-dark mb-1">Target Date Field</label>
-                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="{ open: false, filter: '' }" @click.outside="open = false">
+                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'ntsDate', '-- Select Date Field --')" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
-                                                    <span class="small text-truncate" :class="callType.ntsDate ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(callType.ntsDate) || '-- Select Date Field --'"></span>
+                                                    <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                     <i class="fas fa-search text-muted small ms-2"></i>
                                                 </div>
                                                 <div class="searchable-field-menu shadow-lg p-2" x-show="open" x-transition>
                                                     <input type="text" class="form-control form-control-sm mb-2" x-model="filter" placeholder="Type to search date fields..." @click.stop>
-                                                    <div class="searchable-field-item text-muted small" @click="callType.ntsDate = ''; open = false">-- Clear Selection --</div>
-                                                    <template x-for="f in meta.fields.filter(item => !filter || item.id.toLowerCase().includes(filter.toLowerCase()) || (item.label && item.label.toLowerCase().includes(filter.toLowerCase())))" :key="f.id">
-                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': callType.ntsDate === f.id }" @click="callType.ntsDate = f.id; open = false">
+                                                    <div class="searchable-field-item text-muted small" @click="select('')">-- Clear Selection --</div>
+                                                    <template x-for="f in filteredFields" :key="f.id">
+                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': val === f.id }" @click="select(f.id)">
                                                             <span x-text="f.label || `${f.id} (${f.name})`"></span>
-                                                            <i class="fas fa-check text-primary" x-show="callType.ntsDate === f.id"></i>
+                                                            <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                         </div>
                                                     </template>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-4" x-data="eventSelect(callType.ntsEvents)">
                                             <label class="form-label small fw-bold text-dark mb-1">Include Events</label>
-                                            <template x-if="meta.events && meta.events.length === 1">
+                                            <template x-if="singleEvent">
                                                 <select class="form-select form-select-sm bg-light text-muted fw-semibold" disabled>
                                                     <option selected>🔒 Only one event exists on this project</option>
                                                 </select>
                                             </template>
-                                            <template x-if="meta.events && meta.events.length > 1">
-                                                <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" x-data="{ open: false }" @click.outside="open = false">
+                                            <template x-if="!singleEvent">
+                                                <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" @click.outside="open = false">
                                                     <div class="custom-multiselect-box" :class="{ 'is-open': open }" @click="open = !open">
                                                         <div class="d-flex flex-wrap align-items-center">
                                                             <template x-if="!callType.ntsEvents || callType.ntsEvents.length === 0">
@@ -757,7 +757,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                             <template x-for="eId in callType.ntsEvents" :key="eId">
                                                                 <span class="multiselect-chip chip-blue">
                                                                     <span x-text="getEventLabel(eId)"></span>
-                                                                    <i class="fas fa-times close-icon" @click.stop="toggleMultiselectItem(callType.ntsEvents, eId)"></i>
+                                                                    <i class="fas fa-times close-icon" @click.stop="toggle(eId)"></i>
                                                                 </span>
                                                             </template>
                                                         </div>
@@ -765,9 +765,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                     </div>
                                                     <div class="custom-multiselect-menu" x-show="open" x-transition>
                                                         <template x-for="evt in meta.events" :key="evt.id">
-                                                            <div class="custom-multiselect-item" @click.stop="toggleMultiselectItem(callType.ntsEvents, evt.id)">
+                                                            <div class="custom-multiselect-item" @click.stop="toggle(evt.id)">
                                                                 <span x-text="`${evt.name} (${evt.unique})`"></span>
-                                                                <i class="fas" :class="callType.ntsEvents.includes(String(evt.id)) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
+                                                                <i class="fas" :class="isSelected(evt.id) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
                                                             </div>
                                                         </template>
                                                     </div>
@@ -795,32 +795,32 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-6">
                                             <label class="form-label small fw-bold text-dark mb-1">Visit Indicator Field</label>
-                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="{ open: false, filter: '' }" @click.outside="open = false">
+                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'visitIndicator', '-- Select Indicator Field --')" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
-                                                    <span class="small text-truncate" :class="callType.visitIndicator ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(callType.visitIndicator) || '-- Select Indicator Field --'"></span>
+                                                    <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                     <i class="fas fa-search text-muted small ms-2"></i>
                                                 </div>
                                                 <div class="searchable-field-menu shadow-lg p-2" x-show="open" x-transition>
                                                     <input type="text" class="form-control form-control-sm mb-2" x-model="filter" placeholder="Type to search fields..." @click.stop>
-                                                    <div class="searchable-field-item text-muted small" @click="callType.visitIndicator = ''; open = false">-- Clear Selection --</div>
-                                                    <template x-for="f in meta.fields.filter(item => !filter || item.id.toLowerCase().includes(filter.toLowerCase()) || (item.label && item.label.toLowerCase().includes(filter.toLowerCase())))" :key="f.id">
-                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': callType.visitIndicator === f.id }" @click="callType.visitIndicator = f.id; open = false">
+                                                    <div class="searchable-field-item text-muted small" @click="select('')">-- Clear Selection --</div>
+                                                    <template x-for="f in filteredFields" :key="f.id">
+                                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': val === f.id }" @click="select(f.id)">
                                                             <span x-text="f.label || `${f.id} (${f.name})`"></span>
-                                                            <i class="fas fa-check text-primary" x-show="callType.visitIndicator === f.id"></i>
+                                                            <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                         </div>
                                                     </template>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
+                                        <div class="col-md-6" x-data="eventSelect(callType.visitEvents)">
                                             <label class="form-label small fw-bold text-dark mb-1">Include Events</label>
-                                            <template x-if="meta.events && meta.events.length === 1">
+                                            <template x-if="singleEvent">
                                                 <select class="form-select form-select-sm bg-light text-muted fw-semibold" disabled>
                                                     <option selected>🔒 Only one event exists on this project</option>
                                                 </select>
                                             </template>
-                                            <template x-if="meta.events && meta.events.length > 1">
-                                                <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" x-data="{ open: false }" @click.outside="open = false">
+                                            <template x-if="!singleEvent">
+                                                <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" @click.outside="open = false">
                                                     <div class="custom-multiselect-box" :class="{ 'is-open': open }" @click="open = !open">
                                                         <div class="d-flex flex-wrap align-items-center">
                                                             <template x-if="!callType.visitEvents || callType.visitEvents.length === 0">
@@ -829,7 +829,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                             <template x-for="eId in callType.visitEvents" :key="eId">
                                                                 <span class="multiselect-chip chip-blue">
                                                                     <span x-text="getEventLabel(eId)"></span>
-                                                                    <i class="fas fa-times close-icon" @click.stop="toggleMultiselectItem(callType.visitEvents, eId)"></i>
+                                                                    <i class="fas fa-times close-icon" @click.stop="toggle(eId)"></i>
                                                                 </span>
                                                             </template>
                                                         </div>
@@ -837,9 +837,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                     </div>
                                                     <div class="custom-multiselect-menu" x-show="open" x-transition>
                                                         <template x-for="evt in meta.events" :key="evt.id">
-                                                            <div class="custom-multiselect-item" @click.stop="toggleMultiselectItem(callType.visitEvents, evt.id)">
+                                                            <div class="custom-multiselect-item" @click.stop="toggle(evt.id)">
                                                                 <span x-text="`${evt.name} (${evt.unique})`"></span>
-                                                                <i class="fas" :class="callType.visitEvents.includes(String(evt.id)) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
+                                                                <i class="fas" :class="isSelected(evt.id) ? 'fa-check-square text-primary fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
                                                             </div>
                                                         </template>
                                                     </div>
@@ -896,7 +896,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <label class="form-label small fw-bold text-dark mb-1">Included Call IDs</label>
                                     
                                     <!-- Included Call IDs Custom Multi-Select Dropdown -->
-                                    <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" x-data="{ open: false }" @click.outside="open = false">
+                                    <div class="custom-multiselect-container position-relative" :class="{ 'is-open': open }" x-data="multiSelect(tab.callsIncluded)" @click.outside="open = false">
                                         <div class="custom-multiselect-box" :class="{ 'is-open': open }" @click="open = !open">
                                             <div class="d-flex flex-wrap align-items-center">
                                                 <template x-if="!tab.callsIncluded || tab.callsIncluded.length === 0">
@@ -905,7 +905,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                 <template x-for="cId in tab.callsIncluded" :key="cId">
                                                     <span class="multiselect-chip chip-green">
                                                         <span x-text="cId"></span>
-                                                        <i class="fas fa-times close-icon" @click.stop="toggleMultiselectItem(tab.callsIncluded, cId)"></i>
+                                                        <i class="fas fa-times close-icon" @click.stop="toggle(cId)"></i>
                                                     </span>
                                                 </template>
                                             </div>
@@ -916,9 +916,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                 <div class="p-2 text-muted small">No call types defined yet. Add call types in the Call Types tab first.</div>
                                             </template>
                                             <template x-for="cId in getAvailableCallIds()" :key="cId">
-                                                <div class="custom-multiselect-item" @click.stop="toggleMultiselectItem(tab.callsIncluded, cId)">
+                                                <div class="custom-multiselect-item" @click.stop="toggle(cId)">
                                                     <span x-text="cId"></span>
-                                                    <i class="fas" :class="tab.callsIncluded.includes(String(cId)) ? 'fa-check-square text-success fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
+                                                    <i class="fas" :class="isSelected(cId) ? 'fa-check-square text-success fs-5' : 'fa-square text-muted opacity-50 fs-5'"></i>
                                                 </div>
                                             </template>
                                         </div>
@@ -961,18 +961,18 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                     <label class="form-label small fw-semibold text-dark mb-1">Field</label>
                                                     
                                                     <!-- Searchable Field Select -->
-                                                    <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="{ open: false, filter: '' }" @click.outside="open = false">
+                                                    <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(fRow, 'field', '-- Select Field --')" @click.outside="open = false">
                                                         <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
-                                                            <span class="small text-truncate" :class="fRow.field ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(fRow.field) || '-- Select Field --'"></span>
+                                                            <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                             <i class="fas fa-search text-muted small ms-2"></i>
                                                         </div>
                                                         <div class="searchable-field-menu shadow-lg p-2" x-show="open" x-transition>
                                                             <input type="text" class="form-control form-control-sm mb-2" x-model="filter" placeholder="Type to search fields..." @click.stop>
-                                                            <div class="searchable-field-item text-muted small" @click="fRow.field = ''; open = false">-- Clear Selection --</div>
-                                                            <template x-for="f in meta.fields.filter(item => !filter || item.id.toLowerCase().includes(filter.toLowerCase()) || (item.label && item.label.toLowerCase().includes(filter.toLowerCase())))" :key="f.id">
-                                                                <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': fRow.field === f.id }" @click="fRow.field = f.id; open = false">
+                                                            <div class="searchable-field-item text-muted small" @click="select('')">-- Clear Selection --</div>
+                                                            <template x-for="f in filteredFields" :key="f.id">
+                                                                <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': val === f.id }" @click="select(f.id)">
                                                                     <span x-text="f.label || `${f.id} (${f.name})`"></span>
-                                                                    <i class="fas fa-check text-primary" x-show="fRow.field === f.id"></i>
+                                                                    <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                                 </div>
                                                             </template>
                                                         </div>

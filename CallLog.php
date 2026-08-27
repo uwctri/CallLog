@@ -112,6 +112,7 @@ class CallLog extends AbstractExternalModule
             return;
         }
 
+        $this->includeJs('js/utils.js');
         $this->includeJs('js/templates.js');
 
         if ($this->isPage('ExternalModules/') && ($_GET['prefix'] ?? '') === 'call_log') {

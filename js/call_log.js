@@ -1,5 +1,6 @@
 (() => {
     const module = ExternalModules.UWMadison.CallLog;
+    const getParam = (name) => (module.utils && module.utils.getParam) ? module.utils.getParam(name) : (typeof window.getParameterByName === 'function' ? window.getParameterByName(name) : null);
 
     if (typeof window.displayFormSaveBtnTooltip === 'function') {
         window.displayFormSaveBtnTooltip = function () { };
@@ -19,7 +20,7 @@
 
     module.saveMetadata = () => {
         module.ajax("metadataSave", {
-            record: getParameterByName('id'),
+            record: getParam('id'),
             metadata: JSON.stringify(module.metadata)
         }).then(function (response) {
             console.log(response);
@@ -85,8 +86,8 @@
 
     const selectTab = () => {
         if ($("input[name=call_id]").val() !== "") return;
-        if (getParameterByName('call_id')) {
-            const rawId = decodeURIComponent(getParameterByName('call_id'));
+        if (getParam('call_id')) {
+            const rawId = decodeURIComponent(getParam('call_id'));
             $(`.callTab`).filter((_, el) => $(el).data('call-id') === rawId).click();
         } else {
             $(".callTab:visible").first().click();
@@ -119,7 +120,7 @@
         }
         $("#__SUBMITBUTTONS__-tr").hide();
 
-        let instance = getParameterByName('instance') || 1;
+        let instance = getParam('instance') || 1;
         let data = (module.data && module.data[instance]) ? module.data[instance] : {};
         let id = data['call_id'];
         let meta = (id && module.metadata) ? module.metadata[id] : null;
@@ -170,7 +171,7 @@
             $(`#${adhoc.id} .callModalSave`).on('click', function () {
                 let date = $(`#${adhoc.id} input[name=callDate]`).val();
                 module.ajax("newAdhoc", {
-                    record: getParameterByName('id'),
+                    record: getParam('id'),
                     id: adhoc.id,
                     date: date,
                     time: $(`#${adhoc.id} input[name=callTime]`).val(),
@@ -260,7 +261,7 @@
             });
         });
 
-        if (getParameterByName('showReturn')) {
+        if (getParam('showReturn')) {
             addGoToCallListButton();
         }
 
