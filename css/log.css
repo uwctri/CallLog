@@ -1,40 +1,39 @@
+/* Call Log & Data Entry Form Styles */
+
 .CallLogDetailTable td {
-    font-size: 1.3em;
-    padding: .3rem;
+    font-size: 1.15rem;
+    padding: 0.4rem;
     min-width: 100px;
 }
 
 .card-header {
-    background-color: white;
-    width: 800px;
+    background-color: #ffffff;
+    max-width: 100%;
     border: none;
     min-height: 45px;
     padding-bottom: 0;
-    padding-left: 0.5em;
+    padding-left: 0.5rem;
+}
+
+.callTab {
+    border: 1px solid #dee2e6;
+    background-color: #ffffff;
+    transform: translate(0, 1px);
+    transition: background-color 0.2s ease;
 }
 
 .callTab.active {
-    background-color: #f5f5f5 !important;
-}
-
-.callTab {
-    border: 1px solid #ddd !important;
-    background-color: white;
-}
-
-.callTab {
-    transform: translate(0, 1px);
+    background-color: #f8f9fa;
+    font-weight: 600;
 }
 
 .rc-form-status-link.btn.btn-link {
     display: none;
 }
 
-
-/* Call Log Notes area*/
-
+/* Call Log Notes Splitter Area */
 .notesRow {
-    border-bottom: 1px solid #DDDDDD;
+    border-bottom: 1px solid #dee2e6;
     padding-left: 0.25rem;
     padding-right: 0;
 }
@@ -44,19 +43,21 @@
     height: 250px;
 }
 
-.panel-container textarea {
-    border: none;
-    resize: none !important;
-    width: 100%;
-    height: 100%
-}
-
 .panel-container {
     display: flex;
     flex-direction: row;
-    border: 1px solid silver;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
     overflow: hidden;
     margin-right: 0.25rem;
+}
+
+.panel-container textarea {
+    border: none;
+    resize: none;
+    width: 100%;
+    height: 100%;
+    padding: 0.5rem;
 }
 
 .panel-left {
@@ -64,116 +65,113 @@
     width: 300px;
     min-height: 200px;
     min-width: 186px;
-    max-width: 550px !important;
+    max-width: 550px;
     white-space: nowrap;
     padding: 0;
 }
 
+.panel-left textarea {
+    background-color: #e9ecef;
+}
+
 .splitter {
     flex: 0 0 auto;
-    width: 3px;
-    background-color: #535353;
+    width: 4px;
+    background-color: #6c757d;
     min-height: 200px;
     cursor: col-resize;
     padding: 0;
 }
 
 .panel-right {
-    flex: 1 1;
+    flex: 1 1 auto;
     min-height: 200px;
     padding: 0;
 }
 
 .panel-right textarea {
-    background-color: white;
-}
-
-.panel-left textarea {
-    background-color: #eee
+    background-color: #ffffff;
 }
 
 .maxWidthOverride {
-    width: 100% !important;
-    max-width: 100% !important;
+    width: 100%;
+    max-width: 100%;
 }
 
-
-/* Call Log optional styles*/
-
+/* Section Header Optional Colors */
 .formHeader.optionalCSS {
     background-color: #675186;
-    color: #FBE5D6;
-    font-weight: normal;
-    font-size: 2.5rem;
+    color: #fbe5d6;
+    font-weight: 500;
+    font-size: 2.2rem;
     text-align: center;
+    border-radius: 4px 4px 0 0;
+    padding: 0.5rem;
 }
 
 .formSxnHeader.optionalCSS {
-    background-color: #67B094;
-    color: #f7ecec;
-    font-weight: normal;
-    font-size: 2rem;
+    background-color: #67b094;
+    color: #ffffff;
+    font-weight: 500;
+    font-size: 1.6rem;
     text-align: center;
+    padding: 0.4rem;
 }
 
-
-/* Call Log summary Table*/
-
+/* Call Log Summary Side Container */
 .callHistoryContainer {
-    background-color: #f0f0f0;
-    border: 1px solid #bbb;
-    padding: 3px 8px 8px 8px;
-    left: 1130px;
-    position: fixed;
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 8px 12px;
+    position: sticky;
+    top: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
-table.callSummaryTable tbody tr.even {
-    background: #eeeeee !important;
-}
-
-table.callSummaryTable tbody tr.odd {
-    background: white !important;
-}
-
+table.callSummaryTable tbody tr.even,
 table.callSummaryTable tbody tr.even td {
-    background-color: #eeeeee !important;
+    background-color: #f1f3f5;
 }
 
+table.callSummaryTable tbody tr.odd,
 table.callSummaryTable tbody tr.odd td {
-    background-color: white !important;
+    background-color: #ffffff;
 }
 
 .deleteInstance i {
     cursor: pointer;
-    color: gray;
-    padding-left: 11px;
+    color: #6c757d;
+    padding-left: 8px;
+    transition: color 0.2s ease;
+}
+
+.deleteInstance i:hover {
+    color: #dc3545;
 }
 
 .callSummarySettings {
     cursor: pointer;
+    color: #495057;
 }
 
-
-/* Call Log summary Table Pages*/
-
+/* DataTables Pagination Override */
 .dataTables_wrapper .paginate_button.next,
 .dataTables_wrapper .paginate_button.previous {
-    display: none !important;
+    display: none;
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-    color: #333 !important;
-    background: white !important;
+    color: #212529;
+    background: #e9ecef;
 }
 
-
-/* Slider CSS from w3 */
-
+/* Accessible Toggle Switch */
 .switch {
     position: relative;
     display: inline-block;
-    width: 60px;
-    height: 34px;
+    width: 50px;
+    height: 26px;
 }
 
 .switch input {
@@ -189,42 +187,35 @@ table.callSummaryTable tbody tr.odd td {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
-    -webkit-transition: .4s;
-    transition: .4s;
+    background-color: #adb5bd;
+    transition: background-color 0.3s ease;
 }
 
 .slider:before {
     position: absolute;
     content: "";
-    height: 26px;
-    width: 26px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    -webkit-transition: .4s;
-    transition: .4s;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #ffffff;
+    transition: transform 0.3s ease;
 }
 
-input:checked+.slider {
-    background-color: #2196F3;
+input:checked + .slider {
+    background-color: #0d6efd;
 }
 
-input:focus+.slider {
-    box-shadow: 0 0 1px #2196F3;
+input:focus + .slider {
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
 }
 
-input:checked+.slider:before {
-    -webkit-transform: translateX(26px);
-    -ms-transform: translateX(26px);
-    transform: translateX(26px);
+input:checked + .slider:before {
+    transform: translateX(24px);
 }
-
-
-/* Rounded sliders */
 
 .slider.round {
-    border-radius: 34px;
+    border-radius: 26px;
 }
 
 .slider.round:before {

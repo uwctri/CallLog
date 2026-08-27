@@ -1,0 +1,570 @@
+<?php
+
+namespace UWMadison\CallLog\Services;
+
+use REDCap;
+use UWMadison\CallLog\CallMetadataRepository;
+use UWMadison\CallLog\CallTemplateType;
+
+class ConfigService
+{
+    private $module;
+
+    public function __construct($module)
+    {
+        $this->module = $module;
+    }
+
+    /**
+     * Master centralized defaults for all module project settings.
+     *
+     * @return array
+     */
+    public function getDefaultSettings(): array
+    {
+        return [
+            'trigger_save' => [],
+            'same_day_mcv_nts' => ['0'],
+            'enabled_holidays' => [
+                'new_years_day', 'mlk_day', 'memorial_day', 'juneteenth',
+                'independence_day', 'labor_day', 'veterans_day', 'thanksgiving',
+                'day_after_thanksgiving', 'christmas_eve', 'christmas_day', 'new_years_eve'
+            ],
+            'custom_holidays_date' => [],
+            'custom_holidays_name' => [],
+            'call_summary' => [],
+            'withdraw_event' => [],
+            'withdraw_var' => [],
+            'call_id' => [],
+            'call_name' => [],
+            'call_template' => [],
+            'hide_after_attempts' => [],
+            'new_expire_days' => [],
+            'reminder_variable' => [],
+            'reminder_days' => [],
+            'reminder_include_events' => [],
+            'reminder_remove_event' => [],
+            'reminder_remove_var' => [],
+            'followup_event' => [],
+            'followup_date' => [],
+            'followup_include_events' => [],
+            'followup_days' => [],
+            'followup_length' => [],
+            'followup_end' => [],
+            'followup_auto_remove' => [],
+            'mcv_indicator' => [],
+            'mcv_date' => [],
+            'mcv_include_events' => [],
+            'mcv_auto_remove' => [],
+            'nts_indicator' => [],
+            'nts_date' => [],
+            'nts_include_events' => [],
+            'nts_skip' => [],
+            'nts_window_start_cron' => [],
+            'nts_window_days_before' => [],
+            'adhoc_reason' => [],
+            'visit_indicator' => [],
+            'visit_include_events' => [],
+            'visit_auto_remove' => [],
+            'tab_name' => [],
+            'tab_calls_included' => [],
+            'tab_order' => [],
+            'tab_field' => [[]],
+            'tab_field_name' => [[]],
+            'tab_field_default' => [[]],
+            'tab_field_link' => [[]],
+            'tab_field_link_instrument' => [[]],
+            'tab_expands_field' => [[]],
+            'tab_expands_field_name' => [[]],
+            'tab_expands_field_default' => [[]]
+        ];
+    }
+
+    /**
+     * Retrieves raw project settings and merges them with master defaults.
+     *
+     * @param int $projectId
+     * @return array
+     */
+    public function getRawProjectSettings(int $projectId): array
+    {
+        $defaults = $this->getDefaultSettings();
+        $clean = [];
+
+        foreach ($defaults as $key => $defaultVal) {
+            $val = $this->module->getProjectSetting($key, $projectId);
+            if ($val === null || $val === '') {
+                $val = $defaultVal;
+            }
+            $clean[$key] = $val;
+        }
+
+        return $clean;
+    }
+
+    public function saveProjectSettings(int $projectId, array $newSettings): bool
+    {
+        $allowedKeys = array_keys($this->getDefaultSettings());
+
+        foreach ($allowedKeys as $key) {
+            if (array_key_exists($key, $newSettings)) {
+                $val = $newSettings[$key];
+                $this->module->setProjectSetting($key, $val, $projectId);
+            }
+        }
+
+        return true;
+    }
+
+    public function getProjectMetadataInfo(int $projectId): array
+    {
+        $Proj = new \Project($projectId);
+
+        $events = [];
+        if (is_array($Proj->events)) {
+            foreach ($Proj->events as $armNum => $armDetails) {
+                if (isset($armDetails['events']) && is_array($armDetails['events'])) {
+                    foreach ($armDetails['events'] as $eventId => $evtDetails) {
+                        $events[] = [
+                            'id' => (string)$eventId,
+                            'name' => $evtDetails['descrip'] ?? "Event {$eventId}",
+                            'unique' => $evtDetails['custom_event_label'] ?? "event_{$eventId}"
+                        ];
+                    }
+                }
+            }
+        }
+
+        if (empty($events) && !empty($Proj->firstEventId)) {
+            $events[] = [
+                'id' => (string)$Proj->firstEventId,
+                'name' => 'Event 1',
+                'unique' => 'event_1_arm_1'
+            ];
+        }
+
+        $instruments = [];
+        if (is_array($Proj->forms)) {
+            foreach ($Proj->forms as $formName => $formDetails) {
+                $instruments[] = [
+                    'id' => $formName,
+                    'label' => $formDetails['menu'] ?? $formName
+                ];
+            }
+        }
+
+        $fields = [];
+        if (is_array($Proj->metadata)) {
+            foreach ($Proj->metadata as $fieldName => $fieldInfo) {
+                $type = strtolower($fieldInfo['element_type'] ?? 'text');
+                if ($type === 'descriptive' || $type === 'descriptive_text') {
+                    continue;
+                }
+                $rawLabel = $fieldInfo['element_label'] ?? $fieldName;
+                $cleanLabel = trim(strip_tags(html_entity_decode($rawLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+                
+                $displayText = $fieldName;
+                if (!empty($cleanLabel) && strcasecmp($cleanLabel, $fieldName) !== 0) {
+                    $truncatedLabel = (mb_strlen($cleanLabel) > 50) ? (mb_substr($cleanLabel, 0, 47) . '...') : $cleanLabel;
+                    $displayText = "{$fieldName} - {$truncatedLabel}";
+                }
+
+                $fields[] = [
+                    'id' => $fieldName,
+                    'label' => $displayText,
+                    'type' => $type,
+                    'form' => $fieldInfo['form_name'] ?? ''
+                ];
+            }
+        }
+
+        $metadataRepo = new CallMetadataRepository();
+        $totalCalls = $metadataRepo->getTotalCallsCount($projectId);
+
+        return [
+            'events' => $events,
+            'instruments' => $instruments,
+            'fields' => $fields,
+            'totalCalls' => $totalCalls,
+            'defaultHolidayMap' => DateMathService::$defaultHolidayMap,
+            'callTemplateOptions' => CallTemplateType::getOptions(),
+            'fieldLinkOptions' => [
+                'none' => 'None (Plain Text)',
+                'home' => 'Record Home Page',
+                'call' => 'Call Log Instrument',
+                'instrument' => 'Specific Instrument'
+            ]
+        ];
+    }
+
+    public function getCallTemplateConfig(int $projectId): array
+    {
+        $eventNameMap = $this->getEventNameMap();
+        $newEntryConfig = [];
+        $reminderConfig = [];
+        $followupConfig = [];
+        $mcvConfig = [];
+        $ntsConfig = [];
+        $adhocConfig = [];
+        $visitConfig = [];
+
+        $settings = $this->getRawProjectSettings($projectId);
+        $templates = $settings["call_template"];
+
+        foreach ($templates as $i => $template) {
+            $hide = $settings["hide_after_attempts"][$i] ?? null;
+            $commonConfig = [
+                "id" => $settings["call_id"][$i] ?? '',
+                "name" => $settings["call_name"][$i] ?? '',
+                "hideAfterAttempt" => $hide ? (int)$hide : 9999
+            ];
+
+            if ($template === "new") {
+                $days = intval($settings["new_expire_days"][$i][0] ?? $settings["new_expire_days"][$i] ?? 0);
+                $newEntryConfig[] = array_merge(["expire" => $days], $commonConfig);
+            } elseif ($template === "reminder") {
+                $field = $settings["reminder_variable"][$i][0] ?? $settings["reminder_variable"][$i] ?? '';
+                if (empty($field)) continue;
+                $rawEvents = $settings["reminder_include_events"][$i][0] ?? $settings["reminder_include_events"][$i] ?? '';
+                $includeEvents = array_map('trim', explode(',', $rawEvents));
+                foreach ($includeEvents as $eventName) {
+                    if (empty($eventName)) continue;
+                    $eventId = REDCap::getEventIdFromUniqueEvent($eventName);
+                    $arr = array_merge([
+                        "event" => $eventId,
+                        "field" => $field,
+                        "days" => (int)($settings["reminder_days"][$i][0] ?? $settings["reminder_days"][$i] ?? 0),
+                        "removeEvent" => $settings["reminder_remove_event"][$i][0] ?? $settings["reminder_remove_event"][$i] ?? '',
+                        "removeVar" => $settings["reminder_remove_var"][$i][0] ?? $settings["reminder_remove_var"][$i] ?? ''
+                    ], $commonConfig);
+                    $arr['id'] .= '|' . $eventName;
+                    $arr['name'] .= ' - ' . ($eventNameMap[$eventName] ?? $eventName);
+                    $reminderConfig[] = $arr;
+                }
+            } elseif ($template === "followup") {
+                $event = $settings["followup_event"][$i][0] ?? $settings["followup_event"][$i] ?? '';
+                $field = $settings["followup_date"][$i][0] ?? $settings["followup_date"][$i] ?? '';
+                $days = (int)($settings["followup_days"][$i][0] ?? $settings["followup_days"][$i] ?? 0);
+                $length = (int)($settings["followup_length"][$i][0] ?? $settings["followup_length"][$i] ?? 0);
+                $end = $settings["followup_end"][$i][0] ?? $settings["followup_end"][$i] ?? '';
+                if (!empty($field) && !empty($event)) {
+                    $followupConfig[] = array_merge([
+                        "event" => $event,
+                        "field" => $field,
+                        "days" => $days,
+                        "length" => $length,
+                        "end" => $end
+                    ], $commonConfig);
+                } elseif (!empty($field)) {
+                    $rawEvents = $settings["followup_include_events"][$i][0] ?? $settings["followup_include_events"][$i] ?? '';
+                    $includeEvents = array_map('trim', explode(',', $rawEvents));
+                    foreach ($includeEvents as $eventName) {
+                        if (empty($eventName)) continue;
+                        $arr = array_merge([
+                            "event" => REDCap::getEventIdFromUniqueEvent($eventName),
+                            "field" => $field,
+                            "days" => $days,
+                            "length" => $length,
+                            "end" => $end
+                        ], $commonConfig);
+                        $arr['id'] .= '|' . $eventName;
+                        $arr['name'] .= ' - ' . ($eventNameMap[$eventName] ?? $eventName);
+                        $followupConfig[] = $arr;
+                    }
+                }
+            } elseif ($template === "mcv") {
+                $indicator = $settings["mcv_indicator"][$i][0] ?? $settings["mcv_indicator"][$i] ?? '';
+                $dateField = $settings["mcv_date"][$i][0] ?? $settings["mcv_date"][$i] ?? '';
+                if (empty($indicator) || empty($dateField)) continue;
+                $rawEvents = $settings["mcv_include_events"][$i][0] ?? $settings["mcv_include_events"][$i] ?? '';
+                $includeEvents = array_map('trim', explode(',', $rawEvents));
+                foreach ($includeEvents as $eventName) {
+                    if (empty($eventName)) continue;
+                    $arr = array_merge([
+                        "event" => REDCap::getEventIdFromUniqueEvent($eventName),
+                        "indicator" => $indicator,
+                        "apptDate" => $dateField,
+                    ], $commonConfig);
+                    $arr['id'] .= '|' . $eventName;
+                    $arr['name'] .= ' - ' . ($eventNameMap[$eventName] ?? $eventName);
+                    $mcvConfig[] = $arr;
+                }
+            } elseif ($template === "nts") {
+                $indicator = $settings["nts_indicator"][$i][0] ?? $settings["nts_indicator"][$i] ?? '';
+                $dateField = $settings["nts_date"][$i][0] ?? $settings["nts_date"][$i] ?? '';
+                $skipField = $settings["nts_skip"][$i][0] ?? $settings["nts_skip"][$i] ?? '';
+                $window = $settings["nts_window_start_cron"][$i][0] ?? $settings["nts_window_start_cron"][$i] ?? '';
+                $windowDays = $settings["nts_window_days_before"][$i][0] ?? $settings["nts_window_days_before"][$i] ?? 0;
+                if (empty($indicator) || empty($dateField)) continue;
+                $rawEvents = $settings["nts_include_events"][$i][0] ?? $settings["nts_include_events"][$i] ?? '';
+                $includeEvents = array_map('trim', explode(',', $rawEvents));
+                foreach ($includeEvents as $eventName) {
+                    if (empty($eventName)) continue;
+                    $arr = array_merge([
+                        "event" => REDCap::getEventIdFromUniqueEvent($eventName),
+                        "indicator" => $indicator,
+                        "apptDate" => $dateField,
+                        "skip" => $skipField,
+                        "window" => $window,
+                        "windowDaysBefore" => intval($windowDays)
+                    ], $commonConfig);
+                    $arr['id'] .= '|' . $eventName;
+                    $arr['name'] .= ' - ' . ($eventNameMap[$eventName] ?? $eventName);
+                    $ntsConfig[] = $arr;
+                }
+            } elseif ($template === "adhoc") {
+                $reasons = $settings["adhoc_reason"][$i][0] ?? $settings["adhoc_reason"][$i] ?? '';
+                if (empty($reasons)) continue;
+                $adhocConfig[] = array_merge([
+                    "reasons" => $this->explodeCodedValueText($reasons),
+                ], $commonConfig);
+            } elseif ($template === "visit") {
+                $indicator = $settings["visit_indicator"][$i][0] ?? $settings["visit_indicator"][$i] ?? '';
+                $autoField = $settings["visit_auto_remove"][$i][0] ?? $settings["visit_auto_remove"][$i] ?? '';
+                if (empty($indicator)) continue;
+                $rawEvents = $settings["visit_include_events"][$i][0] ?? $settings["visit_include_events"][$i] ?? '';
+                $includeEvents = array_map('trim', explode(',', $rawEvents));
+                foreach ($includeEvents as $eventName) {
+                    if (empty($eventName)) continue;
+                    $arr = array_merge([
+                        "event" => REDCap::getEventIdFromUniqueEvent($eventName),
+                        "indicator" => $indicator,
+                        "autoRemove" => $autoField
+                    ], $commonConfig);
+                    $arr['id'] .= '|' . $eventName;
+                    $arr['name'] .= ' - ' . ($eventNameMap[$eventName] ?? $eventName);
+                    $visitConfig[] = $arr;
+                }
+            }
+        }
+
+        return [
+            "new" => $newEntryConfig,
+            "reminder" => $reminderConfig,
+            "followup" => $followupConfig,
+            "mcv" => $mcvConfig,
+            "nts" => $ntsConfig,
+            "adhoc" => $adhocConfig,
+            "visit" => $visitConfig
+        ];
+    }
+
+    public function getAutoRemoveConfig(int $projectId): array
+    {
+        $settings = $this->getRawProjectSettings($projectId);
+        $config = [];
+        foreach ($settings["call_template"] as $i => $template) {
+            $callId = $settings["call_id"][$i] ?? null;
+            if (!$callId) continue;
+            if ($template === "mcv") {
+                $config[$callId] = $settings["mcv_auto_remove"][$i][0] ?? $settings["mcv_auto_remove"][$i] ?? null;
+            } elseif ($template === "visit") {
+                $config[$callId] = $settings["visit_auto_remove"][$i][0] ?? $settings["visit_auto_remove"][$i] ?? null;
+            } elseif ($template === "followup") {
+                $config[$callId] = $settings["followup_auto_remove"][$i][0] ?? $settings["followup_auto_remove"][$i] ?? null;
+            }
+        }
+        return $config;
+    }
+
+    public function getTabConfig(int $projectId): array
+    {
+        global $Proj;
+        $allFields = [];
+        $call2TabMap = [];
+        $tabNameMap = [];
+        $tabConfig = [];
+
+        $settings = $this->getRawProjectSettings($projectId);
+        $orderMapping = $settings["tab_order"];
+        $recordIdField = REDCap::getRecordIdField();
+        $recordIdLabel = $this->getFieldLabel($recordIdField);
+        $dd = REDCap::getDataDictionary('array');
+
+        $expands = [];
+        $expandsFieldList = $settings["tab_expands_field"][0] ?? $settings["tab_expands_field"];
+        if (!empty($expandsFieldList)) {
+            foreach ($expandsFieldList as $i => $field) {
+                if (empty($field)) continue;
+                $namesList = $settings["tab_expands_field_name"][0] ?? $settings["tab_expands_field_name"] ?? [];
+                $defaultList = $settings["tab_expands_field_default"][0] ?? $settings["tab_expands_field_default"] ?? [];
+                $name = $namesList[$i] ?? trim($this->getFieldLabel($field), ":?");
+                $validation = $Proj->metadata[$field]["element_validation_type"] ?? "";
+                $default = $defaultList[$i] ?? "";
+                $expands[] = [
+                    "field" => $field,
+                    "map" => $this->getDictionaryValuesFor($field, $dd),
+                    "displayName" => trim($name) . ": ",
+                    "validation" => $validation,
+                    "isFormStatus" => isset($Proj) && $Proj->isFormStatus($field),
+                    "fieldType" => $Proj->metadata[$field]["element_type"] ?? 'text',
+                    "default" => $default,
+                    "expanded" => true
+                ];
+                $allFields[] = $field;
+            }
+        }
+
+        $tabNames = $settings["tab_name"];
+        if (count(array_filter($orderMapping)) !== count($tabNames)) {
+            $orderMapping = range(0, max(0, count($tabNames) - 1));
+        }
+
+        foreach ($tabNames as $i => $tabName) {
+            $tabOrder = $orderMapping[$i] ?? $i;
+            $calls = $settings["tab_calls_included"][$i] ?? '';
+            $tabId = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '_', strtolower($tabName)));
+            $tabConfig[$tabOrder] = [
+                "tab_name" => $tabName,
+                "included_calls" => $calls,
+                "tab_id" => $tabId,
+                "fields" => [],
+                "showFollowupWindows" => ($settings["tab_includes_followup"][$i] ?? '') === '1',
+                "showMissedDateTime" => ($settings["tab_includes_mcv"][$i] ?? '') === '1',
+                "showAdhocDates" => ($settings["tab_includes_adhoc"][$i] ?? '') === '1'
+            ];
+            $tabNameMap[$tabId] = $tabName;
+            $callsArray = array_map('trim', explode(',', $calls));
+            foreach ($callsArray as $call) {
+                if (!empty($call)) {
+                    $call2TabMap[$call] = $tabId;
+                }
+            }
+
+            $tabConfig[$tabOrder]["fields"] = array_merge($expands, [
+                [
+                    "field" => $recordIdField,
+                    "displayName" => $recordIdLabel,
+                    "validation" => "",
+                    "link" => $settings["tab_link"][$i] ?? "home",
+                    "linkedEvent" => $settings["tab_field_link_event"][$i] ?? '',
+                    "linkedInstrument" => $settings["tab_field_link_instrument"][$i] ?? '',
+                ]
+            ]);
+
+            $tabFieldsList = $settings["tab_field"][$i] ?? [];
+            if (!empty($tabFieldsList)) {
+                foreach ($tabFieldsList as $j => $field) {
+                    if (empty($field)) continue;
+                    $namesList = $settings["tab_field_name"][$i] ?? [];
+                    $defaultList = $settings["tab_field_default"][$i] ?? [];
+                    $linkList = $settings["tab_field_link"][$i] ?? [];
+                    $instList = $settings["tab_field_link_instrument"][$i] ?? [];
+
+                    $name = $namesList[$j] ?? trim($this->getFieldLabel($field), ":?");
+                    $validation = $Proj->metadata[$field]["element_validation_type"] ?? "";
+                    $default = $defaultList[$j] ?? "";
+                    $link = $linkList[$j] ?? "none";
+                    $linkedInst = $instList[$j] ?? "";
+
+                    $tabConfig[$tabOrder]["fields"][] = [
+                        "field" => $field,
+                        "map" => $this->getDictionaryValuesFor($field, $dd),
+                        "displayName" => trim($name) . ": ",
+                        "validation" => $validation,
+                        "isFormStatus" => isset($Proj) && $Proj->isFormStatus($field),
+                        "fieldType" => $Proj->metadata[$field]["element_type"] ?? 'text',
+                        "default" => $default,
+                        "link" => $link,
+                        "linkedInstrument" => $linkedInst,
+                        "expanded" => false
+                    ];
+                    $allFields[] = $field;
+                }
+            }
+        }
+
+        ksort($tabConfig);
+
+        return [
+            "allFields" => array_values(array_unique($allFields)),
+            "call2TabMap" => $call2TabMap,
+            "tabNameMap" => $tabNameMap,
+            "config" => array_values($tabConfig)
+        ];
+    }
+
+    public function getAdhocTemplateConfig(int $projectId): array
+    {
+        $settings = $this->getRawProjectSettings($projectId);
+        $config = [];
+        foreach ($settings["call_template"] as $i => $template) {
+            if ($template === "adhoc") {
+                $callId = $settings["call_id"][$i] ?? null;
+                $reasons = $settings["adhoc_reason"][$i][0] ?? $settings["adhoc_reason"][$i] ?? '';
+                if ($callId && !empty($reasons)) {
+                    $config[$callId] = [
+                        "name" => $settings["call_name"][$i] ?? '',
+                        "reasons" => $this->explodeCodedValueText($reasons)
+                    ];
+                }
+            }
+        }
+        return $config;
+    }
+
+
+
+    public function getEventNameMap(): array
+    {
+        $events = REDCap::getEventNames(false, true);
+        return is_array($events) ? array_flip($events) : [];
+    }
+
+    private function getFieldLabel(string $fieldName): string
+    {
+        global $Proj;
+        return $Proj->metadata[$fieldName]["element_label"] ?? $fieldName;
+    }
+
+    private function getDictionaryValuesFor(string $fieldName, array $dd): array
+    {
+        $fieldInfo = $dd[$fieldName] ?? null;
+        if (!$fieldInfo) return [];
+
+        $type = $fieldInfo["element_type"] ?? "";
+        if (!in_array($type, ["select", "radio", "checkbox", "yesno", "truefalse"], true)) {
+            return [];
+        }
+
+        if ($type === "yesno") {
+            return ["1" => "Yes", "0" => "No"];
+        }
+        if ($type === "truefalse") {
+            return ["1" => "True", "0" => "False"];
+        }
+
+        $enumStr = $fieldInfo["select_choices_or_calculations"] ?? "";
+        return $this->explodeCodedValueText($enumStr);
+    }
+
+    private function explodeCodedValueText(string $str): array
+    {
+        $map = [];
+        $lines = explode("\\n", $str);
+        foreach ($lines as $line) {
+            $parts = explode(",", $line, 2);
+            if (count($parts) === 2) {
+                $map[trim($parts[0])] = trim($parts[1]);
+            }
+        }
+        return $map;
+    }
+
+    public function getWithdrawConfig(int $projectId): array
+    {
+        $raw = $this->getRawProjectSettings($projectId);
+        $events = is_array($raw['withdraw_event']) ? $raw['withdraw_event'] : (array)($raw['withdraw_event'] ?? []);
+        $vars = is_array($raw['withdraw_var']) ? $raw['withdraw_var'] : (array)($raw['withdraw_var'] ?? []);
+
+        $rules = [];
+        foreach ($vars as $i => $var) {
+            if (empty($var)) continue;
+            $rules[] = [
+                'event' => $events[$i] ?? '',
+                'var' => $var
+            ];
+        }
+        return $rules;
+    }
+}
