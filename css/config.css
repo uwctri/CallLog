@@ -1,229 +1,340 @@
 /* Call Log Custom Configuration Dashboard Styling */
 
-/* Drag and Drop Tab Reordering Handles */
-.drag-handle {
-    cursor: grab;
-}
-.drag-handle:active {
-    cursor: grabbing;
-}
-.call-tab-card.dragging {
-    opacity: 0.4;
-    border: 2px dashed #0d6efd !important;
-}
-
-/* Eliminate blue focus rings and blue hover borders for non-primary buttons */
-button:focus,
-.btn:focus,
-.btn:active:focus,
-.btn.active:focus {
-    outline: none !important;
-}
-
-.btn-outline-secondary:hover,
-.btn-outline-secondary:focus,
-.btn-outline-secondary:active,
-.btn-outline-secondary.active {
-    border-color: #6c757d !important;
-    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25) !important;
-    outline: none !important;
-}
-
-.btn-outline-danger:hover,
-.btn-outline-danger:focus,
-.btn-outline-danger:active,
-.btn-outline-danger.active {
-    border-color: #dc3545 !important;
-    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
-    outline: none !important;
-}
-
-.btn-light:hover,
-.btn-light:focus,
-.btn-light:active,
-.btn-light.active {
-    border-color: #ced4da !important;
-    box-shadow: 0 0 0 0.2rem rgba(206, 212, 218, 0.5) !important;
-    outline: none !important;
-}
-
-.btn-success:hover,
-.btn-success:focus,
-.btn-success:active,
-.btn-success.active {
-    border-color: #198754 !important;
-    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25) !important;
-    outline: none !important;
-}
-
-.nav-pills .nav-link:focus,
-.nav-tabs .nav-link:focus {
-    box-shadow: none !important;
-    outline: none !important;
-}
-
-/* Card Grounding & Prominent Border Definition */
 .call-config-dashboard {
     background-color: #f8fafc;
     border-radius: 8px;
-    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     color: #1e293b;
+}
+
+/* Eliminate default blue focus rings and set matching color glows */
+.call-config-dashboard button:focus,
+.call-config-dashboard .btn:focus,
+.call-config-dashboard .btn:active,
+.call-config-dashboard .btn:hover,
+.call-config-dashboard .custom-nav-pill:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.call-config-dashboard .btn-danger:focus,
+.call-config-dashboard .btn-danger:active,
+.call-config-dashboard .btn-outline-danger:focus,
+.call-config-dashboard .btn-outline-danger:active {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+.call-config-dashboard .btn-success:focus,
+.call-config-dashboard .btn-success:active,
+.call-config-dashboard .btn-outline-success:focus,
+.call-config-dashboard .btn-outline-success:active {
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25) !important;
+}
+
+.call-config-dashboard .btn-secondary:focus,
+.call-config-dashboard .btn-secondary:active,
+.call-config-dashboard .btn-outline-secondary:focus,
+.call-config-dashboard .btn-outline-secondary:active {
+    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25) !important;
+}
+
+.call-config-dashboard .btn-info:focus,
+.call-config-dashboard .btn-info:active,
+.call-config-dashboard .btn-outline-info:focus,
+.call-config-dashboard .btn-outline-info:active {
+    box-shadow: 0 0 0 0.2rem rgba(13, 202, 240, 0.25) !important;
+}
+
+/* Custom Navigation Pills */
+.custom-nav-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    list-style: none;
+    padding-left: 0;
+}
+
+.custom-nav-pill {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+}
+
+.custom-nav-pill:hover {
+    background-color: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.custom-nav-pill.active {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.25) !important;
+}
+
+/* Headings & Typography */
+.call-config-dashboard h3 {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    margin-bottom: 0.25rem;
+}
+
+.call-config-dashboard h4 {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+}
+
+.call-config-dashboard h5 {
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+}
+
+.call-config-dashboard h6 {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
 }
 
 .call-config-dashboard label,
 .call-config-dashboard .form-label {
     font-weight: 600 !important;
+    font-size: 0.875rem !important;
     color: #0f172a !important;
-}
-
-.call-config-dashboard h3,
-.call-config-dashboard h4,
-.call-config-dashboard h5,
-.call-config-dashboard h6,
-.call-config-dashboard .card-header {
-    font-weight: 700 !important;
-    color: #0f172a !important;
+    margin-bottom: 6px;
+    display: block;
 }
 
 .call-config-dashboard .setting-blurb {
-    font-size: 0.875rem;
+    font-size: 0.875rem !important;
     font-weight: 500;
     color: #475569;
     line-height: 1.5;
-    background-color: transparent;
-    border: none;
-    padding: 0;
     margin-bottom: 12px;
 }
 
-.call-config-dashboard .card,
-.call-config-dashboard .call-type-card,
-.call-config-dashboard .call-tab-card {
-    border: 1px solid #b0bec5 !important;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.07) !important;
-    border-radius: 6px;
-    background-color: #ffffff;
+/* Card Containers & Headers - Visible Overflow for Floating Menus */
+.call-config-dashboard .card {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    border-radius: 8px !important;
+    background-color: #ffffff !important;
+    overflow: visible !important;
 }
 
 .call-config-dashboard .card-header {
-    background-color: #e2e8f0 !important;
-    border-bottom: 1px solid #b0bec5 !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
     color: #0f172a !important;
-    font-weight: 700;
+    background-color: #f1f5f9 !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+    padding: 12px 20px !important;
 }
 
-.call-config-dashboard .list-group-item {
-    border-color: #cbd5e1 !important;
+.call-config-dashboard .card-body {
+    padding: 20px !important;
+    overflow: visible !important;
 }
 
-.withdraw-rule-row,
-.expands-field-row,
-.tab-field-row,
-.username-list-row {
-    background-color: #f8fafc !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 6px !important;
-    padding: 12px 16px !important;
-    margin-bottom: 12px !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+/* Custom Multi-Select Container & Dropdown Styling */
+.custom-multiselect-container,
+.searchable-field-select {
+    max-width: 650px;
+    width: 100%;
+    position: relative;
+    z-index: 10;
 }
 
-.call-config-dashboard .nav-pills {
-    background-color: #e2e8f0 !important;
-    border: 1px solid #cbd5e1 !important;
+.custom-multiselect-container.is-open,
+.searchable-field-select.is-open {
+    z-index: 1000 !important;
 }
 
-.call-config-dashboard .nav-pills .nav-link {
-    color: #334155;
+.custom-multiselect-box {
+    min-height: 38px !important;
+    height: auto;
     border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 4px 12px;
     background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.custom-multiselect-box:hover,
+.custom-multiselect-box.is-open {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15) !important;
+}
+
+.custom-multiselect-menu,
+.searchable-field-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    z-index: 1050 !important;
+    margin-top: 6px;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    padding: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.custom-multiselect-item,
+.searchable-field-item {
+    padding: 10px 14px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1e293b;
+    transition: background-color 0.12s ease-in-out;
+}
+
+.custom-multiselect-item:hover,
+.searchable-field-item:hover,
+.searchable-field-item.active {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+
+.multiselect-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.825rem;
     font-weight: 600;
+    margin-right: 6px;
+    margin-top: 2px;
+    margin-bottom: 2px;
 }
 
-.call-config-dashboard .nav-pills .nav-link.active {
-    background-color: #0d6efd !important;
-    color: #ffffff !important;
-    border-color: #0d6efd !important;
-    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.25) !important;
+.multiselect-chip.chip-blue {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
 }
 
-/* Uniform Input Text, Select & Custom Multi-Select Height and Alignment */
+.multiselect-chip.chip-green {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.multiselect-chip .close-icon {
+    margin-left: 6px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s ease-in-out;
+}
+
+.multiselect-chip .close-icon:hover {
+    opacity: 1;
+}
+
+/* Holiday Switch Cards */
+.holiday-card {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.holiday-card:hover {
+    background-color: #f8fafc;
+    border-color: #94a3b8;
+}
+
+.holiday-card .holiday-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.holiday-card .form-check-input {
+    cursor: pointer;
+    width: 2.2em;
+    height: 1.2em;
+    margin: 0;
+}
+
+/* Form Control & Select Height & Spacing - Uniform 38px */
 .call-config-dashboard select.form-select,
 .call-config-dashboard select.form-select-sm,
 .call-config-dashboard input.form-control,
 .call-config-dashboard input.form-control-sm,
 .call-config-dashboard input[type="text"],
 .call-config-dashboard input[type="number"],
-.call-config-dashboard .custom-multiselect-box {
+.call-config-dashboard .searchable-field-select .form-select {
     height: 38px !important;
     min-height: 38px !important;
-    border: 1px solid #94a3b8 !important;
-    border-radius: 4px !important;
+    max-height: 38px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
     font-size: 0.875rem !important;
-    line-height: 1.5 !important;
     padding: 6px 12px !important;
+    line-height: 1.5 !important;
+    background-color: #ffffff;
+    color: #0f172a;
     box-sizing: border-box !important;
+}
+
+.call-config-dashboard .searchable-field-select .form-select {
+    background-image: none !important;
+    padding-right: 12px !important;
+}
+
+.call-config-dashboard select.form-select:focus,
+.call-config-dashboard input.form-control:focus,
+.call-config-dashboard textarea.form-control:focus,
+.call-config-dashboard .searchable-field-select.is-open .form-select {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15) !important;
 }
 
 .call-config-dashboard textarea.form-control,
-.call-config-dashboard textarea.form-control-sm,
-.call-config-dashboard textarea {
-    min-height: 38px !important;
-    border: 1px solid #94a3b8 !important;
-    border-radius: 4px !important;
+.call-config-dashboard textarea.form-control-sm {
+    height: auto !important;
+    min-height: 90px !important;
+    max-height: none !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
     font-size: 0.875rem !important;
+    padding: 8px 12px !important;
     line-height: 1.5 !important;
-    padding: 6px 12px !important;
+    background-color: #ffffff;
+    color: #0f172a;
     box-sizing: border-box !important;
-}
-
-.custom-multiselect-container {
-    position: relative;
-}
-.custom-multiselect-box {
-    cursor: pointer;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
-    font-weight: 500;
-    background-color: #ffffff;
-}
-.custom-multiselect-box.disabled {
-    background-color: #e9ecef;
-    opacity: 0.75;
-    cursor: not-allowed;
-    border-color: #dee2e6 !important;
-}
-.custom-multiselect-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 1050;
-    max-height: 220px;
-    overflow-y: auto;
-    background-color: #ffffff;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    display: none;
-    padding: 4px 0;
-}
-.custom-multiselect-menu.show {
-    display: block;
-}
-.custom-multiselect-option {
-    padding: 6px 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    user-select: none;
-}
-.custom-multiselect-option:hover {
-    background-color: #f8f9fa;
-}
-.remove-badge {
-    cursor: pointer;
-    margin-left: 4px;
 }

@@ -170,4 +170,13 @@ class InstrumentDeploymentService
         $sqlInsert = "INSERT IGNORE INTO redcap_events_forms (event_id, form_name) VALUES (?, '{$this->instrumentCall}'), (?, '{$this->instrumentMeta}')";
         ExternalModules::query($sqlInsert, [$eventId, $eventId]);
     }
+
+    public function isDeployed(int $projectId): bool
+    {
+        global $Proj;
+        if (!isset($Proj) || $Proj->project_id != $projectId) {
+            $Proj = new Project($projectId);
+        }
+        return isset($Proj->forms[$this->instrumentCall]) && isset($Proj->forms[$this->instrumentMeta]);
+    }
 }

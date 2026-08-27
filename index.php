@@ -2,7 +2,7 @@
 // Full Call List Page
 $tabsConfig = $module->tabsConfig['config'] ?? [];
 ?>
-<div class="call-list-dashboard px-1 py-2">
+<div class="call-list-dashboard px-2 py-3" x-data="callListDashboard">
     <!-- Header Card -->
     <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-4 border-bottom gap-3">
         <div class="d-flex align-items-center gap-3">
@@ -43,7 +43,7 @@ $tabsConfig = $module->tabsConfig['config'] ?? [];
         </div>
     <?php } else { ?>
         <!-- Main Call List UI Container -->
-        <div class="call-list-card card border-0 shadow-sm" style="display:none; border-radius: 10px; background-color: #ffffff; border: 1px solid #cbd5e1 !important;">
+        <div class="call-list-card card border-0 shadow-sm" style="border-radius: 10px; background-color: #ffffff; border: 1px solid #cbd5e1 !important;">
             
             <?php if (count($tabsConfig) > 1) { ?>
                 <!-- Segmented Tabs Navigation -->
@@ -51,9 +51,11 @@ $tabsConfig = $module->tabsConfig['config'] ?? [];
                     <ul class="nav nav-pills call-list-nav-pills gap-1" role="tablist">
                         <?php foreach ($tabsConfig as $index => $tab) { ?>
                             <li class="nav-item call-tab" role="presentation">
-                                <a class="nav-link call-link fw-semibold px-3 py-2 <?php echo $index === 0 ? 'active' : ''; ?>" data-toggle="tab" data-tabid="<?php echo htmlspecialchars($tab['tab_id']); ?>" href="#<?php echo htmlspecialchars($tab['tab_id']); ?>" role="tab">
+                                <button type="button" class="nav-link call-link fw-semibold px-3 py-2 me-1"
+                                        :class="{ 'active': activeTab === '<?php echo htmlspecialchars($tab['tab_id']); ?>' }"
+                                        @click="selectTab('<?php echo htmlspecialchars($tab['tab_id']); ?>')">
                                     <span><?php echo htmlspecialchars($tab['tab_name']); ?></span>
-                                </a>
+                                </button>
                             </li>
                         <?php } ?>
                     </ul>
@@ -62,7 +64,9 @@ $tabsConfig = $module->tabsConfig['config'] ?? [];
 
             <div class="tab-content">
                 <?php foreach ($tabsConfig as $tab_index => $tab) { ?>
-                    <div id="<?php echo htmlspecialchars($tab["tab_id"]); ?>" class="tab-pane <?php echo $tab_index === 0 ? 'active' : ''; ?>">
+                    <div id="<?php echo htmlspecialchars($tab["tab_id"]); ?>"
+                         class="tab-pane fade show active"
+                         x-show="activeTab === '<?php echo htmlspecialchars($tab['tab_id']); ?>'">
                         
                         <!-- Toolbar Bar -->
                         <div class="card-header bg-white border-bottom py-3 px-4">
@@ -82,12 +86,16 @@ $tabsConfig = $module->tabsConfig['config'] ?? [];
                                         <input type="search" class="form-control customSearch border-start-0 ps-0" placeholder="Search records...">
                                     </div>
 
-                                    <select class="form-select form-select-sm caller-filter-select" style="width: auto; max-width: 220px;">
+                                    <select class="form-select form-select-sm caller-filter-select" x-model="activeCallerFilter" style="width: auto; max-width: 220px;">
                                         <option value="">-- All Callers / Users --</option>
+                                        <template x-for="caller in availableCallers" :key="caller">
+                                            <option :value="caller" x-text="caller"></option>
+                                        </template>
                                     </select>
 
-                                    <button type="button" class="btn btn-outline-secondary btn-sm toggleHiddenCalls d-inline-flex align-items-center gap-1">
-                                        <i class="fas fa-eye-slash me-1"></i> Toggle Hidden Calls
+                                    <button type="button" @click="toggleHiddenCalls()" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
+                                        <i class="fas me-1" :class="hideCalls ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                        <span x-text="hideCalls ? 'Show Hidden Calls' : 'Hide Retiring Calls'">Toggle Hidden Calls</span>
                                     </button>
                                 </div>
                             </div>

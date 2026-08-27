@@ -120,10 +120,12 @@ class CallLog extends AbstractExternalModule
                 $this->passArgument('rawConfig', $this->getConfigService()->getRawProjectSettings((int)$project_id));
                 $this->passArgument('metaInfo', $this->getConfigService()->getProjectMetadataInfo((int)$project_id));
                 $this->includeCss('css/config.css');
-                $this->includeJs('js/config.js', 'defer');
+                $this->includeJs('js/config.js', true);
+                $this->includeJs('js/alpine.min.js', true);
             } else {
                 $this->includeCss('css/list.css');
-                $this->includeJs('js/call_list.js', 'defer');
+                $this->includeJs('js/call_list.js', true);
+                $this->includeJs('js/alpine.min.js', true);
                 $this->tabsConfig = $this->getConfigService()->getTabConfig((int)$project_id);
                 $this->passArgument('tabs', $this->tabsConfig);
             }
