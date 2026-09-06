@@ -284,6 +284,55 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                         </div>
                     </div>
 
+                    <div class="mb-4 border-top pt-3">
+                        <label class="form-label fw-bold text-dark mb-1" for="cfg_datetime_format">Call List Date/Time Format:</label>
+                        <div class="setting-blurb text-muted small mb-3">
+                            Specify the date and time format for dates shown on the Call List dashboard (e.g. expiration dates, contact windows, call history). Uses standard PHP date format syntax.
+                        </div>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-12 col-md-6 col-lg-5">
+                                <label class="form-label small text-muted fw-semibold mb-1" for="cfg_datetime_format">Format String</label>
+                                <input type="text" class="form-control font-monospace" id="cfg_datetime_format" x-model="datetimeFormat" placeholder="m/d/Y g:i A" style="height: 38px; font-size: 0.95rem;">
+                            </div>
+                            <div class="col-12 col-md-6 col-lg-5">
+                                <label class="form-label small text-muted fw-semibold mb-1">Live Preview</label>
+                                <div class="form-control bg-light text-dark border font-monospace d-flex align-items-center" style="height: 38px; font-size: 0.95rem; cursor: default; user-select: text;">
+                                    <i class="fas fa-eye text-muted me-2 opacity-75"></i>
+                                    <span class="fw-semibold text-dark text-truncate" x-text="formatPreview(datetimeFormat)"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-muted small mt-2" style="font-size: 0.8rem; line-height: 1.5;">
+                            <span class="fw-semibold">Common tokens:</span>
+                            <code>m</code> (month 01-12), <code>d</code> (day 01-31), <code>Y</code> (year 2026), <code>y</code> (year 26), <code>l</code> (full day, e.g. Sunday), <code>D</code> (short day, e.g. Sun), <code>F</code> (full month, e.g. September), <code>M</code> (short month, e.g. Sep), <code>g</code> (12h 1-12), <code>h</code> (12h 01-12), <code>H</code> (24h 00-23), <code>i</code> (minutes 00-59), <code>A</code> (AM/PM), <code>a</code> (am/pm).
+                        </div>
+                    </div>
+
+                    <div class="mb-4 border-top pt-3">
+                        <label class="form-label fw-bold text-dark mb-1">Participant Display Name Field:</label>
+                        <div class="setting-blurb text-muted small mb-3">
+                            Select the REDCap field that contains the participant's name (e.g. <code>first_name</code>, <code>full_name</code>, <code>pt_name</code>). When set, this value automatically displays in the standard <strong>Name</strong> column across all Call List tabs.
+                        </div>
+                        <div style="max-width: 450px;">
+                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect($data, 'displayNameField', '-- Select Name Field (Optional) --')" @click.outside="open = false">
+                                <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
+                                    <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
+                                    <i class="fas fa-search text-muted small ms-2"></i>
+                                </div>
+                                <div class="searchable-field-menu shadow-lg p-2" x-show="open" x-transition style="display: none;">
+                                    <input type="text" class="form-control form-control-sm mb-2" x-model="filter" placeholder="Type to search fields..." @click.stop>
+                                    <div class="searchable-field-item text-muted small" @click="select('')">-- No Name Field (Leave Blank) --</div>
+                                    <template x-for="f in filteredFields" :key="f.id">
+                                        <div class="searchable-field-item small" :class="{ 'active fw-bold text-primary': val === f.id }" @click="select(f.id)">
+                                            <span x-text="f.label || `${f.id} (${f.name})`"></span>
+                                            <i class="fas fa-check text-primary" x-show="val === f.id"></i>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-2 border-top pt-3">
                         <label class="form-label fw-bold text-dark mb-1">Include Call Summary Table On Instruments:</label>
                         <div class="setting-blurb mb-3">
@@ -535,11 +584,18 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <label class="form-label small fw-bold text-dark mb-1">Call Name</label>
                                     <input type="text" class="form-control form-control-sm" x-model="callType.name" placeholder="e.g. Baseline Follow-up">
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-bold text-dark mb-1">Hide After Attempts</label>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold text-dark mb-1" title="Ongoing call auto-expires after this time">Call Length</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" class="form-control form-control-sm" x-model="callType.expectedDuration" placeholder="30" min="1" max="240">
+                                        <span class="input-group-text small text-muted">min</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label small fw-bold text-dark mb-1">Hide Attempts</label>
                                     <input type="number" class="form-control form-control-sm" x-model="callType.hideAfterAttempt" placeholder="e.g. 5">
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <label class="form-label small fw-bold text-dark mb-1">Template Type</label>
                                     <select class="form-select form-select-sm" x-model="callType.template">
                                         <template x-for="(lbl, val) in meta.callTemplateOptions" :key="val">
@@ -553,7 +609,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                             <div class="mt-3 border-top pt-3">
                                 <!-- New Entry -->
                                 <div x-show="callType.template === 'new'">
-                                    <div class="setting-blurb mb-3">New Entry calls trigger automatically when a participant record is created or imported.</div>
+                                    <div class="setting-blurb mb-3">New Entry calls trigger automatically when a participant record is created or imported. Any tab with a New Entry call in it will show the Expiration Date and days remaining as a column.</div>
                                     <div class="row g-3 align-items-center mb-2">
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-dark mb-1">Days Until Expire</label>

@@ -160,6 +160,8 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 $this->includeJs('js/alpine.min.js', true);
                 $this->tabsConfig = $this->getConfigService()->getTabConfig((int)$project_id);
                 $this->passArgument('tabs', $this->tabsConfig);
+                $rawSettings = $this->getConfigService()->getRawProjectSettings((int)$project_id);
+                $this->passArgument('dateTimeFormat', $rawSettings['datetime_format'][0] ?? 'm/d/Y g:i A');
             }
         } elseif ($this->isPage('DataEntry/record_home.php') && !empty($_GET['id'])) {
             $this->includeJs('js/record_home_page.js', 'defer');
@@ -176,6 +178,17 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
 
         $this->passArgument('recentCaller', $this->recentCallStarted($project_id, $record));
         $this->includeJs('js/data_entry.js', 'defer');
+
+        if (!empty($_GET['call_id'])) {
+            $callId = (string)$_GET['call_id'];
+            $metaRepo = $this->getMetadataRepo();
+            $metaData = $metaRepo->getMetadata($project_id, $record);
+            if (!empty($metaData[$callId])) {
+                $metaData[$callId]['callStarted'] = date("Y-m-d H:i:s");
+                $metaData[$callId]['callStartedBy'] = defined('USERID') ? USERID : '';
+                $metaRepo->saveMetadata($project_id, $record, $metaData);
+            }
+        }
 
         if ($instrument === $this->instrumentCall) {
             $this->passArgument('adhoc', $this->getConfigService()->getAdhocTemplateConfig($project_id));
@@ -206,7 +219,9 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 $this->projectLog($payload['text'] ?? '', $record, $payload['event'] ?? null, $project_id);
                 break;
             case "getData":
-                $callListData = $this->getQueryService()->getCallListData($project_id);
+                $callListRes = $this->getQueryService()->getCallListData($project_id);
+                $result['showCallback'] = $callListRes['showCallback'] ?? false;
+                $callListData = $callListRes['data'] ?? [];
                 break;
             case "deployInstruments":
                 $eventId = isset($payload['event_id']) && $payload['event_id'] !== '' ? (int)$payload['event_id'] : null;
@@ -242,15 +257,17 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 }
                 break;
             case "setCallStarted":
-                if (!empty($payload['id']) && !empty($payload['user']) && !empty($metadata)) {
-                    $metadata[$payload['id']]['callStarted'] = date("Y-m-d H:i");
-                    $metadata[$payload['id']]['callStartedBy'] = $payload['user'];
+                $user = !empty($payload['user']) ? $payload['user'] : (defined('USERID') ? USERID : '');
+                if (!empty($payload['id']) && !empty($metadata)) {
+                    $metadata[$payload['id']]['callStarted'] = date("Y-m-d H:i:s");
+                    $metadata[$payload['id']]['callStartedBy'] = $user;
                     $result['saved'] = $metadataRepo->saveMetadata($project_id, $record, $metadata);
                 }
                 break;
             case "setCallEnded":
                 if (!empty($payload['id']) && !empty($metadata)) {
                     $metadata[$payload['id']]['callStarted'] = '';
+                    $metadata[$payload['id']]['callStartedBy'] = '';
                     $result['saved'] = $metadataRepo->saveMetadata($project_id, $record, $metadata);
                 }
                 break;
@@ -336,6 +353,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             "user" => $username,
             "userNameMap" => $this->getUserNameMap($projectId),
             "format" => $this->getUserDateFormat($username),
+            "dateTimeFormat" => $this->getConfigService()->getRawProjectSettings($projectId)['datetime_format'][0] ?? 'm/d/Y g:i A',
             "static" => [
                 "instrument" => $this->instrumentCall,
                 "instrumentMeta" => $this->instrumentMeta,

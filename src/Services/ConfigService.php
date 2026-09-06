@@ -26,6 +26,7 @@ class ConfigService
             'show_record_home_button' => ['1'],
             'show_call_log_instrument' => ['0'],
             'show_metadata_instrument' => ['0'],
+            'datetime_format' => ['m/d/Y g:i A'],
             'trigger_save' => [],
             'same_day_mcv_nts' => ['0'],
             'enabled_holidays' => [
@@ -41,6 +42,8 @@ class ConfigService
             'call_id' => [],
             'call_name' => [],
             'call_template' => [],
+            'display_name_field' => '',
+            'call_expected_duration' => [],
             'hide_after_attempts' => [],
             'new_expire_days' => [],
             'reminder_variable' => [],
@@ -313,10 +316,13 @@ class ConfigService
 
         foreach ($templates as $i => $template) {
             $hide = $settings["hide_after_attempts"][$i] ?? null;
+            $duration = $settings["call_expected_duration"][$i] ?? null;
+            if (is_array($duration)) $duration = reset($duration);
             $commonConfig = [
                 "id" => $settings["call_id"][$i] ?? '',
                 "name" => $settings["call_name"][$i] ?? '',
-                "hideAfterAttempt" => $hide ? (int)$hide : 9999
+                "hideAfterAttempt" => $hide ? (int)$hide : 9999,
+                "callDuration" => ($duration !== null && $duration !== '' && is_numeric($duration)) ? (int)$duration : 30
             ];
 
             if ($template === "new") {
@@ -496,6 +502,8 @@ class ConfigService
                     "map" => $this->getDictionaryValuesFor($field, $dd),
                     "displayName" => trim($name) . ": ",
                     "validation" => $validation,
+                    "isDate" => strpos($validation, 'date') !== false,
+                    "hasTime" => strpos($validation, 'datetime') !== false,
                     "isFormStatus" => isset($Proj) && $Proj->isFormStatus($field),
                     "fieldType" => $Proj->metadata[$field]["element_type"] ?? 'text',
                     "default" => $default,
@@ -505,42 +513,102 @@ class ConfigService
             }
         }
 
-        $tabNames = $settings["tab_name"];
-        if (count(array_filter($orderMapping)) !== count($tabNames)) {
+        $callIds = $settings['call_id'] ?? [];
+        $callTemplates = $settings['call_template'] ?? [];
+        $callIdToTemplate = [];
+        if (is_array($callIds) && is_array($callTemplates)) {
+            foreach ($callIds as $idx => $cId) {
+                $cId = trim((string)$cId);
+                if ($cId !== '') {
+                    $callIdToTemplate[$cId] = $callTemplates[$idx] ?? '';
+                }
+            }
+        }
+
+        $tabNames = $settings["tab_name"] ?? [];
+        $validOrders = is_array($orderMapping) ? array_filter($orderMapping, fn($v) => $v !== null && $v !== '') : [];
+        if (count($validOrders) !== count($tabNames)) {
             $orderMapping = range(0, max(0, count($tabNames) - 1));
         }
 
+        $usedTabIds = [];
         foreach ($tabNames as $i => $tabName) {
             $tabOrder = $orderMapping[$i] ?? $i;
             $calls = $settings["tab_calls_included"][$i] ?? '';
-            $tabId = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '_', strtolower($tabName)));
+            $baseTabId = preg_replace('/_+/', '_', trim(preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', strtolower($tabName))), '_'));
+            if (empty($baseTabId)) {
+                $baseTabId = "tab_" . ($i + 1);
+            }
+            $tabId = $baseTabId;
+            $suffix = 1;
+            while (isset($usedTabIds[$tabId])) {
+                $tabId = $baseTabId . '_' . (++$suffix);
+            }
+            $usedTabIds[$tabId] = true;
+
+            $tabNameMap[$tabId] = $tabName;
+            $callsList = is_array($calls) ? $calls : explode(',', (string)$calls);
+            $callsArray = array_filter(array_map('trim', $callsList));
+            $tabTemplates = [];
+            foreach ($callsArray as $call) {
+                if (!empty($call)) {
+                    if (!isset($call2TabMap[$call])) {
+                        $call2TabMap[$call] = [];
+                    }
+                    if (!in_array($tabId, $call2TabMap[$call], true)) {
+                        $call2TabMap[$call][] = $tabId;
+                    }
+                    if (isset($callIdToTemplate[$call])) {
+                        $tabTemplates[] = $callIdToTemplate[$call];
+                    }
+                }
+            }
+            $tabTemplates = array_unique($tabTemplates);
+
+            $showVisit = in_array('nts', $tabTemplates, true)
+                || in_array('mcv', $tabTemplates, true)
+                || in_array('reminder', $tabTemplates, true)
+                || in_array('followup', $tabTemplates, true)
+                || in_array('visit', $tabTemplates, true);
+
+            $showFollowup = in_array('followup', $tabTemplates, true)
+                || (($settings["tab_includes_followup"][$i] ?? '') === '1');
+
+            $showReminder = in_array('reminder', $tabTemplates, true);
+
+            $showMcv = in_array('mcv', $tabTemplates, true)
+                || (($settings["tab_includes_mcv"][$i] ?? '') === '1');
+
+            $showAdhoc = in_array('adhoc', $tabTemplates, true)
+                || (($settings["tab_includes_adhoc"][$i] ?? '') === '1');
+
+            $showNew = in_array('new', $tabTemplates, true);
+
             $tabConfig[$tabOrder] = [
                 "tab_name" => $tabName,
                 "included_calls" => $calls,
                 "tab_id" => $tabId,
                 "fields" => [],
-                "showFollowupWindows" => ($settings["tab_includes_followup"][$i] ?? '') === '1',
-                "showMissedDateTime" => ($settings["tab_includes_mcv"][$i] ?? '') === '1',
-                "showAdhocDates" => ($settings["tab_includes_adhoc"][$i] ?? '') === '1'
+                "showVisit" => $showVisit,
+                "showFollowupWindows" => $showFollowup,
+                "showReminderAppt" => $showReminder,
+                "showMissedDateTime" => $showMcv,
+                "showAdhocDates" => $showAdhoc,
+                "showNewExpiration" => $showNew,
+                "includedTemplates" => array_values($tabTemplates)
             ];
-            $tabNameMap[$tabId] = $tabName;
-            $callsArray = array_map('trim', explode(',', $calls));
-            foreach ($callsArray as $call) {
-                if (!empty($call)) {
-                    $call2TabMap[$call] = $tabId;
-                }
-            }
 
-            $tabConfig[$tabOrder]["fields"] = array_merge($expands, [
+            $tabFields = [
                 [
                     "field" => $recordIdField,
-                    "displayName" => $recordIdLabel,
+                    "displayName" => "Record ID",
                     "validation" => "",
                     "link" => $settings["tab_link"][$i] ?? "home",
                     "linkedEvent" => $settings["tab_field_link_event"][$i] ?? '',
                     "linkedInstrument" => $settings["tab_field_link_instrument"][$i] ?? '',
+                    "expanded" => false
                 ]
-            ]);
+            ];
 
             $tabFieldsList = $settings["tab_field"][$i] ?? [];
             if (!empty($tabFieldsList)) {
@@ -557,11 +625,13 @@ class ConfigService
                     $link = $linkList[$j] ?? "none";
                     $linkedInst = $instList[$j] ?? "";
 
-                    $tabConfig[$tabOrder]["fields"][] = [
+                    $tabFields[] = [
                         "field" => $field,
                         "map" => $this->getDictionaryValuesFor($field, $dd),
-                        "displayName" => trim($name) . ": ",
+                        "displayName" => trim($name),
                         "validation" => $validation,
+                        "isDate" => strpos($validation, 'date') !== false,
+                        "hasTime" => strpos($validation, 'datetime') !== false,
                         "isFormStatus" => isset($Proj) && $Proj->isFormStatus($field),
                         "fieldType" => $Proj->metadata[$field]["element_type"] ?? 'text',
                         "default" => $default,
@@ -572,13 +642,21 @@ class ConfigService
                     $allFields[] = $field;
                 }
             }
+
+            $tabConfig[$tabOrder]["fields"] = array_merge($tabFields, $expands);
+            $tabConfig[$tabOrder]["expands"] = $expands;
         }
 
         ksort($tabConfig);
 
+        $displayNameField = $settings['display_name_field'] ?? '';
+        if (is_array($displayNameField)) $displayNameField = reset($displayNameField);
+
         return [
             "allFields" => array_values(array_unique($allFields)),
+            "displayNameField" => (string)$displayNameField,
             "call2TabMap" => $call2TabMap,
+            "call2tabMap" => $call2TabMap,
             "tabNameMap" => $tabNameMap,
             "config" => array_values($tabConfig)
         ];

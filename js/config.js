@@ -18,8 +18,20 @@
             showRecordHomeButton: true,
             showCallLogInstrument: false,
             showMetadataInstrument: false,
+            datetimeFormat: 'm/d/Y g:i A',
+            displayNameField: '',
             triggerSave: [],
             callSummary: [],
+
+            formatPreview(fmt) {
+                let now = new Date();
+                let norm = (module.utils && module.utils.normalizePhpDateFormat)
+                    ? module.utils.normalizePhpDateFormat(fmt || 'm/d/Y g:i A')
+                    : (fmt || 'm/d/Y g:i A');
+                return (module.utils && module.utils.formatPhpDate)
+                    ? module.utils.formatPhpDate(now, norm)
+                    : '';
+            },
 
             callTypes: [],
             callTabs: [],
@@ -144,6 +156,8 @@
                     : Boolean(r.show_record_home_button && (r.show_record_home_button[0] === '1' || r.show_record_home_button === '1' || r.show_record_home_button === true));
                 this.showCallLogInstrument = Boolean(r.show_call_log_instrument && (r.show_call_log_instrument[0] === '1' || r.show_call_log_instrument === '1' || r.show_call_log_instrument === true));
                 this.showMetadataInstrument = Boolean(r.show_metadata_instrument && (r.show_metadata_instrument[0] === '1' || r.show_metadata_instrument === '1' || r.show_metadata_instrument === true));
+                this.datetimeFormat = (r.datetime_format && r.datetime_format[0]) ? r.datetime_format[0] : 'm/d/Y g:i A';
+                this.displayNameField = (r.display_name_field && r.display_name_field[0]) ? r.display_name_field[0] : (r.display_name_field || '');
                 this.triggerSave = toArray(r.trigger_save);
                 this.callSummary = toArray(r.call_summary);
 
@@ -151,6 +165,7 @@
                 const names = toArray(r.call_name);
                 const templates = toArray(r.call_template);
                 const hides = toArray(r.hide_after_attempts);
+                const durations = r.call_expected_duration || [];
 
                 const newExp = r.new_expire_days || [];
                 const remVar = r.reminder_variable || [];
@@ -189,6 +204,7 @@
                         name: names[i] || '',
                         template: templates[i] || 'new',
                         hideAfterAttempt: hides[i] || '',
+                        expectedDuration: getVal(durations, i, 30),
                         newExpireDays: getVal(newExp, i, ''),
                         reminderVariable: getVal(remVar, i, ''),
                         reminderDays: getVal(remDays, i, ''),
@@ -318,7 +334,9 @@
 
                 const opts = this.meta.callTemplateOptions || {};
                 const items = [];
-                items.push('Standard Columns: Record ID, Call Date/Time, Call Notes, Action Controls');
+                const isOnlyNew = templatesFound.has('new') && templatesFound.size === 1;
+                const dateColName = isOnlyNew ? 'Generated' : 'Call Date/Time';
+                items.push(`Standard Columns: Record ID, Attempts, Name, ${dateColName} (Call Notes & details in expanded rows)`);
                 if (templatesFound.has('reminder') || templatesFound.has('followup')) {
                     items.push(`<strong>${opts.reminder || 'Reminder'} / ${opts.followup || 'Follow Up'} Windows:</strong> Window Start & End Dates, Callback Requestor info & Stopwatch badge`);
                 }
@@ -332,7 +350,7 @@
                     items.push(`<strong>${opts.adhoc || 'Ad-hoc'} Calls:</strong> Target Adhoc Available Date, Adhoc Reason selection`);
                 }
                 if (templatesFound.has('new')) {
-                    items.push(`<strong>${opts.new || 'New Entry'} Calls:</strong> Entry Expiration Status & Days remaining`);
+                    items.push(`<strong>${opts.new || 'New Entry'} Calls:</strong> Generated Date, Entry Expiration Status & Days remaining`);
                 }
                 if (templatesFound.has('visit')) {
                     items.push(`<strong>${opts.visit || 'Scheduled Phone Visit'} Calls:</strong> Visit Window Indicator status`);
@@ -350,6 +368,7 @@
                     name: 'New Call Type ' + nextNum,
                     template: 'new',
                     hideAfterAttempt: '',
+                    expectedDuration: 30,
                     newExpireDays: '',
                     reminderVariable: '',
                     reminderDays: '',
@@ -519,6 +538,8 @@
                     show_record_home_button: [this.showRecordHomeButton ? '1' : '0'],
                     show_call_log_instrument: [this.showCallLogInstrument ? '1' : '0'],
                     show_metadata_instrument: [this.showMetadataInstrument ? '1' : '0'],
+                    datetime_format: [this.datetimeFormat ? this.datetimeFormat.trim() : 'm/d/Y g:i A'],
+                    display_name_field: [this.displayNameField ? this.displayNameField.trim() : ''],
                     trigger_save: this.triggerSave,
                     same_day_mcv_nts: [this.sameDayMcvNts ? '1' : '0'],
                     enabled_holidays: this.enabledHolidays,
@@ -530,6 +551,7 @@
                     call_id: this.callTypes.map(c => c.id.trim()),
                     call_name: this.callTypes.map(c => c.name.trim()),
                     call_template: this.callTypes.map(c => c.template),
+                    call_expected_duration: this.callTypes.map(c => c.expectedDuration || 30),
                     hide_after_attempts: this.callTypes.map(c => c.hideAfterAttempt),
                     new_expire_days: this.callTypes.map(c => c.newExpireDays),
                     reminder_variable: this.callTypes.map(c => c.reminderVariable),
