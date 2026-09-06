@@ -1,3 +1,7 @@
+#west {
+    height: min-content;
+}
+
 /* Call Log & Data Entry Form Styles */
 
 .CallLogDetailTable td {
