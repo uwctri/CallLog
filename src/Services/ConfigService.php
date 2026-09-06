@@ -153,7 +153,20 @@ class ConfigService
             }
         }
 
+        $dd = [];
+        try {
+            if (class_exists('\REDCap') && method_exists('\REDCap', 'getDataDictionary')) {
+                $dd = \REDCap::getDataDictionary('array', false, [], [], $projectId);
+                if (empty($dd)) {
+                    $dd = \REDCap::getDataDictionary('array');
+                }
+            }
+        } catch (\Throwable $e) {
+            $dd = [];
+        }
+
         $fields = [];
+        $dateFields = [];
         if (is_array($Proj->metadata)) {
             foreach ($Proj->metadata as $fieldName => $fieldInfo) {
                 $type = strtolower($fieldInfo['element_type'] ?? 'text');
@@ -165,17 +178,77 @@ class ConfigService
                 
                 $displayText = $fieldName;
                 if (!empty($cleanLabel) && strcasecmp($cleanLabel, $fieldName) !== 0) {
-                    $truncatedLabel = (mb_strlen($cleanLabel) > 50) ? (mb_substr($cleanLabel, 0, 47) . '...') : $cleanLabel;
+                    $strLen = function_exists('mb_strlen') ? mb_strlen($cleanLabel) : strlen($cleanLabel);
+                    $subStr = function_exists('mb_substr') ? mb_substr($cleanLabel, 0, 47) : substr($cleanLabel, 0, 47);
+                    $truncatedLabel = ($strLen > 50) ? ($subStr . '...') : $cleanLabel;
                     $displayText = "{$fieldName} - {$truncatedLabel}";
                 }
 
-                $fields[] = [
+                $ddField = $dd[$fieldName] ?? [];
+                $valType = strtolower($ddField['text_validation_type_or_show_slider_number'] ?? $fieldInfo['element_validation_type'] ?? '');
+                $fieldType = strtolower($ddField['field_type'] ?? $type);
+
+                $isDate = (
+                    str_starts_with($valType, 'date') ||
+                    str_starts_with($valType, 'datetime') ||
+                    str_starts_with($fieldType, 'date') ||
+                    str_starts_with($fieldType, 'datetime')
+                );
+
+                $fieldData = [
                     'id' => $fieldName,
                     'name' => !empty($cleanLabel) ? $cleanLabel : $fieldName,
                     'label' => $displayText,
                     'type' => $type,
-                    'form' => $fieldInfo['form_name'] ?? ''
+                    'form' => $fieldInfo['form_name'] ?? ($ddField['form_name'] ?? ''),
+                    'validation' => $valType,
+                    'isDate' => $isDate
                 ];
+
+                $fields[] = $fieldData;
+                if ($isDate) {
+                    $dateFields[] = $fieldData;
+                }
+            }
+        } elseif (!empty($dd)) {
+            foreach ($dd as $fieldName => $ddField) {
+                $fieldType = strtolower($ddField['field_type'] ?? 'text');
+                if ($fieldType === 'descriptive' || $fieldType === 'descriptive_text') {
+                    continue;
+                }
+                $rawLabel = $ddField['field_label'] ?? $fieldName;
+                $cleanLabel = trim(strip_tags(html_entity_decode($rawLabel, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+                
+                $displayText = $fieldName;
+                if (!empty($cleanLabel) && strcasecmp($cleanLabel, $fieldName) !== 0) {
+                    $strLen = function_exists('mb_strlen') ? mb_strlen($cleanLabel) : strlen($cleanLabel);
+                    $subStr = function_exists('mb_substr') ? mb_substr($cleanLabel, 0, 47) : substr($cleanLabel, 0, 47);
+                    $truncatedLabel = ($strLen > 50) ? ($subStr . '...') : $cleanLabel;
+                    $displayText = "{$fieldName} - {$truncatedLabel}";
+                }
+
+                $valType = strtolower($ddField['text_validation_type_or_show_slider_number'] ?? '');
+                $isDate = (
+                    str_starts_with($valType, 'date') ||
+                    str_starts_with($valType, 'datetime') ||
+                    str_starts_with($fieldType, 'date') ||
+                    str_starts_with($fieldType, 'datetime')
+                );
+
+                $fieldData = [
+                    'id' => $fieldName,
+                    'name' => !empty($cleanLabel) ? $cleanLabel : $fieldName,
+                    'label' => $displayText,
+                    'type' => $fieldType,
+                    'form' => $ddField['form_name'] ?? '',
+                    'validation' => $valType,
+                    'isDate' => $isDate
+                ];
+
+                $fields[] = $fieldData;
+                if ($isDate) {
+                    $dateFields[] = $fieldData;
+                }
             }
         }
 
@@ -189,6 +262,7 @@ class ConfigService
             'events' => $events,
             'instruments' => $instruments,
             'fields' => $fields,
+            'dateFields' => $dateFields,
             'totalCalls' => $totalCalls,
             'instrumentsDeployed' => $isDeployed,
             'defaultHolidayMap' => DateMathService::$defaultHolidayMap,

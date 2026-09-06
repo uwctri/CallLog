@@ -32,6 +32,13 @@
                 return this.meta.defaultHolidayMap || {};
             },
 
+            get dateFields() {
+                if (this.meta.dateFields && Array.isArray(this.meta.dateFields)) {
+                    return this.meta.dateFields;
+                }
+                return (this.meta.fields || []).filter(field => field.isDate);
+            },
+
             getFieldLabel(id) {
                 if (!id) return '';
                 const f = (this.meta.fields || []).find(field => field.id === id);
@@ -62,12 +69,17 @@
                 this.openDropdowns[key] = false;
             },
 
-            fieldSelect(targetObj, propKey, placeholder = '-- Select Field --') {
+            fieldSelect(targetObj, propKey, placeholder = '-- Select Field --', isDateOnly = false) {
                 const self = this;
+                const isDateField = isDateOnly || 
+                    (typeof placeholder === 'string' && placeholder.toLowerCase().includes('date')) || 
+                    ['reminderVariable', 'followupDate', 'mcvDate', 'ntsDate'].includes(propKey);
+
                 return {
                     open: false,
                     filter: '',
                     placeholder: placeholder,
+                    isDateOnly: isDateField,
                     get val() { return targetObj[propKey] || ''; },
                     set val(v) { targetObj[propKey] = v; },
                     select(id) {
@@ -76,11 +88,14 @@
                     },
                     get filteredFields() {
                         const f = this.filter ? this.filter.toLowerCase() : '';
-                        const fields = self.meta.fields || [];
-                        if (!f) return fields;
-                        return fields.filter(item =>
+                        const pool = this.isDateOnly
+                            ? self.dateFields
+                            : (self.meta.fields || []);
+                        if (!f) return pool;
+                        return pool.filter(item =>
                             (item.id && item.id.toLowerCase().includes(f)) ||
-                            (item.label && item.label.toLowerCase().includes(f))
+                            (item.label && item.label.toLowerCase().includes(f)) ||
+                            (item.name && item.name.toLowerCase().includes(f))
                         );
                     }
                 };

@@ -497,7 +497,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-5">
                                             <label class="form-label small fw-bold text-dark mb-1">Target Date Field</label>
-                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'reminderVariable', '-- Select Date Field --')" @click.outside="open = false">
+                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'reminderVariable', '-- Select Date Field --', true)" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
                                                     <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                     <i class="fas fa-search text-muted small ms-2"></i>
@@ -511,6 +511,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                             <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                         </div>
                                                     </template>
+                                                    <div class="p-2 text-muted small text-center" x-show="filteredFields.length === 0">
+                                                        No matching date fields found
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -561,7 +564,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-5">
                                             <label class="form-label small fw-bold text-dark mb-1">Baseline Date Field</label>
-                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'followupDate', '-- Select Date Field --')" @click.outside="open = false">
+                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'followupDate', '-- Select Date Field --', true)" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
                                                     <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                     <i class="fas fa-search text-muted small ms-2"></i>
@@ -575,6 +578,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                             <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                         </div>
                                                     </template>
+                                                    <div class="p-2 text-muted small text-center" x-show="filteredFields.length === 0">
+                                                        No matching date fields found
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -644,7 +650,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-dark mb-1">Appointment Date Field</label>
-                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'mcvDate', '-- Select Date Field --')" @click.outside="open = false">
+                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'mcvDate', '-- Select Date Field --', true)" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
                                                     <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                     <i class="fas fa-search text-muted small ms-2"></i>
@@ -658,6 +664,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                             <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                         </div>
                                                     </template>
+                                                    <div class="p-2 text-muted small text-center" x-show="filteredFields.length === 0">
+                                                        No matching date fields found
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -723,7 +732,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-dark mb-1">Target Date Field</label>
-                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'ntsDate', '-- Select Date Field --')" @click.outside="open = false">
+                                            <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'ntsDate', '-- Select Date Field --', true)" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
                                                     <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
                                                     <i class="fas fa-search text-muted small ms-2"></i>
@@ -737,6 +746,9 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                                             <i class="fas fa-check text-primary" x-show="val === f.id"></i>
                                                         </div>
                                                     </template>
+                                                    <div class="p-2 text-muted small text-center" x-show="filteredFields.length === 0">
+                                                        No matching date fields found
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
