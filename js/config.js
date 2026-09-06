@@ -10,10 +10,14 @@
             activeTab: 'status',
             saving: false,
             deploying: false,
+            enablingRepeatable: false,
 
             openDropdowns: {},
 
             sameDayMcvNts: false,
+            showRecordHomeButton: true,
+            showCallLogInstrument: false,
+            showMetadataInstrument: false,
             triggerSave: [],
             callSummary: [],
 
@@ -134,7 +138,12 @@
                 const r = this.raw || {};
                 const singleEventId = (this.meta.events && this.meta.events.length === 1) ? String(this.meta.events[0].id) : null;
 
-                this.sameDayMcvNts = (r.same_day_mcv_nts && (r.same_day_mcv_nts[0] === '1' || r.same_day_mcv_nts === '1'));
+                this.sameDayMcvNts = Boolean(r.same_day_mcv_nts && (r.same_day_mcv_nts[0] === '1' || r.same_day_mcv_nts === '1' || r.same_day_mcv_nts === true));
+                this.showRecordHomeButton = (r.show_record_home_button === undefined || r.show_record_home_button === null)
+                    ? true
+                    : Boolean(r.show_record_home_button && (r.show_record_home_button[0] === '1' || r.show_record_home_button === '1' || r.show_record_home_button === true));
+                this.showCallLogInstrument = Boolean(r.show_call_log_instrument && (r.show_call_log_instrument[0] === '1' || r.show_call_log_instrument === '1' || r.show_call_log_instrument === true));
+                this.showMetadataInstrument = Boolean(r.show_metadata_instrument && (r.show_metadata_instrument[0] === '1' || r.show_metadata_instrument === '1' || r.show_metadata_instrument === true));
                 this.triggerSave = toArray(r.trigger_save);
                 this.callSummary = toArray(r.call_summary);
 
@@ -262,8 +271,22 @@
                 return this.meta.totalCalls || 0;
             },
 
+            get completedCalls() {
+                return this.meta.completedCalls || 0;
+            },
+
+            get totalCallAttempts() {
+                return this.meta.totalAttempts || 0;
+            },
+
+            get uniqueCallers() {
+                return this.meta.uniqueCallers || 0;
+            },
+
             get setupChecklist() {
                 const hasDeployment = !!(this.meta.instrumentsDeployed);
+                const eventConfig = this.meta.instrumentEventConfig || {};
+                const hasEventRepeat = !!(eventConfig.valid);
                 const hasTrigger = (this.triggerSave.length > 0);
                 const hasCalls = (this.callTypes.length > 0 && this.callTypes.some(c => c.id && c.name));
                 const hasTabs = (this.callTabs.length > 0 && this.callTabs.some(t => t.name));
@@ -271,11 +294,13 @@
 
                 return {
                     deployment: hasDeployment,
+                    eventRepeat: hasEventRepeat,
+                    eventConfig: eventConfig,
                     trigger: hasTrigger,
                     calls: hasCalls,
                     tabs: hasTabs,
                     withdraw: hasWithdraw,
-                    allComplete: hasDeployment && hasTrigger && hasCalls && hasTabs
+                    allComplete: hasDeployment && hasEventRepeat && hasTrigger && hasCalls && hasTabs
                 };
             },
 
@@ -462,10 +487,38 @@
                 });
             },
 
+            enableRepeatable(targetEventId = null) {
+                this.enablingRepeatable = true;
+                const eventId = targetEventId || (this.meta.instrumentEventConfig && this.meta.instrumentEventConfig.assignedEventId) || null;
+
+                module.ajax("enableRepeatable", { event_id: eventId }).then((res) => {
+                    this.enablingRepeatable = false;
+                    if (res && res.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Call Log Repeatable Enabled',
+                            text: res.message || 'Call Log instrument has been enabled as repeatable.'
+                        }).then(() => location.reload());
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Setup Failed',
+                            text: res.message || 'Error updating repeatable instrument status.'
+                        });
+                    }
+                }).catch(err => {
+                    this.enablingRepeatable = false;
+                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || err });
+                });
+            },
+
             saveConfig() {
                 this.saving = true;
 
                 const payload = {
+                    show_record_home_button: [this.showRecordHomeButton ? '1' : '0'],
+                    show_call_log_instrument: [this.showCallLogInstrument ? '1' : '0'],
+                    show_metadata_instrument: [this.showMetadataInstrument ? '1' : '0'],
                     trigger_save: this.triggerSave,
                     same_day_mcv_nts: [this.sameDayMcvNts ? '1' : '0'],
                     enabled_holidays: this.enabledHolidays,

@@ -147,26 +147,95 @@ class CallMetadataRepository
         return !empty($intersect) ? reset($intersect) : null;
     }
 
+    public function getCallLogStats(int $projectId): array
+    {
+        $stats = [
+            'totalCalls' => 0,
+            'completedCalls' => 0,
+            'totalAttempts' => 0,
+            'uniqueCallers' => 0,
+        ];
+
+        try {
+            $table = REDCap::getDataTable($projectId);
+            $metaEvent = $this->getEventOfInstrument($projectId, $this->instrumentMeta);
+            $callEvent = $this->getEventOfInstrument($projectId, $this->instrumentCall);
+
+            $callers = [];
+
+            if ($metaEvent) {
+                $sql = "SELECT value FROM {$table} WHERE project_id = ? AND field_name = ? AND event_id = ?";
+                $result = ExternalModules::query($sql, [$projectId, $this->metadataField, $metaEvent]);
+
+                while ($row = $result->fetch_assoc()) {
+                    $val = $row['value'] ?? '';
+                    if (empty($val)) continue;
+                    $decoded = json_decode($val, true);
+                    if (is_array($decoded)) {
+                        foreach ($decoded as $call) {
+                            $stats['totalCalls']++;
+                            if (!empty($call['complete'])) {
+                                $stats['completedCalls']++;
+                            }
+                            if (!empty($call['completedBy'])) {
+                                $callers[] = trim((string)$call['completedBy']);
+                            }
+                            if (!empty($call['callStartedBy'])) {
+                                $callers[] = trim((string)$call['callStartedBy']);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if ($callEvent) {
+                // Count distinct logged call attempts (each record + instance)
+                $sqlAttempts = "SELECT COUNT(DISTINCT record, COALESCE(instance, 1)) as cnt FROM {$table} WHERE project_id = ? AND event_id = ? AND field_name IN ('call_open_date', 'call_attempt')";
+                $resAttempts = ExternalModules::query($sqlAttempts, [$projectId, $callEvent]);
+                if ($resAttempts && ($row = $resAttempts->fetch_assoc())) {
+                    $stats['totalAttempts'] = (int)($row['cnt'] ?? 0);
+                }
+
+                // Query distinct callers who have opened or logged calls
+                $sqlCallers = "SELECT DISTINCT value FROM {$table} WHERE project_id = ? AND event_id = ? AND field_name = 'call_open_user' AND value IS NOT NULL AND value != ''";
+                $resCallers = ExternalModules::query($sqlCallers, [$projectId, $callEvent]);
+                $foundUsername = false;
+                if ($resCallers) {
+                    while ($row = $resCallers->fetch_assoc()) {
+                        $val = trim((string)($row['value'] ?? ''));
+                        if (!empty($val)) {
+                            $callers[] = $val;
+                            $foundUsername = true;
+                        }
+                    }
+                }
+
+                // If call_open_user had no entries, fallback to call_open_user_full_name
+                if (!$foundUsername) {
+                    $sqlFull = "SELECT DISTINCT value FROM {$table} WHERE project_id = ? AND event_id = ? AND field_name = 'call_open_user_full_name' AND value IS NOT NULL AND value != ''";
+                    $resFull = ExternalModules::query($sqlFull, [$projectId, $callEvent]);
+                    if ($resFull) {
+                        while ($row = $resFull->fetch_assoc()) {
+                            $val = trim((string)($row['value'] ?? ''));
+                            if (!empty($val)) {
+                                $callers[] = $val;
+                            }
+                        }
+                    }
+                }
+            }
+
+            $stats['uniqueCallers'] = count(array_unique(array_filter($callers)));
+        } catch (\Throwable $e) {
+            // Gracefully catch query failures
+        }
+
+        return $stats;
+    }
+
     public function getTotalCallsCount(int $projectId): int
     {
-        $metaEvent = $this->getEventOfInstrument($projectId, $this->instrumentMeta);
-        if (!$metaEvent) {
-            return 0;
-        }
-
-        $table = REDCap::getDataTable($projectId);
-        $sql = "SELECT value FROM {$table} WHERE project_id = ? AND field_name = ? AND event_id = ?";
-        $result = ExternalModules::query($sql, [$projectId, $this->metadataField, $metaEvent]);
-
-        $total = 0;
-        while ($row = $result->fetch_assoc()) {
-            $val = $row['value'] ?? '';
-            if (empty($val)) continue;
-            $decoded = json_decode($val, true);
-            if (is_array($decoded)) {
-                $total += count($decoded);
-            }
-        }
-        return $total;
+        $stats = $this->getCallLogStats($projectId);
+        return $stats['totalCalls'] ?? 0;
     }
 }

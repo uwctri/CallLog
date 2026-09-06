@@ -23,6 +23,9 @@ class ConfigService
     public function getDefaultSettings(): array
     {
         return [
+            'show_record_home_button' => ['1'],
+            'show_call_log_instrument' => ['0'],
+            'show_metadata_instrument' => ['0'],
             'trigger_save' => [],
             'same_day_mcv_nts' => ['0'],
             'enabled_holidays' => [
@@ -93,13 +96,26 @@ class ConfigService
 
         foreach ($defaults as $key => $defaultVal) {
             $val = $this->module->getProjectSetting($key, $projectId);
-            if ($val === null || $val === '') {
+            if ($val === null || $val === '' || (is_array($val) && empty($val))) {
                 $val = $defaultVal;
             }
             $clean[$key] = $val;
         }
 
         return $clean;
+    }
+
+    public function isSettingEnabled(int $projectId, string $key, bool $default = false): bool
+    {
+        $raw = $this->getRawProjectSettings($projectId);
+        $val = $raw[$key] ?? null;
+        if ($val === null || $val === '' || $val === []) {
+            return $default;
+        }
+        if (is_array($val)) {
+            $val = reset($val);
+        }
+        return $val === '1' || $val === 1 || $val === true || $val === 'true';
     }
 
     public function saveProjectSettings(int $projectId, array $newSettings): bool
@@ -253,18 +269,23 @@ class ConfigService
         }
 
         $metadataRepo = new CallMetadataRepository();
-        $totalCalls = $metadataRepo->getTotalCallsCount($projectId);
+        $callStats = $metadataRepo->getCallLogStats($projectId);
 
         $deployService = new InstrumentDeploymentService();
         $isDeployed = $deployService->isDeployed($projectId);
+        $instrumentEventConfig = $deployService->checkInstrumentConfiguration($projectId);
 
         return [
             'events' => $events,
             'instruments' => $instruments,
             'fields' => $fields,
             'dateFields' => $dateFields,
-            'totalCalls' => $totalCalls,
+            'totalCalls' => $callStats['totalCalls'] ?? 0,
+            'completedCalls' => $callStats['completedCalls'] ?? 0,
+            'totalAttempts' => $callStats['totalAttempts'] ?? 0,
+            'uniqueCallers' => $callStats['uniqueCallers'] ?? 0,
             'instrumentsDeployed' => $isDeployed,
+            'instrumentEventConfig' => $instrumentEventConfig,
             'defaultHolidayMap' => DateMathService::$defaultHolidayMap,
             'callTemplateOptions' => CallTemplateType::getOptions(),
             'fieldLinkOptions' => [

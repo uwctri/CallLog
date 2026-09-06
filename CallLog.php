@@ -104,12 +104,43 @@ class CallLog extends AbstractExternalModule
 
     public function redcap_every_page_top($project_id)
     {
-        if (!defined("USERID")) return;
+        if (!defined("USERID") || empty($project_id)) return;
 
         try {
-            $this->initGlobal($project_id);
+            $this->initGlobal((int)$project_id);
         } catch (\Throwable $e) {
             return;
+        }
+
+        $cfg = $this->getConfigService();
+        $showCallLogInstrument = $cfg->isSettingEnabled((int)$project_id, 'show_call_log_instrument', false);
+        $showMetadataInstrument = $cfg->isSettingEnabled((int)$project_id, 'show_metadata_instrument', false);
+
+        $hidingCss = [];
+        if (!$showMetadataInstrument) {
+            $hidingCss[] = '.rc-form-menu-item[data-form="' . $this->instrumentMeta . '"],
+div.formMenuList:has(a[id="form[' . $this->instrumentMeta . ']"]),
+div.formMenuList:has(a[href*="page=' . $this->instrumentMeta . '"]),
+#event_grid_table tr:has([data-mlm-name="' . $this->instrumentMeta . '"]),
+#event_grid_table tr:has(a[href*="page=' . $this->instrumentMeta . '"]),
+.sysManTable tr:has([data-mlm-name="' . $this->instrumentMeta . '"]),
+#record_status_table tr:has([data-mlm-name="' . $this->instrumentMeta . '"]),
+#record_status_table tr:has(a[href*="page=' . $this->instrumentMeta . '"]),
+div[id*="repeat_instrument_table"][id*="' . $this->instrumentMeta . '"] { display: none !important; }';
+        }
+        if (!$showCallLogInstrument) {
+            $hidingCss[] = '.rc-form-menu-item[data-form="' . $this->instrumentCall . '"],
+div.formMenuList:has(a[id="form[' . $this->instrumentCall . ']"]),
+div.formMenuList:has(a[href*="page=' . $this->instrumentCall . '"]),
+#event_grid_table tr:has([data-mlm-name="' . $this->instrumentCall . '"]),
+#event_grid_table tr:has(a[href*="page=' . $this->instrumentCall . '"]),
+.sysManTable tr:has([data-mlm-name="' . $this->instrumentCall . '"]),
+#record_status_table tr:has([data-mlm-name="' . $this->instrumentCall . '"]),
+#record_status_table tr:has(a[href*="page=' . $this->instrumentCall . '"]),
+div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { display: none !important; }';
+        }
+        if (!empty($hidingCss)) {
+            echo "<style id='callLogVisibilityHider'>" . implode("\n", $hidingCss) . "</style>";
         }
 
         $this->includeJs('js/utils.js');
@@ -182,6 +213,12 @@ class CallLog extends AbstractExternalModule
                 $deployRes = $this->getDeploymentService()->deploy($project_id, __DIR__ . '/call.csv', $eventId);
                 $success = $deployRes['success'];
                 $result = $deployRes;
+                break;
+            case "enableRepeatable":
+                $eventId = isset($payload['event_id']) && $payload['event_id'] !== '' ? (int)$payload['event_id'] : null;
+                $repRes = $this->getDeploymentService()->enableRepeatable($project_id, $eventId);
+                $success = $repRes['success'];
+                $result = $repRes;
                 break;
             case "saveConfig":
                 if (!empty($payload['settings']) && is_array($payload['settings'])) {
@@ -288,6 +325,11 @@ class CallLog extends AbstractExternalModule
         $metaEvent = $this->getMetadataRepo()->getEventOfInstrument($projectId, $this->instrumentMeta);
         $username = $this->getUser()->getUsername();
 
+        $cfg = $this->getConfigService();
+        $showRecordHomeButton = $cfg->isSettingEnabled($projectId, 'show_record_home_button', true);
+        $showCallLogInstrument = $cfg->isSettingEnabled($projectId, 'show_call_log_instrument', false);
+        $showMetadataInstrument = $cfg->isSettingEnabled($projectId, 'show_metadata_instrument', false);
+
         $data = json_encode([
             "eventNameMap" => $this->getConfigService()->getEventNameMap(),
             "prefix" => $this->getPrefix(),
@@ -296,8 +338,15 @@ class CallLog extends AbstractExternalModule
             "format" => $this->getUserDateFormat($username),
             "static" => [
                 "instrument" => $this->instrumentCall,
+                "instrumentMeta" => $this->instrumentMeta,
                 "instrumentEvent" => $callEvent,
+                "metaEvent" => $metaEvent,
                 "record_id" => REDCap::getRecordIdField()
+            ],
+            "workflow" => [
+                "showRecordHomeButton" => $showRecordHomeButton,
+                "showCallLogInstrument" => $showCallLogInstrument,
+                "showMetadataInstrument" => $showMetadataInstrument
             ],
             "configError" => !($callEvent && $metaEvent)
         ]);

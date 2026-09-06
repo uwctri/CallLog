@@ -1,13 +1,14 @@
 <?php
 // Full Call List Page
+/** @var \UWMadison\CallLog\CallLog $module */
 $tabsConfig = $module->tabsConfig['config'] ?? [];
 ?>
-<div class="call-list-dashboard px-2 py-3" x-data="callListDashboard">
+<div class="call-list-dashboard px-3 py-3" style="max-width: 1750px;" x-data="callListDashboard">
     <!-- Header Card -->
     <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-4 border-bottom gap-3">
         <div class="d-flex align-items-center gap-3">
-            <div class="p-3 bg-primary text-white rounded-3 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                <i class="fas fa-phone-alt fa-lg text-white"></i>
+            <div class="bg-primary text-white rounded-3 shadow-sm d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="fas fa-phone-alt text-white" style="font-size: 1.65rem;"></i>
             </div>
             <div>
                 <div class="d-flex align-items-center gap-2">
@@ -36,7 +37,7 @@ $tabsConfig = $module->tabsConfig['config'] ?? [];
                 <p class="text-muted mb-4 mx-auto" style="max-width: 500px; font-size: 0.95rem; line-height: 1.6;">
                     The Call List dashboard requires at least one configured <strong>Call Tab</strong> to organize and display active participant calls.
                 </p>
-                <a href="<?php echo $module->getUrl('config.php'); ?>" class="btn btn-primary text-white px-4 py-2 fw-semibold shadow-sm" style="color: #ffffff !important;">
+                <a href="<?= $module->getUrl('config.php'); ?>" class="btn btn-primary text-white px-4 py-2 fw-semibold shadow-sm" style="color: #ffffff !important;">
                     <i class="fas fa-cog me-1 text-white"></i> Configure Call Log Settings
                 </a>
             </div>
