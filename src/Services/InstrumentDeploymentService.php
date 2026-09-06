@@ -155,12 +155,13 @@ class InstrumentDeploymentService
 
     /**
      * Assigns call_log and call_log_metadata instruments to a single specified event_id in redcap_events_forms.
+     * Also marks call_log as repeatable in redcap_events_repeat.
      *
      * @param int $projectId
      * @param int $eventId
      * @return void
      */
-    private function assignToSingleEvent(int $projectId, int $eventId): void
+    public function assignToSingleEvent(int $projectId, int $eventId): void
     {
         // First remove any stale assignments to ensure strict single-event binding
         $sqlDelete = "DELETE FROM redcap_events_forms WHERE form_name IN ('{$this->instrumentCall}', '{$this->instrumentMeta}') AND event_id IN (SELECT event_id FROM redcap_events_metadata WHERE arm_id IN (SELECT arm_id FROM redcap_events_arms WHERE project_id = ?))";
@@ -169,6 +170,192 @@ class InstrumentDeploymentService
         // Insert fresh single-event designation
         $sqlInsert = "INSERT IGNORE INTO redcap_events_forms (event_id, form_name) VALUES (?, '{$this->instrumentCall}'), (?, '{$this->instrumentMeta}')";
         ExternalModules::query($sqlInsert, [$eventId, $eventId]);
+
+        // Also ensure call_log is marked as repeatable on this event
+        $sqlRepeat = "INSERT IGNORE INTO redcap_events_repeat (event_id, form_name) VALUES (?, '{$this->instrumentCall}')";
+        ExternalModules::query($sqlRepeat, [$eventId]);
+    }
+
+    /**
+     * Checks event assignment and repeatability for call_log and call_log_metadata instruments.
+     *
+     * @param int $projectId
+     * @return array
+     */
+    public function checkInstrumentConfiguration(int $projectId): array
+    {
+        global $Proj;
+        if (!isset($Proj) || $Proj->project_id != $projectId) {
+            $Proj = new Project($projectId);
+        }
+
+        $isDeployed = isset($Proj->forms[$this->instrumentCall]) && isset($Proj->forms[$this->instrumentMeta]);
+        if (!$isDeployed) {
+            return [
+                'deployed' => false,
+                'singleEventValid' => false,
+                'repeatableValid' => false,
+                'valid' => false,
+                'assignedEventId' => null,
+                'assignedEventName' => null,
+                'isLongitudinal' => !empty($Proj->longitudinal),
+                'eventMessage' => 'Call Log instruments have not been deployed yet.',
+                'repeatableMessage' => 'Deploy instruments first.'
+            ];
+        }
+
+        $events = $Proj->eventInfo ?? [];
+        $isLongitudinal = !empty($Proj->longitudinal);
+        $validEventIds = array_keys($events);
+
+        $singleEventValid = false;
+        $assignedEventId = null;
+        $assignedEventName = null;
+        $eventMessage = '';
+
+        if (!$isLongitudinal || count($events) <= 1) {
+            // Classic project: automatically single event
+            $singleEventValid = true;
+            $assignedEventId = !empty($events) ? (int)array_key_first($events) : null;
+            $assignedEventName = $assignedEventId && isset($events[$assignedEventId]['name_ext']) ? $events[$assignedEventId]['name_ext'] : 'Default Event';
+        } else {
+            // Longitudinal project: query redcap_events_forms
+            $inClause = implode(',', array_fill(0, count($validEventIds), '?'));
+            $sql = "SELECT DISTINCT event_id, form_name 
+                    FROM redcap_events_forms 
+                    WHERE form_name IN ('{$this->instrumentCall}', '{$this->instrumentMeta}') 
+                    AND event_id IN ({$inClause})";
+
+            $result = ExternalModules::query($sql, $validEventIds);
+            $assignedEvents = [];
+            while ($row = $result->fetch_assoc()) {
+                $eId = (int)$row['event_id'];
+                $assignedEvents[$eId][] = $row['form_name'];
+            }
+
+            $numEvents = count($assignedEvents);
+            if ($numEvents === 0) {
+                $singleEventValid = false;
+                $eventMessage = 'Instruments are not designated to any event. Please assign them to exactly 1 event.';
+            } elseif ($numEvents > 1) {
+                $singleEventValid = false;
+                $eventNames = [];
+                foreach (array_keys($assignedEvents) as $eId) {
+                    $eventNames[] = $events[$eId]['name_ext'] ?? "Event ID $eId";
+                }
+                $eventMessage = 'Instruments are assigned across multiple events (' . implode(', ', $eventNames) . '). Both must be on only 1 event.';
+            } else {
+                $eId = array_key_first($assignedEvents);
+                $formsOnEvent = $assignedEvents[$eId];
+                $hasCall = in_array($this->instrumentCall, $formsOnEvent, true);
+                $hasMeta = in_array($this->instrumentMeta, $formsOnEvent, true);
+
+                if ($hasCall && $hasMeta) {
+                    $singleEventValid = true;
+                    $assignedEventId = $eId;
+                    $assignedEventName = $events[$eId]['name_ext'] ?? "Event ID $eId";
+                } else {
+                    $missing = !$hasCall ? 'call_log' : 'call_log_metadata';
+                    $singleEventValid = false;
+                    $eventMessage = "Both instruments must be on the same event. Currently missing: {$missing}.";
+                }
+            }
+        }
+
+        // Check if call_log is repeatable on the target event
+        $repeatableValid = false;
+        $targetEventId = $assignedEventId ?? (!empty($events) ? (int)array_key_first($events) : null);
+
+        if ($targetEventId) {
+            if (isset($Proj) && method_exists($Proj, 'isRepeatingFormOrEvent')) {
+                $repeatableValid = (bool)$Proj->isRepeatingFormOrEvent($targetEventId, $this->instrumentCall);
+            }
+            if (!$repeatableValid) {
+                $sqlRepeat = "SELECT 1 FROM redcap_events_repeat WHERE (form_name = '{$this->instrumentCall}' OR form_name IS NULL OR form_name = '') AND event_id = ? LIMIT 1";
+                $resRepeat = ExternalModules::query($sqlRepeat, [$targetEventId]);
+                if ($resRepeat && $resRepeat->fetch_assoc()) {
+                    $repeatableValid = true;
+                }
+            }
+        }
+
+        if (!$repeatableValid && !empty($validEventIds)) {
+            $inClause = implode(',', array_fill(0, count($validEventIds), '?'));
+            $sqlRepeatAll = "SELECT event_id FROM redcap_events_repeat WHERE (form_name = '{$this->instrumentCall}' OR form_name IS NULL OR form_name = '') AND event_id IN ({$inClause}) LIMIT 1";
+            $resRepeatAll = ExternalModules::query($sqlRepeatAll, $validEventIds);
+            if ($resRepeatAll && ($row = $resRepeatAll->fetch_assoc())) {
+                if ($singleEventValid && $assignedEventId && (int)$row['event_id'] !== $assignedEventId) {
+                    $repeatableValid = false;
+                } else {
+                    $repeatableValid = true;
+                    if (!$assignedEventId) {
+                        $assignedEventId = (int)$row['event_id'];
+                    }
+                }
+            }
+        }
+
+        $repeatableMessage = $repeatableValid 
+            ? 'The call_log instrument is enabled as repeatable.'
+            : 'The call_log instrument has not been enabled as repeatable.';
+
+        $allValid = $isDeployed && $singleEventValid && $repeatableValid;
+
+        return [
+            'deployed' => $isDeployed,
+            'singleEventValid' => $singleEventValid,
+            'repeatableValid' => $repeatableValid,
+            'valid' => $allValid,
+            'assignedEventId' => $assignedEventId,
+            'assignedEventName' => $assignedEventName,
+            'isLongitudinal' => $isLongitudinal,
+            'eventMessage' => $eventMessage,
+            'repeatableMessage' => $repeatableMessage,
+        ];
+    }
+
+    /**
+     * Enables call_log as a repeatable instrument on the designated event.
+     *
+     * @param int $projectId
+     * @param int|null $eventId
+     * @return array
+     */
+    public function enableRepeatable(int $projectId, ?int $eventId = null): array
+    {
+        global $Proj;
+        if (!isset($Proj) || $Proj->project_id != $projectId) {
+            $Proj = new Project($projectId);
+        }
+
+        $events = $Proj->eventInfo ?? [];
+        if (!$eventId) {
+            $repo = new \UWMadison\CallLog\CallMetadataRepository();
+            $eventId = $repo->getEventOfInstrument($projectId, $this->instrumentCall);
+            if (!$eventId && !empty($events)) {
+                $eventId = (int)array_key_first($events);
+            }
+        }
+
+        if (!$eventId) {
+            return [
+                'success' => false,
+                'message' => 'No valid project event found to enable repeatable call log.'
+            ];
+        }
+
+        // If longitudinal and user specified eventId, also make sure both instruments are on this event
+        if (!empty($Proj->longitudinal)) {
+            $this->assignToSingleEvent($projectId, $eventId);
+        } else {
+            $sqlRepeat = "INSERT IGNORE INTO redcap_events_repeat (event_id, form_name) VALUES (?, '{$this->instrumentCall}')";
+            ExternalModules::query($sqlRepeat, [$eventId]);
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Call Log has been enabled as repeatable successfully.'
+        ];
     }
 
     public function isDeployed(int $projectId): bool

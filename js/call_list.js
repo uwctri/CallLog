@@ -215,17 +215,56 @@
                     childRows[tab_id] = "";
                     colConfig[tab_id] = self.createColConfig(index);
 
-                    $(el).DataTable({
-                        lengthMenu: [
-                            [25, 50, 100, -1],
-                            [25, 50, 100, "All"]
-                        ],
+                    let dt = $(el).DataTable({
+                        pageLength: 100,
+                        iDisplayLength: 100,
                         language: {
                             emptyTable: "No calls to display"
                         },
                         columns: colConfig[tab_id],
                         createdRow: (row) => $(row).addClass('dataTablesRow'),
-                        sDom: 'ltpi'
+                        sDom: 't<"dataTables_footer d-flex flex-wrap align-items-center justify-content-between px-3 py-2"ip>'
+                    });
+
+                    let $wrapper = $(el).closest('.dataTables_wrapper');
+                    let $info = $wrapper.find('.dataTables_info');
+
+                    let $infoContainer = $('<div class="dataTables_info_wrapper d-flex align-items-center flex-wrap gap-2"></div>');
+                    $info.before($infoContainer);
+                    $infoContainer.append($info);
+
+                    let $lenControl = $(`
+                        <div class="d-inline-flex align-items-center gap-1 ms-2 ps-2 border-start call-len-box">
+                            <label class="small text-muted fw-semibold mb-0" for="call_len_${tab_id}">Show:</label>
+                            <input type="number" id="call_len_${tab_id}" class="form-control form-control-sm custom-page-len-input" value="100" min="1" step="10" style="width: 75px; height: 28px; text-align: center; font-size: 0.85rem;" title="Enter number of calls to display">
+                            <span class="small text-muted">calls</span>
+                        </div>
+                    `);
+                    $infoContainer.append($lenControl);
+
+                    const applyLen = function(inputEl) {
+                        let rawVal = $(inputEl).val().trim();
+                        if (rawVal.toLowerCase() === 'all' || rawVal === '-1') {
+                            dt.page.len(-1).draw();
+                            return;
+                        }
+                        let num = parseInt(rawVal, 10);
+                        if (!isNaN(num) && num > 0) {
+                            dt.page.len(num).draw();
+                        } else {
+                            $(inputEl).val(100);
+                            dt.page.len(100).draw();
+                        }
+                    };
+
+                    $lenControl.find('.custom-page-len-input').on('change', function() {
+                        applyLen(this);
+                    }).on('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            applyLen(this);
+                            $(this).trigger('blur');
+                        }
                     });
                 });
             },

@@ -361,3 +361,12 @@
     cursor: grabbing !important;
     cursor: -webkit-grabbing !important;
 }
+
+/* Uniform width for setup checklist badges */
+.call-config-dashboard .checklist-badge {
+    width: 130px;
+    min-width: 130px;
+    text-align: center;
+    display: inline-block;
+    flex-shrink: 0;
+}

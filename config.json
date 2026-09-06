@@ -55,6 +55,7 @@
         "setCallStarted",
         "setNoCallsToday",
         "deployInstruments",
+        "enableRepeatable",
         "saveConfig",
         "generate"
     ],

@@ -5,12 +5,17 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
 <div class="container-fluid py-3 px-4 call-config-dashboard m-0" style="max-width: 1300px;" x-data="callLogConfig">
     
     <!-- Top Action Bar -->
-    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-        <div>
-            <h3 class="fw-bold text-dark">
-                <i class="fas fa-cog text-primary me-2"></i> Call Log Configuration
-            </h3>
-            <p class="text-muted small mb-0">Manage rules, unique call types, dashboard tabs, and instrument deployments.</p>
+    <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-4 border-bottom gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-primary text-white rounded-3 shadow-sm d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="fas fa-cog text-white" style="font-size: 1.65rem;"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h3 class="fw-bold mb-0" style="color: #0f172a;">Call Log Configuration</h3>
+                </div>
+                <span class="text-muted small">Manage rules, unique call types, dashboard tabs, and instrument deployments.</span>
+            </div>
         </div>
         <div class="d-flex gap-2">
             <button type="button" @click="saveConfig()" :disabled="saving" class="btn btn-success btn-sm px-3 py-2 shadow-sm fw-bold d-inline-flex align-items-center">
@@ -42,6 +47,11 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                 <i class="fas fa-columns me-2"></i> Dashboard Tabs
             </button>
         </li>
+        <li>
+            <button type="button" class="custom-nav-pill" :class="{ 'active': activeTab === 'workflow' }" @click="activeTab = 'workflow'">
+                <i class="fas fa-route me-2"></i> Workflow
+            </button>
+        </li>
     </ul>
 
     <!-- Tab Content -->
@@ -52,39 +62,57 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
             
             <!-- Stats Row -->
             <div class="row g-3 mb-4">
-                <div class="col-md-3">
+                <div class="col-6 col-md-4 col-lg-2">
                     <div class="card border shadow-sm h-100 bg-white text-dark rounded-3">
-                        <div class="card-body text-center py-4">
+                        <div class="card-body text-center py-3 px-2">
                             <i class="fas fa-phone-alt fa-2x text-primary mb-2"></i>
                             <h4 class="fw-bold mb-1 text-dark" x-text="totalGeneratedCalls">0</h4>
-                            <span class="text-muted small fw-semibold">Total Generated Calls</span>
+                            <span class="text-muted small fw-semibold">Generated Calls</span>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-4 col-lg-2">
                     <div class="card border shadow-sm h-100 bg-white text-dark rounded-3">
-                        <div class="card-body text-center py-4">
+                        <div class="card-body text-center py-3 px-2">
+                            <i class="fas fa-check-double fa-2x text-success mb-2"></i>
+                            <h4 class="fw-bold mb-1 text-dark" x-text="completedCalls">0</h4>
+                            <span class="text-muted small fw-semibold">Completed Calls</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <div class="card border shadow-sm h-100 bg-white text-dark rounded-3">
+                        <div class="card-body text-center py-3 px-2">
+                            <i class="fas fa-headset fa-2x text-warning mb-2"></i>
+                            <h4 class="fw-bold mb-1 text-dark" x-text="totalCallAttempts">0</h4>
+                            <span class="text-muted small fw-semibold">Logged Attempts</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <div class="card border shadow-sm h-100 bg-white text-dark rounded-3">
+                        <div class="card-body text-center py-3 px-2">
+                            <i class="fas fa-users fa-2x mb-2" style="color: #6f42c1;"></i>
+                            <h4 class="fw-bold mb-1 text-dark" x-text="uniqueCallers">0</h4>
+                            <span class="text-muted small fw-semibold">Unique Callers</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <div class="card border shadow-sm h-100 bg-white text-dark rounded-3">
+                        <div class="card-body text-center py-3 px-2">
                             <i class="fas fa-phone-volume fa-2x text-info mb-2"></i>
                             <h4 class="fw-bold mb-1 text-dark" x-text="callTypes.length">0</h4>
-                            <span class="text-muted small fw-semibold">Configured Call Types</span>
+                            <span class="text-muted small fw-semibold">Configured Types</span>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-4 col-lg-2">
                     <div class="card border shadow-sm h-100 bg-white text-dark rounded-3">
-                        <div class="card-body text-center py-4">
-                            <i class="fas fa-table fa-2x text-success mb-2"></i>
+                        <div class="card-body text-center py-3 px-2">
+                            <i class="fas fa-table fa-2x mb-2" style="color: #0284c7;"></i>
                             <h4 class="fw-bold mb-1 text-dark" x-text="callTabs.length">0</h4>
-                            <span class="text-muted small fw-semibold">Configured Dashboard Tabs</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card border shadow-sm h-100 bg-white text-dark rounded-3">
-                        <div class="card-body text-center py-4">
-                            <i class="fas fa-clock fa-2x text-warning mb-2"></i>
-                            <h4 class="fw-bold mb-1 text-dark">24 Hours</h4>
-                            <span class="text-muted small fw-semibold">Cron Evaluation Interval</span>
+                            <span class="text-muted small fw-semibold">Dashboard Tabs</span>
                         </div>
                     </div>
                 </div>
@@ -97,67 +125,110 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                 </div>
                 <div class="card-body p-0">
                     <ul class="list-group list-group-flush rounded-3">
-                        <li class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
-                            <div class="d-flex align-items-center me-3">
-                                <i class="fas fa-check-circle me-3 fs-5" :class="setupChecklist.deployment ? 'text-success' : 'text-muted'"></i>
+                        <li class="list-group-item d-flex justify-content-between align-items-start py-3 px-4">
+                            <div class="d-flex align-items-start me-3">
+                                <i class="fas fa-check-circle me-3 fs-5 mt-1" :class="setupChecklist.deployment ? 'text-success' : 'text-muted'"></i>
                                 <div>
-                                    <h6 class="fw-bold mb-0 text-dark">1. Deploy Call Log Instruments</h6>
-                                    <small class="text-muted">Deploy <code>call_log</code> and <code>call_log_metadata</code> instruments from <code>call.csv</code>.</small>
+                                    <h6 class="fw-bold mb-1 text-dark">1. Deploy Call Log Instruments</h6>
+                                    <div class="text-muted small" style="line-height: 1.5;">
+                                        Adds the two instruments needed by this module to your REDCap project. The <code>call_log</code> repeating form is where callers record each individual call attempt (date/time, outcome, caller notes, etc.). The <code>call_log_metadata</code> form stores background tracking details and active call states.
+                                    </div>
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-3 mt-1">
                                 <template x-if="!setupChecklist.deployment">
                                     <button type="button" @click="deployInstruments()" :disabled="deploying" class="btn btn-primary btn-sm px-3 py-1.5 fw-bold shadow-xs me-2">
                                         <i class="fas me-1" :class="deploying ? 'fa-spinner fa-spin' : 'fa-download'"></i>
                                         <span x-text="deploying ? 'Deploying...' : 'Deploy Instruments'">Deploy Instruments</span>
                                     </button>
                                 </template>
-                                <span class="badge px-3 py-2 fw-semibold" :class="setupChecklist.deployment ? 'bg-success text-white' : 'bg-secondary text-white'" x-text="setupChecklist.deployment ? 'Deployed' : 'Pending'">Pending</span>
+                                <span class="badge checklist-badge py-2 fw-semibold" style="width: 130px;" :class="setupChecklist.deployment ? 'bg-success text-white' : 'bg-secondary text-white'" x-text="setupChecklist.deployment ? 'Deployed' : 'Pending'">Pending</span>
                             </div>
                         </li>
 
-                        <li class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-check-circle me-3 fs-5" :class="setupChecklist.trigger ? 'text-success' : 'text-muted'"></i>
+                        <li class="list-group-item d-flex justify-content-between align-items-start py-3 px-4">
+                            <div class="d-flex align-items-start me-3">
+                                <i class="fas me-3 fs-5 mt-1" :class="setupChecklist.eventRepeat ? 'fa-check-circle text-success' : (setupChecklist.deployment ? 'fa-exclamation-circle text-warning' : 'fa-check-circle text-muted')"></i>
                                 <div>
-                                    <h6 class="fw-bold mb-0 text-dark">2. Select Generation Triggers</h6>
-                                    <small class="text-muted">Select form saves that trigger automated participant call evaluation.</small>
+                                    <h6 class="fw-bold mb-1 text-dark">2. Event Assignment & Repeatable Setup</h6>
+                                    <div class="text-muted small mb-2" style="line-height: 1.5;">
+                                        Make sure the <code>call_log</code> and <code>call_log_metadata</code> instruments are both assigned to only <strong>1 event</strong>, and that the <code>call_log</code> instrument has been enabled as <strong>repeatable</strong>. (Because callers make multiple call attempts over time, <code>call_log</code> must repeat so each attempt is saved separately; <code>call_log_metadata</code> should stay non-repeating).
+                                    </div>
+                                    <template x-if="setupChecklist.deployment">
+                                        <div class="d-flex flex-wrap align-items-center gap-3 pt-1">
+                                            <span class="small d-inline-flex align-items-center" :class="setupChecklist.eventConfig.singleEventValid ? 'text-success fw-semibold' : 'text-danger fw-semibold'">
+                                                <i class="fas me-1" :class="setupChecklist.eventConfig.singleEventValid ? 'fa-check-circle' : 'fa-times-circle'"></i>
+                                                <span x-text="setupChecklist.eventConfig.singleEventValid ? ('Single Event: ' + (setupChecklist.eventConfig.assignedEventName || 'Assigned')) : (setupChecklist.eventConfig.eventMessage || 'Event assignment issue')"></span>
+                                            </span>
+                                            <span class="small d-inline-flex align-items-center" :class="setupChecklist.eventConfig.repeatableValid ? 'text-success fw-semibold' : 'text-danger fw-semibold'">
+                                                <i class="fas me-1" :class="setupChecklist.eventConfig.repeatableValid ? 'fa-check-circle' : 'fa-times-circle'"></i>
+                                                <span x-text="setupChecklist.eventConfig.repeatableValid ? 'Call Log is repeatable' : 'Call Log is not repeatable'"></span>
+                                            </span>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
-                            <span class="badge px-3 py-2 fw-semibold" :class="setupChecklist.trigger ? 'bg-success text-white' : 'bg-secondary text-white'" x-text="setupChecklist.trigger ? 'Configured' : 'Pending'">Pending</span>
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-3 mt-1">
+                                <template x-if="setupChecklist.deployment && !setupChecklist.eventRepeat && setupChecklist.eventConfig.singleEventValid && !setupChecklist.eventConfig.repeatableValid">
+                                    <button type="button" @click="enableRepeatable()" :disabled="enablingRepeatable" class="btn btn-warning btn-sm px-3 py-1.5 fw-bold shadow-xs text-dark">
+                                        <i class="fas me-1" :class="enablingRepeatable ? 'fa-spinner fa-spin' : 'fa-redo'"></i>
+                                        <span x-text="enablingRepeatable ? 'Enabling...' : 'Enable Repeatable Now'">Enable Repeatable Now</span>
+                                    </button>
+                                </template>
+                                <span class="badge checklist-badge py-2 fw-semibold" style="width: 130px;" :class="setupChecklist.eventRepeat ? 'bg-success text-white' : (setupChecklist.deployment ? 'bg-warning text-dark' : 'bg-secondary text-white')" x-text="setupChecklist.eventRepeat ? 'Configured' : (setupChecklist.deployment ? 'Action Required' : 'Pending')">Pending</span>
+                            </div>
                         </li>
 
-                        <li class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-check-circle me-3 fs-5" :class="setupChecklist.calls ? 'text-success' : 'text-muted'"></i>
+                        <li class="list-group-item d-flex justify-content-between align-items-start py-3 px-4">
+                            <div class="d-flex align-items-start me-3">
+                                <i class="fas fa-check-circle me-3 fs-5 mt-1" :class="setupChecklist.trigger ? 'text-success' : 'text-muted'"></i>
                                 <div>
-                                    <h6 class="fw-bold mb-0 text-dark">3. Define Unique Call Types</h6>
-                                    <small class="text-muted">Create unique call rules (MCV, NTS, Reminders, Follow-ups, Ad-hoc).</small>
+                                    <h6 class="fw-bold mb-1 text-dark">3. Select Generation Triggers</h6>
+                                    <div class="text-muted small" style="line-height: 1.5;">
+                                        Generation Triggers generate calls for your participants. Choose which data entry forms should trigger call generation whenever staff save a form. (The automated daily cron also checks participants against your call rules each night).
+                                    </div>
                                 </div>
                             </div>
-                            <span class="badge px-3 py-2 fw-semibold" :class="setupChecklist.calls ? 'bg-success text-white' : 'bg-secondary text-white'" x-text="setupChecklist.calls ? 'Configured' : 'Pending'">Pending</span>
+                            <span class="badge checklist-badge py-2 fw-semibold flex-shrink-0 ms-3 mt-1" style="width: 130px;" :class="setupChecklist.trigger ? 'bg-success text-white' : 'bg-secondary text-white'" x-text="setupChecklist.trigger ? 'Configured' : 'Pending'">Pending</span>
                         </li>
 
-                        <li class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-check-circle me-3 fs-5" :class="setupChecklist.tabs ? 'text-success' : 'text-muted'"></i>
+                        <li class="list-group-item d-flex justify-content-between align-items-start py-3 px-4">
+                            <div class="d-flex align-items-start me-3">
+                                <i class="fas fa-check-circle me-3 fs-5 mt-1" :class="setupChecklist.calls ? 'text-success' : 'text-muted'"></i>
                                 <div>
-                                    <h6 class="fw-bold mb-0 text-dark">4. Configure Dashboard Call Tabs</h6>
-                                    <small class="text-muted">Add at least one tab to group and present calls on the Call List dashboard.</small>
+                                    <h6 class="fw-bold mb-1 text-dark">4. Define Unique Call Types</h6>
+                                    <div class="text-muted small" style="line-height: 1.5;">
+                                        Set up the specific rules for the kinds of calls your study needs to make. You can create <strong>Reminders</strong> ahead of upcoming visits, <strong>Follow Ups</strong> after baseline visits, <strong>Missed / Cancelled Visit (MCV)</strong> calls when visits are missed, <strong>Need to Schedule (NTS)</strong> calls for due visits, and <strong>New Entry</strong> or <strong>Ad-hoc</strong> calls.
+                                    </div>
                                 </div>
                             </div>
-                            <span class="badge px-3 py-2 fw-semibold" :class="setupChecklist.tabs ? 'bg-success text-white' : 'bg-secondary text-white'" x-text="setupChecklist.tabs ? 'Configured' : 'Pending'">Pending</span>
+                            <span class="badge checklist-badge py-2 fw-semibold flex-shrink-0 ms-3 mt-1" style="width: 130px;" :class="setupChecklist.calls ? 'bg-success text-white' : 'bg-secondary text-white'" x-text="setupChecklist.calls ? 'Configured' : 'Pending'">Pending</span>
                         </li>
 
-                        <li class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-check-circle me-3 fs-5" :class="setupChecklist.withdraw ? 'text-info' : 'text-muted'"></i>
+                        <li class="list-group-item d-flex justify-content-between align-items-start py-3 px-4">
+                            <div class="d-flex align-items-start me-3">
+                                <i class="fas fa-check-circle me-3 fs-5 mt-1" :class="setupChecklist.tabs ? 'text-success' : 'text-muted'"></i>
                                 <div>
-                                    <h6 class="fw-bold mb-0 text-dark">5. Subject Withdrawal Rules (Optional)</h6>
-                                    <small class="text-muted">Set permanent subject withdrawal event and field rules to exclude subjects.</small>
+                                    <h6 class="fw-bold mb-1 text-dark">5. Configure Dashboard Call Tabs</h6>
+                                    <div class="text-muted small" style="line-height: 1.5;">
+                                        Organize how active calls appear to your team on the main Call List page. You can set up separate tabs for different caller queues, study visits, or priorities (such as "Recruitment", "Upcoming Reminders", or "Missed Visits"), and filter which call types show up on each tab.
+                                    </div>
                                 </div>
                             </div>
-                            <span class="badge px-3 py-2 fw-semibold" :class="setupChecklist.withdraw ? 'bg-info text-white' : 'bg-secondary text-white'" x-text="setupChecklist.withdraw ? 'Active' : 'Optional'">Optional</span>
+                            <span class="badge checklist-badge py-2 fw-semibold flex-shrink-0 ms-3 mt-1" style="width: 130px;" :class="setupChecklist.tabs ? 'bg-success text-white' : 'bg-secondary text-white'" x-text="setupChecklist.tabs ? 'Configured' : 'Pending'">Pending</span>
+                        </li>
+
+                        <li class="list-group-item d-flex justify-content-between align-items-start py-3 px-4">
+                            <div class="d-flex align-items-start me-3">
+                                <i class="fas fa-check-circle me-3 fs-5 mt-1" :class="setupChecklist.withdraw ? 'text-info' : 'text-muted'"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-dark">6. Subject Withdrawal Rules (Optional)</h6>
+                                    <div class="text-muted small" style="line-height: 1.5;">
+                                        Prevent calling participants who have withdrawn from the study. Select your project's withdrawal field and event, and the module will automatically stop generating calls and remove those participants from the Call List once marked as withdrawn.
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="badge checklist-badge py-2 fw-semibold flex-shrink-0 ms-3 mt-1" style="width: 130px;" :class="setupChecklist.withdraw ? 'bg-info text-white' : 'bg-secondary text-white'" x-text="setupChecklist.withdraw ? 'Active' : 'Optional'">Optional</span>
                         </li>
                     </ul>
                 </div>
@@ -1030,6 +1101,222 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                     </div>
                 </template>
             </div>
+        </div>
+
+        <!-- Tab 5: Workflow -->
+        <div class="tab-pane fade show active" x-show="activeTab === 'workflow'">
+            
+            <!-- Navigation & Visibility Controls -->
+            <div class="card border shadow-sm mb-4 rounded-3">
+                <div class="card-header bg-light border-bottom fw-bold py-3 px-4 text-dark">
+                    <i class="fas fa-compass text-primary me-2"></i> How to Navigate to the Call Log
+                </div>
+                <div class="card-body p-4">
+                    <!-- Option 1: Record Home Page Button -->
+                    <div class="mb-4">
+                        <div class="form-check form-switch mb-1">
+                            <input class="form-check-input me-2 cursor-pointer" type="checkbox" id="cfg_show_record_home_button" x-model="showRecordHomeButton">
+                            <label class="form-check-label fw-bold text-dark cursor-pointer" for="cfg_show_record_home_button">
+                                Show "Call Log" Button on Record Home Page
+                            </label>
+                        </div>
+                        <div class="setting-blurb text-muted small ps-4" style="line-height: 1.5;">
+                            Places a dedicated <strong>Call Log</strong> button directly on each participant's Record Home page next to the record action menu. This gives study staff a fast, one-click shortcut into the call log without needing to locate the instrument in the event grid or sidebar.
+                        </div>
+                    </div>
+
+                    <!-- Option 2: Show Call Log Instrument in Navigation -->
+                    <div class="mb-4 border-top pt-3">
+                        <div class="form-check form-switch mb-1">
+                            <input class="form-check-input me-2 cursor-pointer" type="checkbox" id="cfg_show_call_log_instrument" x-model="showCallLogInstrument">
+                            <label class="form-check-label fw-bold text-dark cursor-pointer" for="cfg_show_call_log_instrument">
+                                Show Call Log Instrument in Navigation
+                            </label>
+                        </div>
+                        <div class="setting-blurb text-muted small ps-4" style="line-height: 1.5;">
+                            Controls whether the <code>call_log</code> instrument is listed in REDCap's left sidebar and the Record Home event grid. When turned off, the instrument is hidden from routine navigation so staff enter calls through the Record Home button above or the main Call List dashboard.
+                        </div>
+                    </div>
+
+                    <!-- Option 3: Show Metadata Instrument -->
+                    <div class="mb-2 border-top pt-3">
+                        <div class="form-check form-switch mb-1">
+                            <input class="form-check-input me-2 cursor-pointer" type="checkbox" id="cfg_show_metadata_instrument" x-model="showMetadataInstrument">
+                            <label class="form-check-label fw-bold text-dark cursor-pointer" for="cfg_show_metadata_instrument">
+                                Show Call Log Metadata Instrument
+                            </label>
+                        </div>
+                        <div class="setting-blurb text-muted small ps-4" style="line-height: 1.5;">
+                            Controls whether the internal <code>call_log_metadata</code> instrument is displayed in REDCap menus and record tables.
+                            <div class="alert alert-light border mt-2 mb-0 py-2 px-3 small text-secondary">
+                                <i class="fas fa-info-circle text-info me-1"></i>
+                                <strong>Note:</strong> Default is <strong>hidden</strong>. This instrument stores internal tracking metadata and call history as JSON. It should remain hidden during normal study operations, but can be enabled for debugging, auditing data, or troubleshooting specific records.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modify Call Log Form (Placeholder Area) -->
+            <div class="card border shadow-sm mb-4 rounded-3">
+                <div class="card-header bg-light border-bottom fw-bold py-3 px-4 text-dark d-flex align-items-center justify-content-between">
+                    <div>
+                        <i class="fas fa-edit text-secondary me-2"></i> Modify Call Log Form
+                    </div>
+                    <span class="badge bg-warning text-dark border small fw-semibold">Placeholder</span>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-start mb-4">
+                        <div class="rounded-circle bg-light border p-3 me-3 text-secondary">
+                            <i class="fas fa-sliders-h fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1">Call Log Form Customization Preview</h6>
+                            <p class="text-muted small mb-0" style="line-height: 1.5;">
+                                This area is a visual preview of upcoming controls for tailoring the Call Log form fields, question order, and required rules directly from this settings page. The controls below are non-functional placeholders—all active form fields are currently configured in REDCap's Project Setup / Online Designer under the <code>call_log</code> instrument.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Fake Config Subsection: General Form Behaviors -->
+                    <div class="bg-light border rounded-3 p-3 mb-4">
+                        <div class="fw-semibold text-dark small mb-2 d-flex align-items-center">
+                            <i class="fas fa-toggle-on text-primary me-2"></i> Form Behavior Options (Preview)
+                        </div>
+                        <div class="row g-3 text-muted small">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="ph_auto_timestamps" checked disabled>
+                                    <label class="form-check-label" for="ph_auto_timestamps">
+                                        Auto-capture call start and end timestamps
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="ph_require_outcome" checked disabled>
+                                    <label class="form-check-label" for="ph_require_outcome">
+                                        Require staff to select a contact outcome before saving
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="ph_phone_banner" checked disabled>
+                                    <label class="form-check-label" for="ph_phone_banner">
+                                        Show participant phone numbers in a sticky header
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="ph_timer_widget" disabled>
+                                    <label class="form-check-label" for="ph_timer_widget">
+                                        Display call duration stopwatch widget during call
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fake Config Subsection: Field Order & Visibility Table -->
+                    <div class="border rounded-3 p-3 mb-3 bg-white">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="fw-semibold text-dark small">
+                                <i class="fas fa-list-ol text-primary me-2"></i> Form Fields & Ordering (Preview)
+                            </div>
+                            <span class="badge bg-light text-muted border small">7 Fields Configured</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0 small text-muted">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40px;">#</th>
+                                        <th>Field Label</th>
+                                        <th>Variable Name</th>
+                                        <th>Field Type</th>
+                                        <th class="text-center" style="width: 100px;">Required</th>
+                                        <th class="text-center" style="width: 100px;">Visibility</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 1</td>
+                                        <td class="fw-semibold text-dark">Staff / Caller Name</td>
+                                        <td><code>caller_name</code></td>
+                                        <td>Text (User Dropdown)</td>
+                                        <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Required</span></td>
+                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 2</td>
+                                        <td class="fw-semibold text-dark">Attempt Date & Time</td>
+                                        <td><code>call_date</code></td>
+                                        <td>Datetime (Y-M-D H:M)</td>
+                                        <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Required</span></td>
+                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 3</td>
+                                        <td class="fw-semibold text-dark">Phone Number Used</td>
+                                        <td><code>phone_used</code></td>
+                                        <td>Radio (Home / Cell / Alt)</td>
+                                        <td class="text-center"><span class="badge bg-light text-muted border">Optional</span></td>
+                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 4</td>
+                                        <td class="fw-semibold text-dark">Call Contact Outcome</td>
+                                        <td><code>call_outcome</code></td>
+                                        <td>Radio / Select Box</td>
+                                        <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Required</span></td>
+                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 5</td>
+                                        <td class="fw-semibold text-dark">Caller Notes & Summary</td>
+                                        <td><code>call_notes</code></td>
+                                        <td>Notes / Text Box</td>
+                                        <td class="text-center"><span class="badge bg-light text-muted border">Optional</span></td>
+                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 6</td>
+                                        <td class="fw-semibold text-dark">Follow-up Contact Required</td>
+                                        <td><code>followup_needed</code></td>
+                                        <td>Yes / No Checkbox</td>
+                                        <td class="text-center"><span class="badge bg-light text-muted border">Optional</span></td>
+                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                    </tr>
+                                    <tr class="table-light opacity-75">
+                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 7</td>
+                                        <td class="fw-semibold text-muted">Supervisor Review Flag</td>
+                                        <td><code>supervisor_review</code></td>
+                                        <td>Yes / No Radio</td>
+                                        <td class="text-center"><span class="badge bg-light text-muted border">Optional</span></td>
+                                        <td class="text-center"><span class="badge bg-secondary-subtle text-muted border">Hidden</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center text-muted small pt-1">
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Placeholder only">
+                                <i class="fas fa-plus me-1"></i> Add Custom Form Field
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ms-2" disabled title="Placeholder only">
+                                <i class="fas fa-sync-alt me-1"></i> Reset to Instrument Defaults
+                            </button>
+                        </div>
+                        <div class="text-muted fst-italic">
+                            <i class="fas fa-info-circle text-muted me-1"></i> Interactive form editing will be available in a future release.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
     </div>
