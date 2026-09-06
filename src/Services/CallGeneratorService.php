@@ -114,6 +114,7 @@ class CallGeneratorService
                     $metadata[$callConfig['id']] = [
                         "start" => $start,
                         "end" => $end,
+                        "created" => date('Y-m-d H:i:s'),
                         "template" => 'followup',
                         "event_id" => $callConfig['event'],
                         "name" => $callConfig['name'],
@@ -177,11 +178,14 @@ class CallGeneratorService
                 $metadata[$callConfig['id']]['complete'] = false;
                 $metadata[$callConfig['id']]['start'] = $newStart;
                 $metadata[$callConfig['id']]['end'] = $newEnd;
+                $metadata[$callConfig['id']]['appt'] = $fieldVal;
                 $changeOccurred = true;
             } elseif (empty($metadata[$callConfig['id']]) && !empty($fieldVal)) {
                 $metadata[$callConfig['id']] = [
                     "start" => $newStart,
                     "end" => $newEnd,
+                    "appt" => $fieldVal,
+                    "created" => date('Y-m-d H:i:s'),
                     "template" => 'reminder',
                     "event_id" => $callConfig['event'],
                     "name" => $callConfig['name'],
@@ -209,6 +213,7 @@ class CallGeneratorService
             if (empty($metadata[$idExact]) && !empty($apptDate) && !empty($indicator)) {
                 $metadata[$idExact] = [
                     "appt" => $apptDate,
+                    "created" => date('Y-m-d H:i:s'),
                     "template" => 'mcv',
                     "event_id" => $callConfig['event'],
                     "name" => $callConfig['name'],
@@ -250,7 +255,7 @@ class CallGeneratorService
 
             if ($prevEvent && empty($metadata[$callConfig['id']]) && !empty($data[$prevEvent][$callConfig['indicator']]) && empty($data[$callConfig['event']][$callConfig['apptDate']]) && empty($data[$callConfig['event']][$callConfig['indicator']])) {
                 $metadata[$callConfig['id']] = [
-                    "created" => $today,
+                    "created" => date('Y-m-d H:i:s'),
                     "template" => 'nts',
                     "event_id" => $callConfig['event'],
                     "name" => $callConfig['name'],
@@ -279,6 +284,7 @@ class CallGeneratorService
             $metadata[$callConfig['id']] = [
                 "template" => 'visit',
                 "event_id" => $callConfig['event'],
+                "created" => date('Y-m-d H:i:s'),
                 "end" => $data[$callConfig['event']][$callConfig['autoRemove']] ?? '',
                 "name" => $callConfig['name'],
                 "instances" => [],

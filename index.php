@@ -1,7 +1,21 @@
 <?php
 // Full Call List Page
 /** @var \UWMadison\CallLog\CallLog $module */
+$projectId = (int)($_GET['pid'] ?? 0);
+if (empty($module->tabsConfig) && $projectId) {
+    $module->tabsConfig = $module->getConfigService()->getTabConfig($projectId);
+}
 $tabsConfig = $module->tabsConfig['config'] ?? [];
+$cookieState = null;
+if (!empty($_COOKIE["call_log_dashboard_{$projectId}"])) {
+    $rawCookie = $_COOKIE["call_log_dashboard_{$projectId}"];
+    $cookieState = json_decode(urldecode($rawCookie), true) ?: json_decode($rawCookie, true);
+}
+$savedTab = $cookieState['tab'] ?? '';
+$validTabIds = array_column($tabsConfig, 'tab_id');
+$activeTabId = (!empty($savedTab) && in_array($savedTab, $validTabIds, true)) 
+    ? $savedTab 
+    : ($tabsConfig[0]['tab_id'] ?? '');
 ?>
 <div class="call-list-dashboard px-3 py-3" style="max-width: 1750px;" x-data="callListDashboard">
     <!-- Header Card -->
@@ -52,7 +66,7 @@ $tabsConfig = $module->tabsConfig['config'] ?? [];
                     <ul class="nav nav-pills call-list-nav-pills gap-1" role="tablist">
                         <?php foreach ($tabsConfig as $index => $tab) { ?>
                             <li class="nav-item call-tab" role="presentation">
-                                <button type="button" class="nav-link call-link fw-semibold px-3 py-2 me-1"
+                                <button type="button" class="nav-link call-link fw-semibold px-3 py-2 me-1 <?= ($tab['tab_id'] === $activeTabId) ? 'active' : '' ?>"
                                         :class="{ 'active': activeTab === '<?php echo htmlspecialchars($tab['tab_id']); ?>' }"
                                         @click="selectTab('<?php echo htmlspecialchars($tab['tab_id']); ?>')">
                                     <span><?php echo htmlspecialchars($tab['tab_name']); ?></span>
@@ -66,8 +80,9 @@ $tabsConfig = $module->tabsConfig['config'] ?? [];
             <div class="tab-content">
                 <?php foreach ($tabsConfig as $tab_index => $tab) { ?>
                     <div id="<?php echo htmlspecialchars($tab["tab_id"]); ?>"
-                         class="tab-pane fade show active"
-                         x-show="activeTab === '<?php echo htmlspecialchars($tab['tab_id']); ?>'">
+                         class="call-list-tab-pane tab-pane show active"
+                         x-show="activeTab === '<?php echo htmlspecialchars($tab['tab_id']); ?>'"
+                         style="<?= ($tab['tab_id'] === $activeTabId) ? '' : 'display: none;' ?>">
                         
                         <!-- Toolbar Bar -->
                         <div class="card-header bg-white border-bottom py-3 px-4">
@@ -81,31 +96,60 @@ $tabsConfig = $module->tabsConfig['config'] ?? [];
                                     <?php } ?>
                                 </div>
 
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <div class="input-group input-group-sm search-input-group" style="width: 220px;">
-                                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                                        <input type="search" class="form-control customSearch border-start-0 ps-0" placeholder="Search records...">
+                                <div class="d-flex align-items-center gap-2 flex-wrap" :class="{ 'opacity-50 pointer-events-none': !dataLoaded }">
+                                    <div class="custom-search-wrap position-relative" style="width: 220px;">
+                                        <i class="fas fa-search search-icon text-muted"></i>
+                                        <input type="search" class="form-control form-control-sm customSearch" placeholder="Search calls..." :disabled="!dataLoaded || (!displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'] || displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'].length === 0)">
                                     </div>
 
-                                    <select class="form-select form-select-sm caller-filter-select" x-model="activeCallerFilter" style="width: auto; max-width: 220px;">
+                                    <select class="form-select form-select-sm caller-filter-select" x-model="activeCallerFilter" :disabled="!dataLoaded || (!displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'] || displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'].length === 0)" style="width: auto; max-width: 220px;">
                                         <option value="">-- All Callers / Users --</option>
                                         <template x-for="caller in availableCallers" :key="caller">
                                             <option :value="caller" x-text="caller"></option>
                                         </template>
                                     </select>
 
-                                    <button type="button" @click="toggleHiddenCalls()" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1">
-                                        <i class="fas me-1" :class="hideCalls ? 'fa-eye-slash' : 'fa-eye'"></i>
-                                        <span x-text="hideCalls ? 'Show Hidden Calls' : 'Hide Retiring Calls'">Toggle Hidden Calls</span>
+                                    <button type="button" @click="toggleHiddenCalls()" :title="hideCalls ? 'Show Hidden Calls' : 'Hide Retiring Calls'" :aria-label="hideCalls ? 'Show Hidden Calls' : 'Hide Retiring Calls'" :disabled="!dataLoaded || (!displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'] || displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'].length === 0)" class="btn btn-sm d-inline-flex align-items-center justify-content-center toggle-hidden-calls-btn">
+                                        <i class="fas" :class="hideCalls ? 'fa-eye-slash' : 'fa-eye'"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Data Table Container -->
-                        <div class="card-body p-0 table-responsive">
-                            <table class="table table-hover align-middle mb-0 callTable" style="width:100%">
-                            </table>
+                        <!-- Card Body Container -->
+                        <div class="card-body p-0">
+                            <!-- Loading State Placeholder -->
+                            <div x-show="!dataLoaded" class="call-list-loading-placeholder py-5 text-center">
+                                <div class="placeholder-icon-circle bg-primary-subtle text-primary border-0">
+                                    <i class="fas fa-circle-notch fa-spin fa-2x"></i>
+                                </div>
+                                <h5 class="fw-bold text-dark mb-1">Loading Calls...</h5>
+                                <p class="text-muted small mb-0 mx-auto" style="max-width: 440px;">
+                                    Retrieving active participant call records and schedule windows...
+                                </p>
+                            </div>
+
+                            <!-- Empty Tab Placeholder (when no calls at all exist for this tab) -->
+                            <div x-show="dataLoaded && (!displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'] || displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'].length === 0)" class="call-list-empty-placeholder py-5 text-center" style="display: none;">
+                                <div class="placeholder-icon-circle bg-light text-success">
+                                    <i class="fas fa-clipboard-check fa-2x"></i>
+                                </div>
+                                <h5 class="fw-bold text-dark mb-1">No Calls on this Tab</h5>
+                                <p class="text-muted small mb-3 mx-auto" style="max-width: 460px; line-height: 1.6;">
+                                    There are currently no active calls queued for <strong><?php echo htmlspecialchars($tab["tab_name"]); ?></strong>. Any newly generated calls or scheduled appointments will appear here automatically.
+                                </p>
+                                <div>
+                                    <button type="button" @click="refreshTableData()" class="btn btn-sm px-3 shadow-xs empty-refresh-btn">
+                                        <i class="fas fa-sync-alt me-1"></i> Refresh
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Data Table Container -->
+                            <div x-show="dataLoaded && (displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'] && displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'].length > 0)" class="table-responsive" style="display: none;">
+                                <table class="table table-hover align-middle mb-0 callTable" style="width:100%">
+                                </table>
+                            </div>
                         </div>
 
                     </div>

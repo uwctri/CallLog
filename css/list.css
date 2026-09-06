@@ -60,11 +60,16 @@
     transition: all 0.15s ease-in-out;
     background-color: transparent;
     cursor: pointer;
+    outline: none !important;
 }
 
-.call-list-dashboard .call-list-nav-pills .nav-link.call-link:hover {
+.call-list-dashboard .call-list-nav-pills .nav-link.call-link:hover,
+.call-list-dashboard .call-list-nav-pills .nav-link.call-link:focus,
+.call-list-dashboard .call-list-nav-pills .nav-link.call-link:active,
+.call-list-dashboard .call-list-nav-pills .nav-link.call-link:focus-visible {
     color: #0f172a;
     background-color: #e2e8f0;
+    outline: none !important;
 }
 
 .call-list-dashboard .call-list-nav-pills .nav-link.call-link.active {
@@ -72,19 +77,51 @@
     background-color: #ffffff !important;
     border-color: #cbd5e1 !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+    outline: none !important;
+}
+
+.call-list-dashboard .tab-content > .call-list-tab-pane {
+    opacity: 1 !important;
 }
 
 /* Control Bar & Search Input */
-.call-list-dashboard .search-input-group input.customSearch {
-    border: 1px solid #cbd5e1;
-    border-radius: 0 6px 6px 0;
-    font-size: 0.875rem;
+.call-list-dashboard .custom-search-wrap {
+    position: relative;
+    width: 220px;
 }
 
-.call-list-dashboard .search-input-group .input-group-text {
+.call-list-dashboard .custom-search-wrap .search-icon {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-top: 1px;
+    line-height: 1;
+    pointer-events: none;
+    font-size: 0.82rem;
+    color: #94a3b8;
+    z-index: 4;
+}
+
+.call-list-dashboard .custom-search-wrap input.customSearch {
+    padding-left: 38px;
     border: 1px solid #cbd5e1;
-    border-radius: 6px 0 0 6px;
-    background-color: #f8fafc;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background-color: #ffffff;
+    font-family: inherit;
+}
+
+.call-list-dashboard .custom-search-wrap input.customSearch::placeholder {
+    font-family: inherit;
+    font-weight: normal;
+    color: #94a3b8;
+    opacity: 1;
+}
+
+.call-list-dashboard .custom-search-wrap input.customSearch:focus {
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
 }
 
 .call-list-dashboard .caller-filter-select {
@@ -176,36 +213,250 @@
 }
 
 .call-list-dashboard .callTable .rowLink {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 600;
+    outline: none !important;
+}
+
+.call-list-dashboard .callTable .rowLink:hover,
+.call-list-dashboard .callTable .rowLink:focus,
+.call-list-dashboard .callTable .rowLink:active {
     color: #0d6efd;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.call-list-dashboard .callTable .rowLink:hover {
-    color: #0b5ed7;
     text-decoration: underline;
+    outline: none !important;
 }
 
-/* Action Buttons in Table */
-.call-list-dashboard .noCallsButton {
-    border: 1px solid #fd7e14;
+/* Expanded Child Row & Drawer Styles */
+.call-list-dashboard .callTable tr.shown td {
+    background-color: #f1f5f9 !important;
+}
+
+.call-list-dashboard .callTable tr.dataTableChild > td {
+    padding: 0 !important;
+    background-color: #f8fafc !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    box-shadow: inset 4px 0 0 #3b82f6;
+}
+
+.call-list-dashboard .call-drawer-content {
+    background-color: transparent;
+}
+
+.call-list-dashboard .drawer-call-generated {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: #64748b;
+    background-color: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    padding: 3px 10px;
     border-radius: 6px;
-    padding: 4px 10px;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.call-list-dashboard .drawer-call-generated i {
     font-size: 0.8rem;
+    color: #94a3b8;
+    position: relative;
+    top: 1px;
+}
+
+.call-list-dashboard .drawer-call-generated .call-gen-val {
+    color: #334155;
     font-weight: 600;
-    color: #d97706;
-    background-color: #fffbeb;
+}
+
+/* Action Buttons in Table & Expanded Drawer */
+.call-list-dashboard .drawer-action-btn {
+    font-size: 0.8125rem !important;
+    font-weight: 500 !important;
+    padding: 5px 12px !important;
+    border-radius: 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    outline: none !important;
+    box-shadow: none !important;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.call-list-dashboard .startCallButton {
+    background-color: #198754 !important;
+    border: 1px solid #198754 !important;
+    color: #ffffff !important;
+}
+
+.call-list-dashboard .startCallButton:hover,
+.call-list-dashboard .startCallButton:focus,
+.call-list-dashboard .startCallButton:active,
+.call-list-dashboard .startCallButton:focus-visible {
+    background-color: #157347 !important;
+    border-color: #146c43 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(25, 135, 84, 0.35) !important;
+    outline: none !important;
+}
+
+.call-list-dashboard .startCallButton:hover i,
+.call-list-dashboard .startCallButton:focus i,
+.call-list-dashboard .startCallButton:active i {
+    color: #ffffff !important;
+}
+
+.call-list-dashboard .endCallButton {
+    background-color: #dc3545 !important;
+    border: 1px solid #dc3545 !important;
+    color: #ffffff !important;
+}
+
+.call-list-dashboard .endCallButton:hover,
+.call-list-dashboard .endCallButton:focus,
+.call-list-dashboard .endCallButton:active,
+.call-list-dashboard .endCallButton:focus-visible {
+    background-color: #bb2d3b !important;
+    border-color: #b02a37 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(220, 53, 69, 0.35) !important;
+    outline: none !important;
+}
+
+.call-list-dashboard .endCallButton:hover i,
+.call-list-dashboard .endCallButton:focus i,
+.call-list-dashboard .endCallButton:active i {
+    color: #ffffff !important;
+}
+
+.call-list-dashboard .noCallsButton {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    color: #475569 !important;
+    background-color: #ffffff !important;
     text-decoration: none;
-    transition: all 0.15s ease;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    outline: none !important;
+    box-shadow: none;
 }
 
 .call-list-dashboard .noCallsButton:hover,
-.call-list-dashboard .noCallsButton:focus {
-    background-color: #fef3c7 !important;
-    border-color: #b45309 !important;
-    color: #b45309 !important;
+.call-list-dashboard .noCallsButton:focus,
+.call-list-dashboard .noCallsButton:active,
+.call-list-dashboard .noCallsButton:focus-visible {
+    background-color: #f97316 !important;
+    border-color: #f97316 !important;
+    color: #ffffff !important;
     text-decoration: none;
-    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.2);
+    outline: none !important;
+    box-shadow: 0 2px 6px rgba(249, 115, 22, 0.35) !important;
+}
+
+.call-list-dashboard .noCallsButton:hover i,
+.call-list-dashboard .noCallsButton:focus i,
+.call-list-dashboard .noCallsButton:active i {
+    color: #ffffff !important;
+}
+
+/* Status Badges in Column 0 */
+.call-list-dashboard .badge-call-ongoing {
+    background-color: #dc3545 !important;
+    color: #ffffff !important;
+    border-radius: 50% !important;
+    width: 20px !important;
+    height: 20px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 10px !important;
+    box-shadow: 0 1px 3px rgba(220, 53, 69, 0.4) !important;
+    flex-shrink: 0;
+}
+
+.call-list-dashboard .badge-call-ongoing i {
+    color: #ffffff !important;
+}
+
+.call-list-dashboard .badge-multi-tab {
+    color: #475569 !important;
+    font-size: 0.85rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Toolbar Toggle Hidden Calls Button */
+.call-list-dashboard .toggle-hidden-calls-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    color: #475569 !important;
+    background-color: #ffffff !important;
+    font-size: 0.875rem;
+    transition: all 0.15s ease-in-out;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.call-list-dashboard .toggle-hidden-calls-btn:hover:not(:disabled),
+.call-list-dashboard .toggle-hidden-calls-btn:focus:not(:disabled),
+.call-list-dashboard .toggle-hidden-calls-btn:active:not(:disabled),
+.call-list-dashboard .toggle-hidden-calls-btn:focus-visible:not(:disabled) {
+    background-color: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+    outline: none !important;
+    box-shadow: 0 0 0 0.2rem rgba(148, 163, 184, 0.25) !important;
+}
+
+.call-list-dashboard .toggle-hidden-calls-btn:hover:not(:disabled) i,
+.call-list-dashboard .toggle-hidden-calls-btn:focus:not(:disabled) i,
+.call-list-dashboard .toggle-hidden-calls-btn:active:not(:disabled) i,
+.call-list-dashboard .toggle-hidden-calls-btn:focus-visible:not(:disabled) i {
+    color: #0f172a !important;
+}
+
+/* Empty State Refresh Button */
+.call-list-dashboard .empty-refresh-btn {
+    border: 1px solid #0d6efd !important;
+    color: #0d6efd !important;
+    background-color: #ffffff !important;
+    font-weight: 500;
+    transition: all 0.15s ease-in-out;
+    outline: none !important;
+    box-shadow: none;
+}
+
+.call-list-dashboard .empty-refresh-btn:hover,
+.call-list-dashboard .empty-refresh-btn:focus,
+.call-list-dashboard .empty-refresh-btn:active,
+.call-list-dashboard .empty-refresh-btn:focus-visible,
+.call-list-dashboard .empty-refresh-btn:hover:focus {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+    outline: none !important;
+    box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3) !important;
+}
+
+.call-list-dashboard .empty-refresh-btn:hover i,
+.call-list-dashboard .empty-refresh-btn:focus i,
+.call-list-dashboard .empty-refresh-btn:active i,
+.call-list-dashboard .empty-refresh-btn:focus-visible i {
+    color: #ffffff !important;
 }
 
 /* Child Row Inset Drawer */
@@ -278,10 +529,10 @@
     margin: 0 2px;
 }
 
-.call-list-dashboard .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-    color: #0f172a !important;
-    background: #e2e8f0 !important;
-    border-color: #94a3b8 !important;
+.call-list-dashboard .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.current) {
+    color: #0d6efd !important;
+    background: #eff6ff !important;
+    border-color: #93c5fd !important;
 }
 
 .call-list-dashboard .dataTables_wrapper .dataTables_paginate .paginate_button.current,
@@ -292,9 +543,48 @@
     box-shadow: 0 2px 4px rgba(13, 110, 253, 0.25) !important;
 }
 
-/* Universal Scoped Button Focus Overrides */
+/* Universal Scoped Button & Link Overrides - Neutralize REDCap global hover outline (button:hover, a:hover { outline: 1px solid #4ca2ff; }) and browser focus rings */
+.call-list-dashboard button,
+.call-list-dashboard button:hover,
 .call-list-dashboard button:focus,
+.call-list-dashboard button:active,
+.call-list-dashboard button:focus-visible,
+.call-list-dashboard .btn,
+.call-list-dashboard .btn:hover,
 .call-list-dashboard .btn:focus,
+.call-list-dashboard .btn:active,
+.call-list-dashboard .btn:focus-visible,
+.call-list-dashboard .btn:hover:focus,
 .call-list-dashboard .btn:active:focus {
     outline: none !important;
+}
+
+.call-list-dashboard .dataTables_wrapper .dataTables_paginate .paginate_button,
+.call-list-dashboard .dataTables_wrapper .dataTables_paginate .paginate_button:hover,
+.call-list-dashboard .dataTables_wrapper .dataTables_paginate .paginate_button:focus,
+.call-list-dashboard .dataTables_wrapper .dataTables_paginate .paginate_button:active {
+    outline: none !important;
+}
+
+/* Loading & Empty State Placeholders */
+.call-list-dashboard .call-list-loading-placeholder,
+.call-list-dashboard .call-list-empty-placeholder {
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+}
+
+.call-list-dashboard .placeholder-icon-circle {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
