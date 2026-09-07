@@ -206,10 +206,26 @@
 
 .call-list-dashboard .callTable tbody td.leftListIcon,
 .call-list-dashboard .callTable thead th.leftListIcon {
-    padding-left: 10px;
-    padding-right: 10px;
-    text-align: center;
-    width: 36px;
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+}
+
+.call-list-dashboard .badge-col-header {
+    display: inline-block;
+    width: 24px;
+    height: 1px;
+    visibility: hidden;
+    vertical-align: middle;
 }
 
 .call-list-dashboard .callTable .rowLink {
@@ -267,6 +283,36 @@
 .call-list-dashboard .drawer-call-generated .call-gen-val {
     color: #334155;
     font-weight: 600;
+}
+
+.call-list-dashboard .drawer-ongoing-call-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8125rem;
+    color: #991b1b;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    padding: 3px 10px;
+    border-radius: 6px;
+    line-height: 1.3;
+}
+
+.call-list-dashboard .drawer-ongoing-call-info i {
+    font-size: 0.8rem;
+    color: #dc2626;
+    position: relative;
+    top: 0.5px;
+}
+
+.call-list-dashboard .drawer-ongoing-call-info .ongoing-val {
+    color: #7f1d1d;
+    font-weight: 600;
+}
+
+.call-list-dashboard .drawer-ongoing-call-info .ongoing-divider {
+    color: #fca5a5;
+    font-weight: 300;
 }
 
 /* Action Buttons in Table & Expanded Drawer */
@@ -365,6 +411,19 @@
 }
 
 /* Status Badges in Column 0 */
+.call-list-dashboard .badge-icon-cell {
+    width: 24px !important;
+    min-width: 24px !important;
+    max-width: 24px !important;
+    height: 24px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
 .call-list-dashboard .badge-call-ongoing {
     background-color: #dc3545 !important;
     color: #ffffff !important;
@@ -385,6 +444,22 @@
 
 .call-list-dashboard .badge-multi-tab {
     color: #475569 !important;
+    font-size: 0.85rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.call-list-dashboard .callback-msg-badge {
+    color: #dc3545 !important;
+    font-size: 0.85rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.call-list-dashboard .notes-icon-badge {
+    color: #0d6efd !important;
     font-size: 0.85rem !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -587,4 +662,163 @@
     margin-bottom: 1rem;
     border: 1px solid #e2e8f0;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Call List Bottom Footer */
+.call-list-dashboard .call-list-footer {
+    background-color: #f8fafc !important;
+    border-top: 1px solid #e2e8f0 !important;
+    border-radius: 0 0 10px 10px;
+    font-size: 0.8125rem;
+    color: #64748b;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    user-select: none;
+}
+
+.call-list-dashboard .call-list-footer .last-pull-icon {
+    position: relative;
+    top: 1.5px;
+    font-size: 0.85rem;
+}
+
+.call-list-dashboard .call-list-footer .last-pull-time {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.call-list-dashboard .call-list-footer .btn-link {
+    color: #64748b !important;
+    font-size: 0.8125rem !important;
+    font-weight: 500;
+    transition: color 0.15s ease;
+}
+
+.call-list-dashboard .call-list-footer .btn-link:hover {
+    color: #2563eb !important;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* Column Reordering and Customization */
+.callTable.columns-unlocked thead th {
+    cursor: grab !important;
+    position: relative;
+    user-select: none;
+    background-color: #f8fafc;
+}
+
+.callTable.columns-unlocked thead th:hover {
+    background-color: #e2e8f0;
+}
+
+.callTable.columns-unlocked thead th:active {
+    cursor: grabbing !important;
+}
+
+.callTable.columns-unlocked thead th.leftListIcon {
+    cursor: default !important;
+}
+
+div.DTCR_pointer {
+    width: 2px !important;
+    background-color: #0d6efd !important;
+    box-shadow: 0 0 6px rgba(13, 110, 253, 0.6) !important;
+    z-index: 10000 !important;
+}
+
+table.DTCR_clonedTable.dataTable {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
+    opacity: 0.9 !important;
+    z-index: 10001 !important;
+}
+
+.columns-unlocked-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #fefce8;
+    border-color: #fef08a !important;
+    color: #854d0e;
+    font-size: 0.8125rem;
+}
+
+.columns-unlocked-banner[style*="display: none"] {
+    display: none !important;
+}
+
+.columns-unlocked-banner .btn {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    border-color: #ca8a04;
+    color: #854d0e;
+}
+
+.columns-unlocked-banner .btn:hover {
+    background-color: #ca8a04;
+    color: #ffffff !important;
+}
+
+/* Column Header Context Menu */
+.call-header-context-menu {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    background: #ffffff;
+    min-width: 230px;
+    padding: 6px 0;
+    font-size: 0.84rem;
+}
+
+.call-header-context-menu .dropdown-item {
+    padding: 6px 14px;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    transition: background 0.1s ease;
+    cursor: pointer;
+}
+
+.call-header-context-menu .dropdown-item:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+
+.call-header-context-menu .dropdown-item.disabled {
+    color: #94a3b8 !important;
+    background-color: transparent !important;
+    pointer-events: none;
+    cursor: default;
+}
+
+.call-header-context-menu .dropdown-submenu {
+    position: relative;
+}
+
+.call-header-context-menu .dropdown-submenu > .dropdown-toggle::after {
+    display: inline-block;
+    margin-left: auto;
+    vertical-align: 0.255em;
+    content: "";
+    border-top: 0.3em solid transparent;
+    border-right: 0;
+    border-bottom: 0.3em solid transparent;
+    border-left: 0.3em solid;
+}
+
+.call-header-context-menu .dropdown-submenu .submenu-popup {
+    display: none;
+    position: absolute;
+    top: -6px;
+    left: 100%;
+    min-width: 200px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.call-header-context-menu .dropdown-divider {
+    border-top: 1px solid #e2e8f0;
+    margin: 4px 0;
 }

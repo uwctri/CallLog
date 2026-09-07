@@ -57,7 +57,9 @@
         "deployInstruments",
         "enableRepeatable",
         "saveConfig",
-        "generate"
+        "generate",
+        "saveUserColumns",
+        "resetUserColumns"
     ],
     "framework-version": 16,
     "enable-ajax-logging": true,

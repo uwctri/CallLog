@@ -23,6 +23,9 @@
         },
         parseDateComponents(str) {
             if (!str) return null;
+            if (str instanceof Date && !isNaN(str.getTime())) {
+                return { date: str, hasTime: true };
+            }
             let s = String(str).trim();
             let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
             if (!m) return null;

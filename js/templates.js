@@ -2,20 +2,22 @@
     const module = ExternalModules.UWMadison.CallLog;
 
     const renderers = {
-        renderNotesIcon: function () {
-            return `<span class="notes-icon-badge text-primary" title="Call notes logged"><i class="fas fa-sticky-note"></i></span>`;
+        renderNotesIcon: function (tooltip) {
+            const title = tooltip || "Call notes logged";
+            return `<span class="notes-icon-badge text-primary" title="${title}"><i class="fas fa-sticky-note"></i></span>`;
         },
-        renderCallStartedIcon: function (startedBy) {
-            const title = startedBy ? `On a call (${startedBy})` : 'On a call';
+        renderCallStartedIcon: function (startedBy, tooltip) {
+            const title = tooltip || (startedBy ? `On a call (${startedBy})` : 'On a call');
             return `<span class="badge-call-ongoing text-white bg-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 20px; height: 20px;" title="${title}"><i class="fas fa-phone" style="font-size: 10px;"></i></span>`;
         },
-        renderMultiTabIcon: function (otherTabs) {
+        renderMultiTabIcon: function (otherTabs, tooltip) {
             const tabsList = (Array.isArray(otherTabs) && otherTabs.length) ? otherTabs.join(', ') : '';
-            const title = tabsList ? `Record is on multiple tabs: ${tabsList}` : 'Record is on multiple tabs';
+            const title = tooltip || (tabsList ? `Record is on multiple tabs: ${tabsList}` : 'Record is on multiple tabs');
             return `<span class="badge-multi-tab text-secondary" title="${title}"><i class="fas fa-users"></i></span>`;
         },
-        renderCallbackMsgIcon: function () {
-            return `<span class="callback-msg-badge text-danger" title="Callback requested"><i class="fas fa-bell"></i></span>`;
+        renderCallbackMsgIcon: function (tooltip) {
+            const title = tooltip || "Callback requested";
+            return `<span class="callback-msg-badge text-danger" title="${title}"><i class="fas fa-bell"></i></span>`;
         },
         renderFormStatus: function (pid, record, formName, status) {
             const statusMap = {
