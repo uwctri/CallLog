@@ -203,7 +203,7 @@ if (typeof tinymce === 'undefined') {
                                 <div>
                                     <h6 class="fw-bold mb-1 text-dark">4. Define Unique Call Types</h6>
                                     <div class="text-muted small" style="line-height: 1.5;">
-                                        Set up the specific rules for the kinds of calls your study needs to make. You can create <strong>Reminders</strong> ahead of upcoming visits, <strong>Follow Ups</strong> after baseline visits, <strong>Missed / Cancelled Visit (MCV)</strong> calls when visits are missed, <strong>Need to Schedule (NTS)</strong> calls for due visits, and <strong>New Entry</strong> or <strong>Ad-hoc</strong> calls.
+                                        Set up the specific rules for the kinds of calls your study needs to make. You can create <strong>Reminders</strong> ahead of upcoming visits, <strong>Follow Ups</strong> after baseline visits, <strong>Missed / Cancelled Visit (MCV)</strong> calls when visits are missed, <strong>Need to Schedule (NTS)</strong> calls for due visits, and <strong>New Entry</strong> or <strong>Adhoc</strong> calls.
                                     </div>
                                 </div>
                             </div>
@@ -923,7 +923,7 @@ if (typeof tinymce === 'undefined') {
 
                                 <!-- Adhoc -->
                                 <div x-show="callType.template === 'adhoc'">
-                                    <div class="setting-blurb mb-3">Ad-hoc calls are added by an end user on the call log screen. Any tab with an adhoc call in it will show the Reason and Preferred call back date as the last two columns.</div>
+                                    <div class="setting-blurb mb-3">Adhoc calls are added by an end user on the call log screen. Any tab with an adhoc call in it will show the Reason and Preferred call back date as the last two columns.</div>
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-8">
                                             <label class="form-label small fw-bold text-dark mb-1">Adhoc Reason Code Map</label>
@@ -1048,7 +1048,7 @@ if (typeof tinymce === 'undefined') {
                                     <span class="script-tag-chip chip-custom" @click="insertScriptTag(callType, '{{attempt_num}}')" title="Current Call Attempt Number">
                                         {{attempt_num}}
                                     </span>
-                                    <span class="script-tag-chip chip-custom" @click="insertScriptTag(callType, '{{reason}}')" title="Ad-hoc Selected Reason">
+                                    <span class="script-tag-chip chip-custom" @click="insertScriptTag(callType, '{{reason}}')" title="Adhoc Selected Reason">
                                         {{reason}}
                                     </span>
 
@@ -1140,7 +1140,7 @@ if (typeof tinymce === 'undefined') {
                                                     </tr>
                                                     <tr>
                                                         <td><code>{{reason}}</code></td>
-                                                        <td>Selected reason description for ad-hoc calls</td>
+                                                        <td>Selected reason description for adhoc calls</td>
                                                     </tr>
                                                 </tbody>
                                             </table>

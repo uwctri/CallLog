@@ -17,7 +17,7 @@ $activeTabId = (!empty($savedTab) && in_array($savedTab, $validTabIds, true))
     ? $savedTab 
     : ($tabsConfig[0]['tab_id'] ?? '');
 ?>
-<div class="call-list-dashboard px-3 py-3" style="max-width: 1750px;" x-data="callListDashboard">
+<div class="call-list-dashboard pr-3 py-3" style="max-width: 1750px;" x-data="callListDashboard">
     <!-- Header Card -->
     <div class="d-flex flex-wrap align-items-center justify-content-between pb-3 mb-4 border-bottom gap-3">
         <div class="d-flex align-items-center gap-3">

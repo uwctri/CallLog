@@ -27,13 +27,13 @@
     },
     "api-actions": {
         "newAdhoc": {
-            "description": "Create a new ad-hoc call for specified record(s). Requires 'record' (or 'record_list'), 'call_type_id', and 'reason_id'.",
+            "description": "Create a new adhoc call for specified record(s). Requires 'record' (or 'record_list'), 'call_type_id', and 'reason_id'.",
             "access": [
                 "auth"
             ]
         },
         "resolveAdhoc": {
-            "description": "Resolve and complete open ad-hoc calls matching a call type and reason code for specified record(s). Requires 'record' (or 'record_list'), 'call_type_id', and 'reason_id'.",
+            "description": "Resolve and complete open adhoc calls matching a call type and reason code for specified record(s). Requires 'record' (or 'record_list'), 'call_type_id', and 'reason_id'.",
             "access": [
                 "auth"
             ]

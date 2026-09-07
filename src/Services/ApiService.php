@@ -73,7 +73,7 @@ class ApiService
                 }
                 $success = true;
                 $result['createdCount'] = $createdCount;
-                $result['message'] = "Created {$createdCount} new ad-hoc call(s).";
+                $result['message'] = "Created {$createdCount} new adhoc call(s).";
                 break;
 
             case "resolveAdhoc":
@@ -128,7 +128,7 @@ class ApiService
                 }
                 $success = true;
                 $result['resolvedCount'] = $resolvedCount;
-                $result['message'] = "Resolved {$resolvedCount} matching ad-hoc call(s).";
+                $result['message'] = "Resolved {$resolvedCount} matching adhoc call(s).";
                 break;
 
             case "generate":

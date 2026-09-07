@@ -212,37 +212,97 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
     {
         $project_id = (int)$project_id;
         $record = (string)$record;
-        $summary = $this->getConfigService()->getRawProjectSettings($project_id)['call_summary'];
+        $rawSummary = $this->getConfigService()->getRawProjectSettings($project_id)['call_summary'] ?? [];
+        $summary = is_array($rawSummary) ? $rawSummary : (!empty($rawSummary) ? [$rawSummary] : []);
 
         $this->passArgument('recentCaller', $this->recentCallStarted($project_id, $record));
-        $this->includeJs('js/data_entry.js', 'defer');
+        $this->includeJs('js/data_entry.js', true);
+
+        $rawSettings = $this->getConfigService()->getRawProjectSettings($project_id);
+        $callNames = [];
+        $callScripts = [];
+        $callDurations = [];
+        foreach ($rawSettings['call_id'] ?? [] as $i => $cid) {
+            if (!empty($cid)) {
+                $callNames[$cid] = $rawSettings['call_name'][$i] ?? $cid;
+                $script = $rawSettings['call_script'][$i] ?? '';
+                if (is_array($script)) $script = reset($script);
+                $duration = $rawSettings['call_expected_duration'][$i] ?? 30;
+                if (is_array($duration)) $duration = reset($duration);
+                $callDurations[$cid] = (int)($duration ?: 30);
+
+                $pipedScript = (string)$script;
+                if (!empty($pipedScript) && class_exists('Piping')) {
+                    $pipedScript = \Piping::replaceVariablesInLabel($pipedScript, $record, null, null, [], false, $project_id);
+                }
+                $callScripts[$cid] = $pipedScript;
+            }
+        }
+        $this->passArgument('callNames', $callNames);
+        $this->passArgument('callScripts', $callScripts);
+        $this->passArgument('callDurations', $callDurations);
+
+        $displayNameField = $rawSettings['display_name_field'] ?? '';
+        if (is_array($displayNameField)) $displayNameField = reset($displayNameField);
+        $participantName = '';
+        if (!empty($displayNameField)) {
+            $recData = REDCap::getData($project_id, 'array', $record, [$displayNameField]);
+            if (is_array($recData[$record] ?? null)) {
+                foreach ($recData[$record] as $evData) {
+                    if (is_array($evData) && !empty($evData[$displayNameField])) {
+                        $participantName = (string)$evData[$displayNameField];
+                        break;
+                    }
+                }
+            }
+        }
+        $this->passArgument('participantName', $participantName);
 
         if (!empty($_GET['call_id'])) {
             $callId = (string)$_GET['call_id'];
             $metaRepo = $this->getMetadataRepo();
             $metaData = $metaRepo->getMetadata($project_id, $record);
-            if (!empty($metaData[$callId])) {
-                $user = defined('USERID') ? USERID : '';
-                $metaData[$callId]['callStarted'] = date("Y-m-d H:i:s");
-                $metaData[$callId]['callStartedBy'] = $user;
-                $saved = $metaRepo->saveMetadata($project_id, $record, $metaData);
-                if ($saved) {
-                    $this->getLoggingService()->logCallStarted($project_id, $record, $callId, $user);
+            if (!isset($metaData[$callId]) || !is_array($metaData[$callId])) {
+                $metaData[$callId] = ['id' => $callId, 'complete' => false];
+            }
+            if (empty($metaData[$callId]['name'])) {
+                $baseId = explode('|', explode('||', $callId)[0])[0];
+                foreach ($rawSettings['call_id'] ?? [] as $i => $cid) {
+                    if ($cid === $baseId || $cid === $callId) {
+                        $metaData[$callId]['name'] = $rawSettings['call_name'][$i] ?? $callId;
+                        $metaData[$callId]['template'] = $rawSettings['call_template'][$i] ?? 'new';
+                        break;
+                    }
                 }
+            }
+            $user = defined('USERID') ? USERID : '';
+            $metaData[$callId]['callStarted'] = date("Y-m-d H:i:s");
+            $metaData[$callId]['callStartedBy'] = $user;
+            $saved = $metaRepo->saveMetadata($project_id, $record, $metaData);
+            if ($saved) {
+                $this->getLoggingService()->logCallStarted($project_id, $record, $callId, $user);
             }
         }
 
         if ($instrument === $this->instrumentCall) {
             $this->passArgument('adhoc', $this->getConfigService()->getAdhocTemplateConfig($project_id));
-            $this->includeJs('js/call_log.js', 'defer');
+            $this->includeJs('js/call_log.js', true);
         }
 
         if (in_array($instrument, array_merge($summary, [$this->instrumentCall]), true)) {
-            $this->passArgument('metadata', $this->getMetadataRepo()->getMetadata($project_id, $record));
+            $metadata = $this->getMetadataRepo()->getMetadata($project_id, $record);
+            foreach ($metadata as $k => &$item) {
+                if (is_array($item) && empty($item['name'])) {
+                    $baseId = explode('|', explode('||', $k)[0])[0];
+                    $item['name'] = $callNames[$baseId] ?? ($callNames[$k] ?? ($item['template'] ?? $k));
+                }
+            }
+            unset($item);
+            $this->passArgument('metadata', $metadata);
             $this->passArgument('data', $this->getAllCallData($project_id, $record));
             $this->includeCss('css/log.css');
             $this->includeCss('css/swal.css');
-            $this->includeJs('js/summary_table.js');
+            $this->includeJs('js/summary_table.js', true);
         }
     }
 
@@ -341,6 +401,19 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 }
                 if (!isset($metadata[$targetKey]) || !is_array($metadata[$targetKey])) {
                     $metadata[$targetKey] = [];
+                }
+                if (empty($metadata[$targetKey]['name'])) {
+                    $rawSettings = $this->getConfigService()->getRawProjectSettings($project_id);
+                    $baseId = explode('|', explode('||', (string)$targetKey)[0])[0];
+                    foreach ($rawSettings['call_id'] ?? [] as $i => $cid) {
+                        if ($cid === $baseId || $cid === $targetKey) {
+                            $metadata[$targetKey]['name'] = $rawSettings['call_name'][$i] ?? $targetKey;
+                            $metadata[$targetKey]['template'] = $rawSettings['call_template'][$i] ?? 'new';
+                            $metadata[$targetKey]['id'] = $targetKey;
+                            $metadata[$targetKey]['complete'] = false;
+                            break;
+                        }
+                    }
                 }
                 $startTime = date("Y-m-d H:i:s");
                 $metadata[$targetKey]['callStarted'] = $startTime;
@@ -635,7 +708,12 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         $meta = $this->getMetadataRepo()->getMetadata($projectId, $record);
         if (empty($meta)) return '';
 
-        $user = $this->getUser()->getUsername();
+        try {
+            $userObj = $this->getUser();
+            $user = $userObj ? $userObj->getUsername() : (defined('USERID') ? USERID : '');
+        } catch (\Throwable $e) {
+            $user = defined('USERID') ? USERID : '';
+        }
         foreach ($meta as $call) {
             if (
                 empty($call['complete']) &&
