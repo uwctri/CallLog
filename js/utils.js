@@ -175,7 +175,7 @@
             return !!(
                 document.getElementById('callLogConfig') ||
                 document.querySelector('.call-list-dashboard') ||
-                document.querySelector('.callSummaryTable') ||
+                document.querySelector('.callHistoryTable') ||
                 document.querySelector('.callHistoryContainer') ||
                 document.getElementById('call_log_wrapper-tr') ||
                 document.querySelector('.callTable')

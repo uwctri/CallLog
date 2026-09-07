@@ -339,9 +339,9 @@ if (typeof tinymce === 'undefined') {
                     </div>
 
                     <div class="mb-2 border-top pt-3">
-                        <label class="form-label fw-bold text-dark mb-1">Include Call Summary Table On Instruments:</label>
+                            <label class="form-label fw-bold text-dark mb-1">Include Call History On Instruments:</label>
                         <div class="setting-blurb mb-3">
-                            Choose which data entry instruments will render the interactive Call Summary widget, giving study staff quick access to caller notes and attempt history directly on participant records.
+                            Choose which data entry instruments will render the interactive Call History widget, giving study staff quick access to caller notes and attempt history directly on participant records.
                         </div>
                         <div class="custom-multiselect-container" :class="{ 'is-open': open }" x-data="multiSelect(callSummary)" @click.outside="open = false">
                             <div class="custom-multiselect-box" :class="{ 'is-open': open }" @click="open = !open">

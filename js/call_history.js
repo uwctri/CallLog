@@ -1,11 +1,32 @@
 (() => {
-    const callSummaryPageSize = 20;
+    const callHistoryPageSize = 20;
     const module = ExternalModules.UWMadison.CallLog;
     const getParam = (name) => (module.utils && module.utils.getParam) ? module.utils.getParam(name) : (typeof window.getParameterByName === 'function' ? window.getParameterByName(name) : null);
+    const escapeHtml = (value) => String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const saveMetadata = (metadata) => {
+        module.ajax("metadataSave", {
+            record: getParam('id'),
+            metadata: JSON.stringify(metadata)
+        }).then(function () {
+            window.onbeforeunload = function () { };
+            window.location.reload();
+        }).catch(function (err) {
+            console.error(err);
+        });
+    };
 
     const threeDotClick = () => {
         if (typeof Swal === 'undefined' && (!module.swal || !module.swal.fire)) return;
 
+        const isCallLogPage = (getParam('page') === (module.static ? module.static.instrument : 'call_log'));
+        const hasCallHistory = module.data && Object.keys(module.data).length > 0;
+        const rawMetadata = escapeHtml(JSON.stringify(module.metadata || {}, null, 2));
         let settingsHtml = module.renderers ? module.renderers.renderCallHistorySettings() : '<div class="call-metadata-card">';
         let callHistoryRows = "";
         $.each(module.metadata, (k, v) => {
@@ -14,33 +35,97 @@
             }
         });
         settingsHtml += callHistoryRows + '</div>';
+        if (module.renderers && module.renderers.renderCallHistoryRawMetadata) {
+            settingsHtml += module.renderers.renderCallHistoryRawMetadata(rawMetadata);
+        }
+        if (isCallLogPage && hasCallHistory && module.renderers && module.renderers.renderCallHistoryDeleteAction) {
+            settingsHtml += module.renderers.renderCallHistoryDeleteAction();
+        }
+        settingsHtml += '</div></div>';
 
         (module.swal ? module.swal.fire : Swal.fire)({
             title: 'Call Metadata Settings',
             customIcon: '<i class="fas fa-sliders-h"></i>',
+            customClass: {
+                popup: 'call-history-settings-popup'
+            },
             html: settingsHtml,
             showCancelButton: true,
             confirmButtonText: '<i class="fas fa-check me-1.5"></i> Save Settings',
             cancelButtonText: 'Cancel',
-            focusCancel: true
+            focusCancel: true,
+            didOpen: () => {
+                $('.callMetadataEdit').off('change').on('change', function () {
+                    const $status = $(this).closest('.call-metadata-item').find('.call-metadata-status');
+                    const complete = $(this).is(':checked');
+                    $status
+                        .text(complete ? 'Complete' : 'Incomplete')
+                        .toggleClass('is-complete', complete)
+                        .toggleClass('is-incomplete', !complete);
+                });
+                $('#enableRawMetadataEdit').off('change').on('change', function () {
+                    $('.callHistoryRawMetadata')
+                        .prop('readonly', !this.checked)
+                        .toggleClass('call-history-raw-editable', this.checked);
+                });
+                $('.deleteCallHistoryInstance').off('click').on('click', function () {
+                    const swalObj = window.Swal || (typeof Swal !== 'undefined' ? Swal : null);
+                    if (swalObj && typeof swalObj.close === 'function') swalObj.close();
+                    setTimeout(openDeleteModal, 0);
+                });
+            }
         }).then((result) => {
             if (!result.isConfirmed) return;
 
+            const rawEditEnabled = $('#enableRawMetadataEdit').is(':checked');
+            let metadataToSave = module.metadata;
+            if (rawEditEnabled) {
+                try {
+                    metadataToSave = JSON.parse($('.callHistoryRawMetadata').val());
+                } catch (err) {
+                    (module.swal ? module.swal.error : Swal.fire)('Invalid Metadata', 'The raw metadata must contain valid JSON before it can be saved.', { icon: 'error' });
+                    return;
+                }
+                if (!metadataToSave || Array.isArray(metadataToSave) || typeof metadataToSave !== 'object') {
+                    (module.swal ? module.swal.error : Swal.fire)('Invalid Metadata', 'The raw metadata must be a JSON object.', { icon: 'error' });
+                    return;
+                }
+            }
+
             $(".callMetadataEdit").each(function () {
                 const callId = $(this).data('call');
-                if (module.metadata && module.metadata[callId]) {
-                    module.metadata[callId].complete = $(this).is(':checked');
+                if (metadataToSave && metadataToSave[callId]) {
+                    metadataToSave[callId].complete = $(this).is(':checked');
                 }
             });
 
-            module.ajax("metadataSave", {
-                record: getParam('id'),
-                metadata: JSON.stringify(module.metadata)
-            }).then(function () {
-                window.onbeforeunload = function () { };
-                window.location.reload();
-            }).catch(function (err) {
-                console.error(err);
+            if (!rawEditEnabled) {
+                saveMetadata(metadataToSave);
+                return;
+            }
+
+            const confirmPromise = module.swal
+                ? module.swal.confirm(
+                    'Save Raw Metadata?',
+                    'This will replace the stored call metadata with the JSON you entered. Continue only if you have verified the payload.',
+                    {
+                        confirmButtonText: 'Save Raw Metadata',
+                        cancelButtonText: 'Cancel',
+                        isDestructive: true,
+                        focusCancel: true
+                    }
+                )
+                : Swal.fire({
+                    icon: 'warning',
+                    title: 'Save Raw Metadata?',
+                    text: 'This will replace the stored call metadata with the JSON you entered. Continue only if you have verified the payload.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Save Raw Metadata',
+                    cancelButtonText: 'Cancel',
+                    focusCancel: true
+                });
+            confirmPromise.then((confirmation) => {
+                if (confirmation.isConfirmed) saveMetadata(metadataToSave);
             });
         });
     };
@@ -167,7 +252,7 @@
         }
     };
 
-    const buildCallSummaryTable = () => {
+    const buildCallHistoryTable = () => {
         if (!module.metadata || !module.renderers || !module.renderers.renderCallHistoryTable) return;
 
         const validInstances = [];
@@ -192,7 +277,7 @@
             }
         }
 
-        $(".callSummarySettings").off('click').on('click', threeDotClick);
+        $(".callHistorySettings").off('click').on('click', threeDotClick);
 
         if (validInstances.length === 0) {
             positionHistoryContainer();
@@ -209,28 +294,21 @@
             return;
         }
 
-        const isCallLogPage = (getParam('page') === (module.static ? module.static.instrument : 'call_log'));
-        const lastValidIndex = validInstances[validInstances.length - 1].instance;
-
-        $('.callSummaryTable').DataTable({
+        $('.callHistoryTable').DataTable({
             pageLength: 20,
-            dom: validInstances.length > callSummaryPageSize ? 'rtp' : 'rt',
-            order: [
-                [0, "desc"]
-            ],
+            dom: validInstances.length > callHistoryPageSize ? 'rtp' : 'rt',
+            ordering: false,
             createdRow: (row) => $(row).addClass('dataTablesRow'),
             columns: [
                 { title: '#', data: 'instance', className: 'dt-center text-muted small' },
                 { title: 'Call', data: 'name', className: 'fw-semibold' },
                 { title: 'Msg', data: 'leftMessage', className: 'dt-body-center' },
-                { title: 'Call time', data: 'datetime', className: 'small' },
-                { title: '', data: 'deleteInstance', bSortable: false, className: 'dt-body-right' }
+                { title: 'Call time', data: 'datetime', className: 'small' }
             ],
             data: validInstances.map((item) => {
                 const data = item.data;
                 const index = item.instance;
                 const m = (module.metadata && data['call_id']) ? module.metadata[data['call_id']] : null;
-                const allowDelete = isCallLogPage && (lastValidIndex === index);
                 let callName = (m && m['name']) ? m['name'] : '';
                 if (!callName && data['call_id']) {
                     const cid = String(data['call_id']);
@@ -247,22 +325,12 @@
                     instance: index,
                     name: callName || "Unknown Call",
                     datetime: data['call_open_datetime'] || (data['call_open_date'] ? `${data['call_open_date']} ${data['call_open_time'] || ''}`.trim() : ''),
-                    leftMessage: (data['call_left_message'] && (data['call_left_message'][1] === "1" || data['call_left_message'] === "1")) ? '<span class="badge bg-info text-white">Yes</span>' : '<span class="text-muted small">No</span>',
-                    deleteInstance: allowDelete ? (module.renderers ? module.renderers.renderDeleteLog() : '') : ''
+                    leftMessage: (data['call_left_message'] && (data['call_left_message'][1] === "1" || data['call_left_message'] === "1")) ? '<span class="badge bg-info text-white">Yes</span>' : '<span class="text-muted small">No</span>'
                 };
             })
         });
 
-        $(".callHistoryContainer .sorting_disabled").html(module.renderers ? module.renderers.renderSettingsButton() : '');
-
         $('body').off('click', '.dataTablesRow').on('click', '.dataTablesRow', childRowExpand);
-
-        if (isCallLogPage) {
-            $('.deleteInstance').off('click').on('click', function (e) {
-                e.stopPropagation();
-                openDeleteModal();
-            });
-        }
 
         positionHistoryContainer();
         setTimeout(positionHistoryContainer, 150);
@@ -279,6 +347,6 @@
     };
 
     $(function () {
-        buildCallSummaryTable();
+        buildCallHistoryTable();
     });
 })();
