@@ -40,13 +40,24 @@
         return false;
     };
 
+    // Format a date+time pair using the project's configured dateTimeFormat (via utils),
+    // falling back to a plain concatenation if utils is unavailable.
+    const formatCallDatetime = (date, time) => {
+        const raw = [date, time].filter(Boolean).join(' ').trim();
+        if (!raw) return '';
+        if (module.utils && module.utils.formatDateTime) {
+            return module.utils.formatDateTime(raw, !!time);
+        }
+        return raw;
+    };
+
     const getPreviousCalldatetime = (callID) => {
         const instances = getCallInstanceIds(callID);
         if (!instances.length) return "";
         let lastInst = instances.slice(-1)[0];
         let data = module.data[lastInst];
         if (!data) return "";
-        return (data['call_open_date'] || '') + " " + (data['call_open_time'] || '');
+        return formatCallDatetime(data['call_open_date'] || '', data['call_open_time'] || '');
     };
 
     const getPreviousCallTasks = (callID) => {
@@ -175,6 +186,65 @@
         return n + (s[(v - 20) % 10] || s[v] || s[0]);
     };
 
+    /**
+     * Populates the hidden form fields call_template, call_event_name/call_event,
+     * call_id, and call_attempt based on the selected call tab and its metadata.
+     *
+     * @param {string} id       - The call ID from data-call-id (e.g. "call_1", "call_2|event_1_arm_1", "adhoc||xyz")
+     * @param {object} call     - The call metadata object from module.metadata[id]
+     * @param {number} attempt  - The attempt number (instances.length + 1)
+     */
+    const populateCallFormFields = (id, call, attempt) => {
+        const callObj = call || {};
+        const cleanId = String(id || '');
+        const baseId = cleanId.split('|')[0].split('||')[0];
+
+        // --- Resolve template ---
+        let template = callObj.template || '';
+        if (!template && module.callTemplates) {
+            template = module.callTemplates[baseId] || module.callTemplates[cleanId] || '';
+        }
+        if (!template) {
+            template = cleanId.includes('||') ? 'adhoc' : 'new';
+        }
+
+        // --- Resolve event name ---
+        // Priority: pipe-encoded event in id → call.event_id/call.event → currentEventName
+        let eventName = '';
+        const pipeParts = cleanId.split('|');
+        if (pipeParts.length > 1 && !cleanId.includes('||')) {
+            // e.g. "call_remind|event_1_arm_1"
+            eventName = pipeParts[1] || '';
+        }
+        if (!eventName) {
+            const rawEvent = callObj.event_id || callObj.event || '';
+            if (rawEvent) {
+                // If numeric, look up unique event name from passed map
+                if (/^\d+$/.test(String(rawEvent)) && module.uniqueEventNames) {
+                    eventName = module.uniqueEventNames[rawEvent] || String(rawEvent);
+                } else {
+                    eventName = String(rawEvent);
+                }
+            }
+        }
+        if (!eventName) {
+            eventName = module.currentEventName || '';
+        }
+
+        // --- Set fields ---
+        $("input[name=call_id]").val(cleanId).trigger('blur');
+        $("input[name=call_attempt]").val(attempt || 1).trigger('blur');
+
+        const $tmpl = $("[name=call_template]");
+        if ($tmpl.is('select')) {
+            $tmpl.val(template).trigger('change').trigger('blur');
+        } else {
+            $tmpl.val(template).trigger('blur');
+        }
+
+        $("[name=call_event], [name=call_event_name]").val(eventName).trigger('change').trigger('blur');
+    };
+
     const isScriptEmpty = (html) => {
         if (!html) return true;
         const stripped = String(html)
@@ -256,16 +326,16 @@
 
     module.updateCallScript = updateCallScript;
 
-    const isCompletedLog = () => {
-        if ($(`select[name=${module.static.instrument}_complete]`).val() === "0") return false;
+    const isHistoricLog = () => {
+        let instance = getParam('instance') || 1;
+        let data = (module.data && module.data[instance]) ? module.data[instance] : {};
+        const outcome = Array.isArray(data['call_outcome']) ? data['call_outcome'][1] : data['call_outcome'];
+        if (String(outcome || '') !== '1') return false;
 
         if (!$("#historic-display-tr").length && module.renderers && module.renderers.renderHistoricDisplay) {
             $(".formtbody").prepend(module.renderers.renderHistoricDisplay());
         }
-        $("#__SUBMITBUTTONS__-tr").hide();
 
-        let instance = getParam('instance') || 1;
-        let data = (module.data && module.data[instance]) ? module.data[instance] : {};
         let id = data['call_id'];
         let meta = (id && module.metadata) ? module.metadata[id] : null;
 
@@ -277,10 +347,9 @@
             updateCallScript('');
         }
         $("td:contains(Current Caller)").next().text(data['call_open_user_full_name'] || '');
-        $("#CallLogCurrentTime").text((data['call_open_date'] || '') + " " + (data['call_open_time'] || ''));
+        $("#CallLogCurrentTime").text(formatCallDatetime(data['call_open_date'] || '', data['call_open_time'] || ''));
         $("#CallLogPreviousTime").text("Historic");
-        $('.notesNew').prop('readonly', true).addClass('bg-light');
-        return true;
+        return false;
     };
 
     const buildTabs = () => {
@@ -453,7 +522,7 @@
 
         buildNotesArea();
 
-        if (isCompletedLog()) return;
+        isHistoricLog();
 
         buildTabs();
         buildAdhocMenu();
@@ -472,8 +541,8 @@
             updateCallScript('');
         }
 
-        if (!module.data || Object.keys(module.data).length === 0) return;
-
+        // Bind tab click handler and schedule initial tab selection regardless of
+        // whether there is existing call data (fixes first-call-ever scenario).
         setTimeout(() => {
             $("#CallLogCurrentTime").text(
                 ($("input[name=call_open_date]").val() || '') + " " + ($("input[name=call_open_time]").val() || '')
@@ -489,10 +558,7 @@
             let instances = getCallInstanceIds(id);
             $("#CallLogCurrentCall").text(getCallName(id, call));
             $("#CallLogPreviousTime").text(instances.length === 0 ? 'None' : getPreviousCalldatetime(id));
-            $("input[name=call_attempt]").val(instances.length + 1).blur();
-            $("input[name=call_id]").val(id).blur();
-            $("select[name=call_template]").val(call['template'] || '').change();
-            $("input[name=call_event_name]").val(id.split('|')[1] || "");
+            populateCallFormFields(id, call, instances.length + 1);
             updateCallNotes(id);
             updateCallScript(id);
         });
@@ -523,10 +589,22 @@
             $("#submit-btn-dropdown").parent().find('button').prop('disabled', !hasVal).css('pointer-events', hasVal ? 'inherit' : 'none');
         };
 
+        // Safety net: re-apply call form fields immediately before form save in case
+        // the active tab's fields somehow got cleared by REDCap branching logic.
+        const ensureFieldsOnSave = () => {
+            const $activeTab = $(".callTab.active:visible");
+            if (!$activeTab.length) return;
+            const id = $activeTab.data('call-id');
+            if (!id) return;
+            const call = module.metadata[id] || {};
+            const instances = getCallInstanceIds(id);
+            populateCallFormFields(id, call, instances.length + 1);
+        };
+        $("#submit-btn-saverecord, #goto-call-list, form#form").on('click submit', ensureFieldsOnSave);
+
         $("#call_outcome-tr").find('input, a').on('click change', updateSubmitButtonState);
         updateSubmitButtonState();
 
-        $("select[name=call_log_complete]").val('2');
     };
 
     $(function () {

@@ -99,7 +99,7 @@ form#form > table.form_border {
 
 .call-tabs-nav .callTab i,
 .call-tabs-nav .custom-nav-pill i {
-    margin-right: 0 !important;
+    margin-right: 8px !important;
     display: inline-block;
 }
 
@@ -319,7 +319,6 @@ form#form tr[id*="_hdr_"] td {
     width: 100% !important;
     border-collapse: collapse !important;
     margin: 0 !important;
-    background-color: #ffffff;
 }
 
 .CallLogDetailTable tr {
@@ -334,15 +333,10 @@ form#form tr[id*="_hdr_"] td {
     padding: 7px 12px !important;
     font-size: 0.875rem !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-weight: 600 !important;
     vertical-align: middle !important;
     line-height: 1.4 !important;
-}
-
-.CallLogDetailTable td:nth-child(1),
-.CallLogDetailTable td:nth-child(3) {
-    font-weight: 600 !important;
     color: #475569 !important;
-    font-size: 0.8rem !important;
     text-transform: uppercase !important;
     letter-spacing: 0.03em !important;
     background-color: #f8fafc !important;
@@ -350,10 +344,15 @@ form#form tr[id*="_hdr_"] td {
     white-space: nowrap !important;
 }
 
-.CallLogDetailTable td:nth-child(2),
-.CallLogDetailTable td:nth-child(4) {
+.CallLogDetailTable td:nth-child(1),
+.CallLogDetailTable td:nth-child(3) {
+
+}
+
+.CallLogDetailTable td{
     color: #0f172a !important;
     font-weight: 500 !important;
+    background-color: #f8fafc  !important;
 }
 
 #CallLogCurrentCall {

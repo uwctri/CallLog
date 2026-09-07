@@ -50,12 +50,12 @@
             </tr>`;
         },
         renderHistoricDisplay: function () {
-            return `<tr class="bg-warning bg-opacity-10 border-warning border-start border-4">
+            return `<tr id="historic-display-tr" class="bg-warning bg-opacity-10 border-warning border-start border-4">
                 <td colspan="2" class="p-3">
                     <div class="d-flex align-items-center text-dark">
                         <i class="fas fa-history text-warning me-2 fs-5"></i>
                         <div>
-                            <strong>Completed Call Record</strong> — This call log has been marked complete and is displayed in read-only mode.
+                            <strong>Historic Call Log</strong> — This call log is complete. Editing it may affect call history and attempt tracking; proceed at your own risk.
                         </div>
                     </div>
                 </td>

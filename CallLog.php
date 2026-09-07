@@ -222,6 +222,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         $callNames = [];
         $callScripts = [];
         $callDurations = [];
+        $callTemplates = [];
         foreach ($rawSettings['call_id'] ?? [] as $i => $cid) {
             if (!empty($cid)) {
                 $callNames[$cid] = $rawSettings['call_name'][$i] ?? $cid;
@@ -230,6 +231,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 $duration = $rawSettings['call_expected_duration'][$i] ?? 30;
                 if (is_array($duration)) $duration = reset($duration);
                 $callDurations[$cid] = (int)($duration ?: 30);
+                $callTemplates[$cid] = $rawSettings['call_template'][$i] ?? 'new';
 
                 $pipedScript = (string)$script;
                 if (!empty($pipedScript) && class_exists('Piping')) {
@@ -241,6 +243,25 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         $this->passArgument('callNames', $callNames);
         $this->passArgument('callScripts', $callScripts);
         $this->passArgument('callDurations', $callDurations);
+        $this->passArgument('callTemplates', $callTemplates);
+
+        // Pass event context for client-side call_event_name / call_event population
+        try {
+            $proj = new \Project($project_id);
+            $uniqueEventNames = $proj->getUniqueEventNames() ?: [];
+            $currentEventId = (int)(
+                (isset($event_id) && $event_id > 0) ? $event_id :
+                (!empty($_GET['event_id']) ? $_GET['event_id'] : $proj->firstEventId)
+            );
+            $currentEventName = (string)($proj->getUniqueEventNames($currentEventId) ?: '');
+        } catch (\Throwable $e) {
+            $uniqueEventNames = [];
+            $currentEventId = 0;
+            $currentEventName = '';
+        }
+        $this->passArgument('uniqueEventNames', (object)$uniqueEventNames);
+        $this->passArgument('currentEventName', $currentEventName);
+        $this->passArgument('currentEventId', $currentEventId);
 
         $displayNameField = $rawSettings['display_name_field'] ?? '';
         if (is_array($displayNameField)) $displayNameField = reset($displayNameField);
@@ -292,9 +313,16 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         if (in_array($instrument, array_merge($summary, [$this->instrumentCall]), true)) {
             $metadata = $this->getMetadataRepo()->getMetadata($project_id, $record);
             foreach ($metadata as $k => &$item) {
-                if (is_array($item) && empty($item['name'])) {
+                if (is_array($item)) {
                     $baseId = explode('|', explode('||', $k)[0])[0];
-                    $item['name'] = $callNames[$baseId] ?? ($callNames[$k] ?? ($item['template'] ?? $k));
+                    if (empty($item['name'])) {
+                        $item['name'] = $callNames[$baseId] ?? ($callNames[$k] ?? ($item['template'] ?? $k));
+                    }
+                    if (empty($item['template'])) {
+                        $item['template'] = $callTemplates[$baseId]
+                            ?? ($callTemplates[$k]
+                            ?? (strpos($k, '||') !== false ? 'adhoc' : 'new'));
+                    }
                 }
             }
             unset($item);
