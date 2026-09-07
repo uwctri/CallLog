@@ -152,10 +152,10 @@
             return `<div class="callHistoryContainer card border shadow-xs mb-4">
                 <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
                     <span class="fw-bold text-dark small"><i class="fas fa-history me-1.5 text-primary"></i> Participant Call History</span>
-                    <button type="button" class="btn btn-sm btn-link text-muted p-0 callSummarySettings" title="Call Settings"><i class="fas fa-cog"></i></button>
+                    <button type="button" class="btn btn-sm btn-link text-muted p-0 callHistorySettings" title="Call Metadata Settings"><i class="fas fa-cog"></i></button>
                 </div>
                 <div class="card-body p-2 callHistoryBody">
-                    <table class="table table-sm table-hover callSummaryTable w-100 mb-0"></table>
+                    <table class="table table-sm table-hover callHistoryTable w-100 mb-0"></table>
                 </div>
             </div>`;
         },
@@ -163,7 +163,7 @@
             return `<div class="callHistoryContainer card border shadow-xs mb-4">
                 <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
                     <span class="fw-bold text-dark small"><i class="fas fa-history me-1.5 text-primary"></i> Participant Call History</span>
-                    <button type="button" class="btn btn-sm btn-link text-muted p-0 callSummarySettings" title="Call Settings"><i class="fas fa-cog"></i></button>
+                    <button type="button" class="btn btn-sm btn-link text-muted p-0 callHistorySettings" title="Call Metadata Settings"><i class="fas fa-cog"></i></button>
                 </div>
                 <div class="card-body p-3 text-center text-muted small">
                     <i class="fas fa-phone-slash text-secondary opacity-50 fs-4 mb-2 d-block"></i>
@@ -172,27 +172,55 @@
             </div>`;
         },
         renderCallHistorySettings: function () {
-            return `<div class="text-start mb-2">
-                <p class="small text-muted mb-2">Manage completion status for scheduled call types for this participant:</p>
-            </div><div class="call-metadata-card">`;
+            return `<div class="call-history-settings-grid">
+            <div class="call-history-settings-column call-history-status-column">
+            <div class="call-history-settings-section">
+                <div class="call-history-settings-section-title"><i class="fas fa-tasks me-2"></i>Call Status</div>
+                <div class="call-history-settings-section-copy">
+                    <p class="small text-muted mb-1">Use the checkboxes below to mark each scheduled call as complete or incomplete.</p>
+                    <p class="small text-muted mb-2">Changes are saved when you select <strong>Save Settings</strong>.</p>
+                </div>
+                <div class="call-metadata-card">`;
+        },
+        renderCallHistoryRawMetadata: function (rawMetadata) {
+            return `</div></div>
+            <div class="call-history-settings-column call-history-secondary-column">
+            <div class="call-history-settings-section call-history-raw-section">
+                <div class="call-history-settings-section-title"><i class="fas fa-code me-2"></i>Raw Metadata Payload</div>
+                <p class="small text-muted mb-2">Read-only by default. Enabling editing can overwrite call scheduling and history data.</p>
+                <label class="call-history-raw-toggle">
+                    <input type="checkbox" id="enableRawMetadataEdit">
+                    <span>I understand the risk and want to enable raw JSON editing.</span>
+                </label>
+                <textarea class="form-control callHistoryRawMetadata" rows="9" readonly spellcheck="false">${rawMetadata}</textarea>
+            </div>`;
+        },
+        renderCallHistoryDeleteAction: function () {
+            return `<div class="call-history-settings-danger mt-3 pt-3">
+                <div class="call-history-danger-copy">
+                    <div class="call-history-settings-section-title text-danger border-0 p-0"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</div>
+                    <p class="small text-muted mb-2">Only delete the most recent call log. Deleting an older call can disrupt total call attempt tracking. This cannot be undone.</p>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm deleteCallHistoryInstance">
+                    <i class="fas fa-trash-alt me-1"></i> Delete Most Recent Call Log
+                </button>
+            </div>`;
         },
         renderCallHistoryRow: function (name, callId, isComplete) {
             return `<label class="call-metadata-item" for="meta_${callId}">
-                <div class="d-flex align-items-center flex-grow-1">
-                    <input class="form-check-input callMetadataEdit me-2" type="checkbox" data-call="${callId}" id="meta_${callId}" ${isComplete ? 'checked' : ''}>
+                <div class="call-metadata-main">
+                    <input class="form-check-input callMetadataEdit" type="checkbox" data-call="${callId}" id="meta_${callId}" ${isComplete ? 'checked' : ''}>
                     <span class="call-name-label">${name}</span>
+                    <span class="call-metadata-action">Mark complete</span>
                 </div>
-                <span class="call-id-tag">${callId}</span>
+                <div class="call-metadata-meta">
+                    <span class="call-metadata-status ${isComplete ? 'is-complete' : 'is-incomplete'}">${isComplete ? 'Complete' : 'Incomplete'}</span>
+                    <span class="call-id-tag">${callId}</span>
+                </div>
             </label>`;
         },
         renderCallClosed: function () {
             return `<span class="badge bg-success ms-2"><i class="fas fa-check me-1"></i> Log Closed</span>`;
-        },
-        renderDeleteLog: function () {
-            return `<button type="button" class="btn btn-outline-danger btn-xs deleteInstance" title="Delete Call Log Instance"><i class="fas fa-trash-alt"></i></button>`;
-        },
-        renderSettingsButton: function () {
-            return `<button type="button" class="btn btn-sm btn-link text-muted p-0 callSummarySettings" title="Call Settings"><i class="fas fa-cog"></i></button>`;
         }
     };
 

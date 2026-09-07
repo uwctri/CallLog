@@ -302,7 +302,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             $this->passArgument('data', $this->getAllCallData($project_id, $record));
             $this->includeCss('css/log.css');
             $this->includeCss('css/swal.css');
-            $this->includeJs('js/summary_table.js', true);
+            $this->includeJs('js/call_history.js', true);
         }
     }
 

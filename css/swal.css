@@ -26,6 +26,28 @@
     box-sizing: border-box !important;
 }
 
+.call-log-swal-popup.call-history-settings-popup,
+.swal2-popup.call-history-settings-popup {
+    width: 92vw !important;
+    max-width: 980px !important;
+    padding: 1.25rem !important;
+}
+
+.call-history-settings-popup .call-log-swal-custom-icon {
+    margin-bottom: 0.75rem;
+}
+
+.call-history-settings-popup .swal2-title {
+    margin-bottom: 0.75rem !important;
+}
+
+.call-history-settings-popup .swal2-html-container {
+    max-height: 70vh;
+    margin: 0 !important;
+    overflow-y: auto;
+    text-align: left !important;
+}
+
 /* Icon Badges (Refined, Compact 52px Badge Design) */
 .call-log-swal-popup .swal2-icon,
 .call-log-swal-popup .call-log-swal-icon {

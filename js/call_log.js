@@ -41,8 +41,9 @@
     };
 
     const getPreviousCalldatetime = (callID) => {
-        if (!module.metadata[callID] || !module.metadata[callID].instances || !module.metadata[callID].instances.length) return "";
-        let lastInst = module.metadata[callID].instances.slice(-1)[0];
+        const instances = getCallInstanceIds(callID);
+        if (!instances.length) return "";
+        let lastInst = instances.slice(-1)[0];
         let data = module.data[lastInst];
         if (!data) return "";
         return (data['call_open_date'] || '') + " " + (data['call_open_time'] || '');
@@ -60,10 +61,26 @@
         return arr;
     };
 
+    const getCallInstanceIds = (callID) => {
+        const metadataCall = module.metadata && module.metadata[callID];
+        const instances = metadataCall && Array.isArray(metadataCall.instances)
+            ? metadataCall.instances.slice()
+            : [];
+        const knownInstances = new Set(instances.map(String));
+
+        $.each(module.data || {}, function (instance, data) {
+            if (data && String(data['call_id'] || '') === String(callID) && !knownInstances.has(String(instance))) {
+                instances.push(instance);
+            }
+        });
+        return instances;
+    };
+
     const getPreviousCallNotes = (callID) => {
-        if (!module.metadata[callID] || !module.metadata[callID].instances) return [];
         let notes = [];
-        $.each(module.metadata[callID].instances, function (_, instance) {
+        const instances = getCallInstanceIds(callID);
+
+        $.each(instances, function (_, instance) {
             let data = module.data[instance];
             if (!data) return;
             notes.push({
@@ -84,7 +101,7 @@
             if (!this.text) return;
             const header = `${this.dt} ${this.user}`.trim();
             const entry = header ? `[${header}]\n${this.text}` : this.text;
-            oldNotesText = oldNotesText ? `${oldNotesText}\n\n---\n\n${entry}` : entry;
+            oldNotesText = oldNotesText ? `${oldNotesText}\n${entry}` : entry;
         });
         $('.notesOld').val(oldNotesText);
     };
@@ -92,17 +109,15 @@
     const selectTab = () => {
         const currentVal = $("input[name=call_id]").val();
         if (currentVal !== "") {
-            const $match = $(`.callTab`).filter((_, el) => $(el).data('call-id') === currentVal);
+            const $match = $(`.callTab`).filter((_, el) => String($(el).data('call-id')) === String(currentVal));
             if ($match.length) {
-                $(".callTab.active").removeClass('active');
-                $match.addClass('active');
-                updateCallScript(currentVal);
+                $match.first().click();
                 return;
             }
         }
         if (getParam('call_id')) {
             const rawId = decodeURIComponent(getParam('call_id'));
-            const $paramTab = $(`.callTab`).filter((_, el) => $(el).data('call-id') === rawId);
+            const $paramTab = $(`.callTab`).filter((_, el) => String($(el).data('call-id')) === String(rawId));
             if ($paramTab.length) {
                 $paramTab.first().click();
                 return;
@@ -471,9 +486,10 @@
             $(el).addClass('active');
             let id = $(el).data('call-id');
             let call = module.metadata[id] || {};
+            let instances = getCallInstanceIds(id);
             $("#CallLogCurrentCall").text(getCallName(id, call));
-            $("#CallLogPreviousTime").text((!call.instances || call.instances.length === 0) ? 'None' : getPreviousCalldatetime(id));
-            $("input[name=call_attempt]").val((call.instances ? call.instances.length : 0) + 1).blur();
+            $("#CallLogPreviousTime").text(instances.length === 0 ? 'None' : getPreviousCalldatetime(id));
+            $("input[name=call_attempt]").val(instances.length + 1).blur();
             $("input[name=call_id]").val(id).blur();
             $("select[name=call_template]").val(call['template'] || '').change();
             $("input[name=call_event_name]").val(id.split('|')[1] || "");
