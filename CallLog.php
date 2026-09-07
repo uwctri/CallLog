@@ -57,33 +57,40 @@ class CallLog extends AbstractExternalModule
     private ?CallQueryService $queryService = null;
     private ?InstrumentDeploymentService $deploymentService = null;
     private ?ApiService $apiService = null;
+    private ?\UWMadison\CallLog\Services\LoggingService $loggingService = null;
 
     public function getConfigService(): ConfigService
     {
         return $this->configService ??= new ConfigService($this);
     }
 
-    private function getMetadataRepo(): CallMetadataRepository
+    public function getLoggingService(): \UWMadison\CallLog\Services\LoggingService
+    {
+        return $this->loggingService ??= new \UWMadison\CallLog\Services\LoggingService($this);
+    }
+
+    public function getMetadataRepo(): CallMetadataRepository
     {
         return $this->metadataRepo ??= new CallMetadataRepository();
     }
 
-    private function getDateMathService(): DateMathService
+    public function getDateMathService(): DateMathService
     {
         return $this->dateMathService ??= new DateMathService();
     }
 
-    private function getGeneratorService(): CallGeneratorService
+    public function getGeneratorService(): CallGeneratorService
     {
         return $this->generatorService ??= new CallGeneratorService(
             $this,
             $this->getConfigService(),
             $this->getMetadataRepo(),
-            $this->getDateMathService()
+            $this->getDateMathService(),
+            $this->getLoggingService()
         );
     }
 
-    private function getQueryService(): CallQueryService
+    public function getQueryService(): CallQueryService
     {
         return $this->queryService ??= new CallQueryService(
             $this,
@@ -92,27 +99,33 @@ class CallLog extends AbstractExternalModule
         );
     }
 
-    private function getDeploymentService(): InstrumentDeploymentService
+    public function getDeploymentService(): InstrumentDeploymentService
     {
         return $this->deploymentService ??= new InstrumentDeploymentService();
     }
 
-    private function getApiService(): ApiService
+    public function getApiService(): ApiService
     {
         return $this->apiService ??= new ApiService(
             $this,
             $this->getConfigService(),
             $this->getGeneratorService(),
-            $this->getMetadataRepo()
+            $this->getMetadataRepo(),
+            $this->getLoggingService()
         );
     }
 
     public function redcap_save_record($project_id, $record, $instrument)
     {
+        // Skip call generation evaluation when saving internal module metadata
+        if ($instrument === $this->instrumentMeta) {
+            return;
+        }
+
         $project_id = (int)$project_id;
         $record = (string)$record;
 
-        $this->getGeneratorService()->evaluateAndGenerateForRecord($project_id, $record, $instrument);
+        $this->getGeneratorService()->evaluateAndGenerateForRecord($project_id, $record, $instrument, 'save_record');
     }
 
     public function redcap_every_page_top($project_id)
@@ -209,9 +222,13 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             $metaRepo = $this->getMetadataRepo();
             $metaData = $metaRepo->getMetadata($project_id, $record);
             if (!empty($metaData[$callId])) {
+                $user = defined('USERID') ? USERID : '';
                 $metaData[$callId]['callStarted'] = date("Y-m-d H:i:s");
-                $metaData[$callId]['callStartedBy'] = defined('USERID') ? USERID : '';
-                $metaRepo->saveMetadata($project_id, $record, $metaData);
+                $metaData[$callId]['callStartedBy'] = $user;
+                $saved = $metaRepo->saveMetadata($project_id, $record, $metaData);
+                if ($saved) {
+                    $this->getLoggingService()->logCallStarted($project_id, $record, $callId, $user);
+                }
             }
         }
 
@@ -232,18 +249,18 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
     public function redcap_module_ajax($action, $payload, $project_id, $record)
     {
         $project_id = (int)$project_id;
-        $record = (string)($record ?? $payload['record'] ?? '');
+        $record = !empty($payload['record']) ? (string)$payload['record'] : (string)($record ?: '');
         $success = true;
         $result = [];
         $callListData = false;
 
         $metadataRepo = $this->getMetadataRepo();
-        $metadata = $metadataRepo->getMetadata($project_id, $record);
+        $metadataActions = ['metadataSave', 'setCallStarted', 'setCallEnded', 'setNoCallsToday', 'newAdhoc'];
+        $metadata = (!empty($record) && in_array($action, $metadataActions, true))
+            ? $metadataRepo->getMetadata($project_id, $record)
+            : [];
 
         switch ($action) {
-            case "log":
-                $this->projectLog($payload['text'] ?? '', $record, $payload['event'] ?? null, $project_id);
-                break;
             case "getData":
                 $callListRes = $this->getQueryService()->getCallListData($project_id);
                 $result['showCallback'] = $callListRes['showCallback'] ?? false;
@@ -263,16 +280,28 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 break;
             case "saveConfig":
                 if (!empty($payload['settings']) && is_array($payload['settings'])) {
-                    $result['saved'] = $this->getConfigService()->saveProjectSettings($project_id, $payload['settings']);
+                    $saved = $this->getConfigService()->saveProjectSettings($project_id, $payload['settings']);
+                    $result['saved'] = $saved;
+                    if ($saved) {
+                        $user = defined('USERID') ? USERID : '';
+                        $callTypesCount = count($payload['settings']['call_id'] ?? []);
+                        $tabsCount = count($payload['settings']['tab_id'] ?? []);
+                        $this->getLoggingService()->logConfigSaved($project_id, $user, [
+                            'call_types_count' => $callTypesCount,
+                            'tabs_count' => $tabsCount
+                        ]);
+                    }
                 }
                 break;
             case "newAdhoc":
                 if (!empty($payload['id'])) {
-                    $result = $this->metadataAdhoc($project_id, $record, $payload);
+                    $result['saved'] = $this->metadataAdhoc($project_id, $record, $payload);
                 }
                 break;
             case "callDelete":
                 $metadataRepo->deleteLastCallInstance($project_id, $record);
+                $user = defined('USERID') ? USERID : '';
+                $this->getLoggingService()->logCallInstanceDeleted($project_id, $record, $user);
                 break;
             case "metadataSave":
                 if (!empty($payload['metadata'])) {
@@ -284,26 +313,132 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 break;
             case "setCallStarted":
                 $user = !empty($payload['user']) ? $payload['user'] : (defined('USERID') ? USERID : '');
-                if (!empty($payload['id']) && !empty($metadata)) {
-                    $metadata[$payload['id']]['callStarted'] = date("Y-m-d H:i:s");
-                    $metadata[$payload['id']]['callStartedBy'] = $user;
-                    $result['saved'] = $metadataRepo->saveMetadata($project_id, $record, $metadata);
+                $callId = !empty($payload['id']) ? (string)$payload['id'] : '';
+                if (empty($record)) {
+                    $result['saved'] = false;
+                    $result['error'] = 'Record ID is missing.';
+                    break;
+                }
+                if (empty($callId)) {
+                    $result['saved'] = false;
+                    $result['error'] = 'Call ID is missing.';
+                    break;
+                }
+                if (empty($metadata)) {
+                    $metadata = $metadataRepo->getMetadata($project_id, $record);
+                }
+                $targetKey = isset($metadata[$callId]) ? $callId : null;
+                if (!$targetKey) {
+                    foreach ($metadata as $k => $v) {
+                        if ($k === $callId || ($v['id'] ?? '') === $callId || strpos($k, $callId . '|') === 0 || strpos($callId, $k . '|') === 0) {
+                            $targetKey = $k;
+                            break;
+                        }
+                    }
+                }
+                if (!$targetKey) {
+                    $targetKey = $callId;
+                }
+                if (!isset($metadata[$targetKey]) || !is_array($metadata[$targetKey])) {
+                    $metadata[$targetKey] = [];
+                }
+                $startTime = date("Y-m-d H:i:s");
+                $metadata[$targetKey]['callStarted'] = $startTime;
+                $metadata[$targetKey]['callStartedBy'] = $user;
+                $saved = $metadataRepo->saveMetadata($project_id, $record, $metadata);
+                $result['saved'] = $saved;
+                $result['callStarted'] = $startTime;
+                $result['callStartedBy'] = $user;
+                if ($saved) {
+                    $this->getLoggingService()->logCallStarted($project_id, $record, (string)$targetKey, $user);
+                } else {
+                    $result['error'] = 'Failed to save call start state to metadata.';
                 }
                 break;
             case "setCallEnded":
-                if (!empty($payload['id']) && !empty($metadata)) {
-                    $metadata[$payload['id']]['callStarted'] = '';
-                    $metadata[$payload['id']]['callStartedBy'] = '';
-                    $result['saved'] = $metadataRepo->saveMetadata($project_id, $record, $metadata);
+                $user = defined('USERID') ? USERID : '';
+                $callId = !empty($payload['id']) ? (string)$payload['id'] : '';
+                if (empty($record)) {
+                    $result['saved'] = false;
+                    $result['error'] = 'Record ID is missing.';
+                    break;
+                }
+                if (empty($callId)) {
+                    $result['saved'] = false;
+                    $result['error'] = 'Call ID is missing.';
+                    break;
+                }
+                if (empty($metadata)) {
+                    $metadata = $metadataRepo->getMetadata($project_id, $record);
+                }
+                $targetKey = isset($metadata[$callId]) ? $callId : null;
+                if (!$targetKey) {
+                    foreach ($metadata as $k => $v) {
+                        if ($k === $callId || ($v['id'] ?? '') === $callId || strpos($k, $callId . '|') === 0 || strpos($callId, $k . '|') === 0) {
+                            $targetKey = $k;
+                            break;
+                        }
+                    }
+                }
+                if (!$targetKey) {
+                    $targetKey = $callId;
+                }
+                if (!isset($metadata[$targetKey]) || !is_array($metadata[$targetKey])) {
+                    $metadata[$targetKey] = [];
+                }
+                $metadata[$targetKey]['callStarted'] = '';
+                $metadata[$targetKey]['callStartedBy'] = '';
+                $saved = $metadataRepo->saveMetadata($project_id, $record, $metadata);
+                $result['saved'] = $saved;
+                if ($saved) {
+                    $this->getLoggingService()->logCallEnded($project_id, $record, (string)$targetKey, $user);
+                } else {
+                    $result['error'] = 'Failed to clear call start state in metadata.';
                 }
                 break;
             case "setNoCallsToday":
-                if (!empty($payload['id']) && !empty($metadata)) {
-                    if (!is_array($metadata[$payload['id']]['noCallsToday'] ?? null)) {
-                        $metadata[$payload['id']]['noCallsToday'] = [];
+                $user = defined('USERID') ? USERID : '';
+                $callId = !empty($payload['id']) ? (string)$payload['id'] : '';
+                if (empty($record)) {
+                    $result['saved'] = false;
+                    $result['error'] = 'Record ID is missing.';
+                    break;
+                }
+                if (empty($callId)) {
+                    $result['saved'] = false;
+                    $result['error'] = 'Call ID is missing.';
+                    break;
+                }
+                if (empty($metadata)) {
+                    $metadata = $metadataRepo->getMetadata($project_id, $record);
+                }
+                $targetKey = isset($metadata[$callId]) ? $callId : null;
+                if (!$targetKey) {
+                    foreach ($metadata as $k => $v) {
+                        if ($k === $callId || ($v['id'] ?? '') === $callId || strpos($k, $callId . '|') === 0 || strpos($callId, $k . '|') === 0) {
+                            $targetKey = $k;
+                            break;
+                        }
                     }
-                    $metadata[$payload['id']]['noCallsToday'][] = date('Y-m-d');
-                    $result['saved'] = $metadataRepo->saveMetadata($project_id, $record, $metadata);
+                }
+                if (!$targetKey) {
+                    $targetKey = $callId;
+                }
+                if (!isset($metadata[$targetKey]) || !is_array($metadata[$targetKey])) {
+                    $metadata[$targetKey] = [];
+                }
+                if (!is_array($metadata[$targetKey]['noCallsToday'] ?? null)) {
+                    $metadata[$targetKey]['noCallsToday'] = [];
+                }
+                $todayDate = date('Y-m-d');
+                $metadata[$targetKey]['noCallsToday'][] = $todayDate;
+                $saved = $metadataRepo->saveMetadata($project_id, $record, $metadata);
+                $result['saved'] = $saved;
+                $result['date'] = $todayDate;
+                if ($saved) {
+                    $this->getLoggingService()->logNoCallsToday($project_id, $record, (string)$targetKey, $user, $todayDate);
+                } else {
+                    $result['error'] = 'Failed to save no calls today state to metadata.';
                 }
                 break;
             case "generate":
@@ -311,7 +446,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             case "newEntryLoad":
             case "scheduleLoad":
                 if ($project_id > 0) {
-                    $count = $this->getGeneratorService()->evaluateAndGenerateForProject($project_id);
+                    $count = $this->getGeneratorService()->evaluateAndGenerateForProject($project_id, 'manual_dashboard');
                     $success = true;
                     $result['generatedCount'] = $count;
                     $result['message'] = "Call log generation completed for project {$project_id}.";
@@ -381,7 +516,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         $totalGenerated = 0;
 
         foreach ($projects as $projectId) {
-            $totalGenerated += $this->getGeneratorService()->evaluateAndGenerateForProject((int)$projectId);
+            $totalGenerated += $this->getGeneratorService()->evaluateAndGenerateForProject((int)$projectId, 'cron_daily');
         }
 
         return "Cron completed successfully. Processed calls for " . count($projects) . " projects.";
@@ -393,7 +528,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         $totalGenerated = 0;
 
         foreach ($projects as $projectId) {
-            $totalGenerated += $this->getGeneratorService()->evaluateAndGenerateForProject((int)$projectId);
+            $totalGenerated += $this->getGeneratorService()->evaluateAndGenerateForProject((int)$projectId, 'cron_hourly');
         }
 
         return "Hourly new entry cron completed successfully. Processed calls for " . count($projects) . " projects.";
@@ -466,7 +601,23 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             "complete" => false
         ];
 
-        return $this->getMetadataRepo()->saveMetadata($projectId, $record, $metadata);
+        $saved = $this->getMetadataRepo()->saveMetadata($projectId, $record, $metadata);
+        if ($saved) {
+            $this->getLoggingService()->logAdhocCreated(
+                $projectId,
+                $record,
+                $key,
+                $adhocConfig['name'] . ' - ' . ($adhocConfig['reasons'][$payload['reason'] ?? ''] ?? ''),
+                (string)($payload['reason'] ?? ''),
+                $reporter,
+                'ui',
+                [
+                    'contact_date' => $date,
+                    'contact_time' => $time
+                ]
+            );
+        }
+        return $saved;
     }
 
 

@@ -709,6 +709,68 @@
                 };
             },
 
+            updateRowCallState(record, callId, changes) {
+                const self = this;
+                record = String(record);
+                callId = String(callId);
+
+                const matchesCallId = (targetId) => {
+                    if (!targetId) return false;
+                    let t = String(targetId);
+                    return t === callId || t.startsWith(callId + '|') || callId.startsWith(t + '|');
+                };
+
+                // 1. Update master displayedData cache
+                if (self.displayedData) {
+                    Object.values(self.displayedData).forEach(rows => {
+                        if (Array.isArray(rows)) {
+                            rows.forEach(r => {
+                                if (r && String(r['_record_id']) === record && matchesCallId(r['_call_id'])) {
+                                    Object.assign(r, changes);
+                                }
+                            });
+                        }
+                    });
+                }
+
+                // 2. Update caller list if a new caller became active
+                if (changes._callStartedBy && changes._isCallStarted) {
+                    let callerName = module.userNameMap ? (module.userNameMap[changes._callStartedBy] || changes._callStartedBy) : changes._callStartedBy;
+                    if (callerName && !self.availableCallers.includes(callerName.trim())) {
+                        self.availableCallers.push(callerName.trim());
+                        self.availableCallers.sort();
+                    }
+                }
+
+                // 3. Update all DataTables instances on the page where this row appears
+                $('.callTable').each((index, el) => {
+                    let $table = $(el);
+                    if (!$.fn.DataTable || !$.fn.DataTable.isDataTable($table[0])) return;
+
+                    let dt = $table.DataTable();
+                    let tab_id = $table.closest('.tab-pane').prop('id');
+                    let tableNeedsDraw = false;
+
+                    dt.rows().every(function() {
+                        let rowData = this.data();
+                        if (rowData && String(rowData['_record_id']) === record && matchesCallId(rowData['_call_id'])) {
+                            Object.assign(rowData, changes);
+                            this.invalidate();
+                            tableNeedsDraw = true;
+
+                            if (this.child.isShown()) {
+                                let updatedChildHtml = self.buildChildRowHtml(rowData, tab_id);
+                                this.child(updatedChildHtml, 'dataTableChild').show();
+                            }
+                        }
+                    });
+
+                    if (tableNeedsDraw) {
+                        dt.draw(false);
+                    }
+                });
+            },
+
             setupDataTables() {
                 const self = this;
 
@@ -751,17 +813,57 @@
                     e.preventDefault();
                     e.stopPropagation();
                     let $btn = $(this);
-                    let record = $btn.data('record');
-                    let callId = $btn.data('callid');
+                    let record = $btn.attr('data-record') || $btn.data('record') || '';
+                    let callId = $btn.attr('data-callid') || $btn.data('callid') || '';
+                    if (!record || !callId) {
+                        let $tr = $btn.closest('tr');
+                        if ($tr.hasClass('dataTableChild')) {
+                            $tr = $tr.prev('tr.dataTablesRow');
+                        }
+                        let table = $tr.closest('.callTable').DataTable();
+                        let rowData = table.row($tr).data() || {};
+                        record = record || rowData['_record_id'] || '';
+                        callId = callId || rowData['_call_id'] || '';
+                    }
                     let restore = self.setButtonLoading($btn);
                     module.ajax("setCallStarted", {
                         record: record,
                         id: callId
-                    }).then(() => {
-                        self.refreshTableData();
+                    }).then((res) => {
+                        let resObj = (res && typeof res === 'object') ? res : {};
+                        let isSaved = Boolean(resObj.saved || (resObj.data && resObj.data.saved));
+                        if (isSaved) {
+                            let caller = resObj.callStartedBy || (resObj.data && resObj.data.callStartedBy) || module.user || '';
+                            let startTime = resObj.callStarted || (resObj.data && resObj.data.callStarted) || new Date().toISOString().slice(0, 19).replace('T', ' ');
+                            self.updateRowCallState(record, callId, {
+                                _callStarted: true,
+                                _isCallStarted: true,
+                                _callStartedBy: caller,
+                                _callStartedTime: startTime
+                            });
+                        } else {
+                            restore();
+                            let errMsg = resObj.error || (resObj.data && resObj.data.error) || 'The server did not confirm saving the call status. Please try again.';
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Could Not Start Call',
+                                    text: errMsg
+                                });
+                            } else {
+                                alert(errMsg);
+                            }
+                        }
                     }).catch(err => {
                         console.error("Failed to start call:", err);
                         restore();
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Failed to communicate with server. Please try again.'
+                            });
+                        }
                     });
                 });
 
@@ -769,17 +871,52 @@
                     e.preventDefault();
                     e.stopPropagation();
                     let $btn = $(this);
-                    let record = $btn.data('record');
-                    let callId = $btn.data('callid');
+                    let record = $btn.attr('data-record') || $btn.data('record') || '';
+                    let callId = $btn.attr('data-callid') || $btn.data('callid') || '';
+                    if (!record || !callId) {
+                        let $tr = $btn.closest('tr');
+                        if ($tr.hasClass('dataTableChild')) {
+                            $tr = $tr.prev('tr.dataTablesRow');
+                        }
+                        let table = $tr.closest('.callTable').DataTable();
+                        let rowData = table.row($tr).data() || {};
+                        record = record || rowData['_record_id'] || '';
+                        callId = callId || rowData['_call_id'] || '';
+                    }
                     let restore = self.setButtonLoading($btn);
                     module.ajax("setNoCallsToday", {
                         record: record,
                         id: callId
-                    }).then(() => {
-                        self.refreshTableData();
+                    }).then((res) => {
+                        let resObj = (res && typeof res === 'object') ? res : {};
+                        let isSaved = Boolean(resObj.saved || (resObj.data && resObj.data.saved));
+                        if (isSaved) {
+                            self.updateRowCallState(record, callId, {
+                                _noCallsToday: true
+                            });
+                        } else {
+                            restore();
+                            let errMsg = resObj.error || (resObj.data && resObj.data.error) || 'The server did not confirm marking no calls today. Please try again.';
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Could Not Update Call',
+                                    text: errMsg
+                                });
+                            } else {
+                                alert(errMsg);
+                            }
+                        }
                     }).catch(err => {
                         console.error("Failed to set no calls today:", err);
                         restore();
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Failed to communicate with server. Please try again.'
+                            });
+                        }
                     });
                 });
 
@@ -787,23 +924,61 @@
                     e.preventDefault();
                     e.stopPropagation();
                     let $btn = $(this);
-                    let record = $btn.data('record');
-                    let callId = $btn.data('callid');
+                    let record = $btn.attr('data-record') || $btn.data('record') || '';
+                    let callId = $btn.attr('data-callid') || $btn.data('callid') || '';
+                    if (!record || !callId) {
+                        let $tr = $btn.closest('tr');
+                        if ($tr.hasClass('dataTableChild')) {
+                            $tr = $tr.prev('tr.dataTablesRow');
+                        }
+                        let table = $tr.closest('.callTable').DataTable();
+                        let rowData = table.row($tr).data() || {};
+                        record = record || rowData['_record_id'] || '';
+                        callId = callId || rowData['_call_id'] || '';
+                    }
                     let restore = self.setButtonLoading($btn);
                     module.ajax("setCallEnded", {
                         record: record,
                         id: callId
-                    }).then(() => {
-                        self.refreshTableData();
+                    }).then((res) => {
+                        let resObj = (res && typeof res === 'object') ? res : {};
+                        let isSaved = Boolean(resObj.saved || (resObj.data && resObj.data.saved));
+                        if (isSaved) {
+                            self.updateRowCallState(record, callId, {
+                                _callStarted: false,
+                                _isCallStarted: false,
+                                _callStartedBy: '',
+                                _callStartedTime: ''
+                            });
+                        } else {
+                            restore();
+                            let errMsg = resObj.error || (resObj.data && resObj.data.error) || 'The server did not confirm ending the call. Please try again.';
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Could Not End Call',
+                                    text: errMsg
+                                });
+                            } else {
+                                alert(errMsg);
+                            }
+                        }
                     }).catch(err => {
                         console.error("Failed to end call:", err);
                         restore();
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Failed to communicate with server. Please try again.'
+                            });
+                        }
                     });
                 });
 
                 $(document).on('click', '.rowLink', function(e) {
-                    let record = $(this).data('record');
-                    let callId = $(this).data('callid');
+                    let record = $(this).attr('data-record') || $(this).data('record');
+                    let callId = $(this).attr('data-callid') || $(this).data('callid');
                     if (record && callId) {
                         module.ajax("setCallStarted", {
                             record: record,

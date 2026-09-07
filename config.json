@@ -46,7 +46,6 @@
         }
     },
     "auth-ajax-actions": [
-        "log",
         "getData",
         "newAdhoc",
         "callDelete",
@@ -61,8 +60,7 @@
         "saveUserColumns",
         "resetUserColumns"
     ],
-    "framework-version": 16,
-    "enable-ajax-logging": true,
+    "framework-version": 17,
     "crons": [
         {
             "cron_name": "call_log_generate_all",
