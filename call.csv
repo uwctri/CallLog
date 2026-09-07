@@ -8,10 +8,10 @@ call_open_time,call_log,,text,,,,time,,,,,,,,,," @HIDDEN @NOW"
 call_open_datetime,call_log,,text,,,,datetime_mdy,,,,,,,,,," @NOW @HIDDEN"
 call_open_user,call_log,,text,,,,,,,,,,,,,," @HIDDEN @USERNAME"
 call_open_user_full_name,call_log,,text,,,,,,,,,,,,,," @HIDDEN @DEFAULT=""[user-fullname]"""
-call_hdr_title,call_log,,descriptive,"<div class=""formHeader ""><i class=""fa fa-phone""></i> Call Log</div>",,,,,,,,,,,,,
-call_hdr_details,call_log,,descriptive,"<div class = ""formSxnHeader""> Call Details </div>",,,,,,,,,,,,,
+call_hdr_title,call_log,,descriptive,"<div class=""call-header""><i class=""fas fa-phone""></i> Call Log</div>",,,,,,,,,,,,,
+call_hdr_details,call_log,,descriptive,"<div class=""call-section-header"">Call Details</div>",,,,,,,,,,,,,
 call_hdr_call_info_table,call_log,,descriptive,"<table class=""CallLogDetailTable""> <tbody> <tr> <td>Current Call:</td><td colspan=""3"" id=""CallLogCurrentCall""></td><td></td></tr><tr> <tr> <td>Current Caller:</td><td colspan=""2"">[call_open_user_full_name]</td><td>Current Call Time:</td><td id=""CallLogCurrentTime""></td></tr><tr> <td>Attempt Number:</td><td>[call_attempt]</td><td></td><td>Previous Call Time:</td><td id=""CallLogPreviousTime""></td></tr></tbody></table>",,,,,,,,,,,,,
-call_hdr_script,call_log,,descriptive,"<div class = ""formSxnHeader""> Call Script </div>",,,,,,,,,,,,,
+call_hdr_script,call_log,,descriptive,"<div class=""call-section-header"">Call Script</div>",,,,,,,,,,,,,
 call_script,call_log,,descriptive,,,,,,,,,,,,,,
 call_answered,call_log,,checkbox,"Subject Answered phone","1,",,,,,,,,,,,,
 call_disconnected,call_log,,checkbox,"Phone Disconnected / Not in Service","1,",,,,,,,,,,,,
@@ -25,4 +25,4 @@ call_callback_time,call_log,,text,"Callback Time",,,time,,,,"[call_requested_cal
 call_outcome,call_log,,radio,"Call Log Outcome","1, All Call Log Tasks Completed | 0, Call Log Incomplete",,,,,,,y,,,,,
 call_task_remaining,call_log,,checkbox,"Task(s) Remaining","1, Example Task 1 | 2, Example Task 2 | 3, Example Task 3",,,,,,"[call_outcome] = ""0""",,,,,,
 call_notes,call_log,,notes,"Call Notes",,,,,,,,,LV,,,,
-call_hdr_end,call_log,,descriptive,"<div class='formHeader '>End Of Call Log</div>",,,,,,,,,,,,,
+call_hdr_end,call_log,,descriptive,"<div class=""call-header call-header-end"">End Of Call Log</div>",,,,,,,,,,,,,

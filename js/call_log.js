@@ -424,8 +424,8 @@
             $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
         }
 
-        if ($('.formHeader, .call-header').css('text-align') !== 'center') {
-            $(".formSxnHeader, .formHeader, .call-header, .call-section-header").addClass('optionalCSS');
+        if ($('.call-header, .callHeader, .formHeader').css('text-align') !== 'center') {
+            $(".call-section-header, .callSxnHeader, .call-header, .callHeader, .formSxnHeader, .formHeader").addClass('optionalCSS');
         }
 
         $("#formtop-div").hide();

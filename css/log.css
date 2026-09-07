@@ -254,8 +254,9 @@ form#form tr[id*="_hdr_"] td {
     padding: 0 !important;
 }
 
-/* Main Form Title Header: .call-header, .formHeader */
+/* Main Form Title Header: .call-header, .callHeader (legacy: .formHeader) */
 .call-header,
+.callHeader,
 .formHeader,
 .formHeader.optionalCSS {
     background-color: #1e293b !important;
@@ -275,6 +276,7 @@ form#form tr[id*="_hdr_"] td {
 }
 
 .call-header i,
+.callHeader i,
 .formHeader i {
     font-size: 1.1rem;
     opacity: 0.9;
@@ -282,7 +284,9 @@ form#form tr[id*="_hdr_"] td {
 
 /* End of Call Log Footer: .call-header-end or #call_hdr_end-tr */
 .call-header.call-header-end,
+.callHeader.call-header-end,
 #call_hdr_end-tr .call-header,
+#call_hdr_end-tr .callHeader,
 #call_hdr_end-tr .formHeader {
     background-color: #334155 !important;
     font-size: 0.95rem !important;
@@ -291,8 +295,10 @@ form#form tr[id*="_hdr_"] td {
     text-transform: uppercase !important;
 }
 
-/* Subsection Headers: .call-section-header, .formSxnHeader */
+/* Subsection Headers: .call-section-header, .callSxnHeader (legacy: .formSxnHeader) */
 .call-section-header,
+.callSxnHeader,
+.call-sxn-header,
 .formSxnHeader,
 .formSxnHeader.optionalCSS {
     background-color: #0f766e !important;
