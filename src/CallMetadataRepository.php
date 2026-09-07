@@ -11,6 +11,8 @@ class CallMetadataRepository
     private string $metadataField = "call_metadata";
     private string $instrumentMeta = "call_log_metadata";
     private string $instrumentCall = "call_log";
+    private array $eventOfInstrumentCache = [];
+    private array $existingRecordCache = [];
 
     public function getMetadata(int $projectId, string $record): array
     {
@@ -25,6 +27,8 @@ class CallMetadataRepository
         if (empty($raw)) {
             return [];
         }
+
+        $this->existingRecordCache["{$projectId}_{$record}"] = true;
 
         $decoded = json_decode($raw, true);
         return is_array($decoded) ? $decoded : [];
@@ -53,11 +57,14 @@ class CallMetadataRepository
             return false;
         }
 
-        $table = REDCap::getDataTable($projectId);
-        $sql = "SELECT field_name FROM {$table} WHERE project_id = ? AND record = ? LIMIT 1";
-        $result = ExternalModules::query($sql, [$projectId, $record]);
-        if (empty($result->fetch_assoc())) {
-            return false;
+        if (empty($this->existingRecordCache["{$projectId}_{$record}"])) {
+            $table = REDCap::getDataTable($projectId);
+            $sql = "SELECT field_name FROM {$table} WHERE project_id = ? AND record = ? LIMIT 1";
+            $result = ExternalModules::query($sql, [$projectId, $record]);
+            if (empty($result->fetch_assoc())) {
+                return false;
+            }
+            $this->existingRecordCache["{$projectId}_{$record}"] = true;
         }
 
         $saveData = [
@@ -130,6 +137,11 @@ class CallMetadataRepository
 
     public function getEventOfInstrument(int $projectId, string $instrument): ?int
     {
+        $cacheKey = "{$projectId}_{$instrument}";
+        if (array_key_exists($cacheKey, $this->eventOfInstrumentCache)) {
+            return $this->eventOfInstrumentCache[$cacheKey];
+        }
+
         global $Proj;
         if (!isset($Proj) || $Proj->project_id != $projectId) {
             $Proj = new Project($projectId);
@@ -144,7 +156,7 @@ class CallMetadataRepository
         }
 
         $intersect = array_intersect($events, $validEvents);
-        return !empty($intersect) ? reset($intersect) : null;
+        return $this->eventOfInstrumentCache[$cacheKey] = (!empty($intersect) ? reset($intersect) : null);
     }
 
     public function getCallLogStats(int $projectId): array

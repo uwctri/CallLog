@@ -5,7 +5,7 @@ namespace UWMadison\CallLog\Services;
 use REDCap;
 use RestUtility;
 use UWMadison\CallLog\CallMetadataRepository;
-use UWMadison\CallLog\CallTemplateType;
+use UWMadison\CallTemplateType;
 use UWMadison\CallLog\CallItemDTO;
 
 class ApiService
@@ -14,13 +14,20 @@ class ApiService
     private ConfigService $configService;
     private CallGeneratorService $generatorService;
     private $metadataRepo;
+    private ?LoggingService $loggingService;
 
-    public function __construct($module, ConfigService $configService, CallGeneratorService $generatorService, $metadataRepo)
-    {
+    public function __construct(
+        $module,
+        ConfigService $configService,
+        CallGeneratorService $generatorService,
+        $metadataRepo,
+        ?LoggingService $loggingService = null
+    ) {
         $this->module = $module;
         $this->configService = $configService;
         $this->generatorService = $generatorService;
         $this->metadataRepo = $metadataRepo;
+        $this->loggingService = $loggingService;
     }
 
     public function handleApiRequest(int $projectId, array $payload): array
@@ -95,6 +102,7 @@ class ApiService
                     if (empty($rec)) continue;
                     $metadata = $this->metadataRepo->getMetadata($projectId, $rec);
                     $modified = false;
+                    $reasonsResolved = [];
                     foreach ($metadata as $callKey => &$callData) {
                         if (!empty($callData['complete'])) continue;
                         if (($callData['template'] ?? '') !== 'adhoc') continue;
@@ -107,11 +115,15 @@ class ApiService
                             $callData['completedBy'] = "REDCap API";
                             $modified = true;
                             $resolvedCount++;
+                            $reasonsResolved[] = (string)$reasonId;
                         }
                     }
                     unset($callData);
                     if ($modified) {
                         $this->metadataRepo->saveMetadata($projectId, $rec, $metadata);
+                        if ($this->loggingService) {
+                            $this->loggingService->logAdhocResolved($projectId, $rec, $callTypeId, (string)$reasonId, count($reasonsResolved));
+                        }
                     }
                 }
                 $success = true;
@@ -126,7 +138,7 @@ class ApiService
             case "newEntryLoad":
             case "scheduleLoad":
                 if ($projectId > 0) {
-                    $count = $this->generatorService->evaluateAndGenerateForProject($projectId);
+                    $count = $this->generatorService->evaluateAndGenerateForProject($projectId, 'api');
                     $success = true;
                     $result['generatedCount'] = $count;
                     $result['message'] = "Evaluated and generated calls for project {$projectId}.";
@@ -187,6 +199,23 @@ class ApiService
             "complete" => false
         ];
 
-        return $this->metadataRepo->saveMetadata($projectId, $record, $metadata);
+        $saved = $this->metadataRepo->saveMetadata($projectId, $record, $metadata);
+        if ($saved && $this->loggingService) {
+            $this->loggingService->logAdhocCreated(
+                $projectId,
+                $record,
+                $key,
+                $targetConfig['name'] . ' - ' . $reasonText,
+                (string)$reasonId,
+                $reporter,
+                'api',
+                [
+                    'contact_date' => $date,
+                    'contact_time' => $time
+                ]
+            );
+        }
+
+        return $saved;
     }
 }
