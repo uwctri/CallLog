@@ -1,6 +1,59 @@
 (() => {
     const module = ExternalModules.UWMadison.CallLog;
     const { toArray, getVal } = module.utils || {};
+    const starterCallScripts = {
+        new: `<p>Hello <strong>{{participant_name}}</strong>, my name is <strong>[user-fullname]</strong> calling with the research study team.</p>
+<p>I am reaching out regarding your recent enrollment in our study. We are excited to have you participate! This introductory call takes about <strong>{{expected_duration}} minutes</strong>.</p>
+<p>During this call, I will:</p>
+<ol>
+  <li>Verify your contact details and preferred method of communication.</li>
+  <li>Review the study timeline and upcoming milestones.</li>
+  <li>Answer any initial questions you might have about participating.</li>
+</ol>
+<p>Is now a good time to speak for a few minutes?</p>`,
+
+        reminder: `<p>Hello <strong>{{participant_name}}</strong>, this is <strong>[user-fullname]</strong> calling from the research team to remind you of your upcoming appointment scheduled for <strong>{{call_date}}</strong> at <strong>{{call_time}}</strong>.</p>
+<p><strong>Please remember:</strong></p>
+<ul>
+  <li>Arrive approximately 10 minutes early.</li>
+  <li>Bring a photo ID and your current medication list.</li>
+  <li>If you have any questions or need to reschedule, please let us know.</li>
+</ul>
+<p>Can we confirm that you are still able to make this appointment on <strong>{{call_date}}</strong>?</p>`,
+
+        followup: `<p>Hello <strong>{{participant_name}}</strong>, this is <strong>[user-fullname]</strong> checking in on behalf of the research study team.</p>
+<p>This is our scheduled follow-up call regarding your progress and recent study milestone. This brief check-in will take approximately <strong>{{expected_duration}} minutes</strong>.</p>
+<p>We would like to:</p>
+<ol>
+  <li>Check in on your general health and how you have been feeling since your last visit.</li>
+  <li>Review any changes in medications or study protocol compliance.</li>
+  <li>Verify that any home health surveys or diary entries are up to date.</li>
+</ol>
+<p>Do you have a few moments to review these items with me today?</p>`,
+
+        mcv: `<p>Hello <strong>{{participant_name}}</strong>, this is <strong>[user-fullname]</strong> with the research study team.</p>
+<p>We missed you at your scheduled appointment on <strong>{{call_date}}</strong>. We wanted to check in to make sure everything is okay!</p>
+<p>Your participation is vital to our study, and we would love to get you rescheduled at a time that works best for you.</p>
+<p>Please give us a call back at your earliest convenience or let me know what day and time works best for your visit. Thank you!</p>`,
+
+        nts: `<p>Hello <strong>{{participant_name}}</strong>, this is <strong>[user-fullname]</strong> calling from the research study team.</p>
+<p>According to our study records, you are now due to schedule your next milestone visit (<strong>[event-name]</strong>).</p>
+<p>The upcoming visit will take approximately <strong>{{expected_duration}} minutes</strong>. We have openings available across the next two weeks.</p>
+<p>What day of the week or time of day generally works best for your schedule?</p>`,
+
+        adhoc: `<p>Hello <strong>{{participant_name}}</strong>, this is <strong>[user-fullname]</strong> calling from the research study team.</p>
+<p>I am reaching out today regarding: <strong>{{reason}}</strong>.</p>
+<p>This call should take about <strong>{{expected_duration}} minutes</strong>. Is now a convenient time for you to speak, or would another time today or later this week work better?</p>`,
+
+        visit: `<p>Hello <strong>{{participant_name}}</strong>, this is <strong>[user-fullname]</strong> calling for your scheduled phone visit today.</p>
+<p>Today we will be conducting your study evaluation over the phone. This encounter is expected to take approximately <strong>{{expected_duration}} minutes</strong>.</p>
+<p><strong>Before we begin:</strong></p>
+<ol>
+  <li>Can you confirm your full name and date of birth?</li>
+  <li>Are you in a quiet and private space where you are comfortable speaking?</li>
+</ol>
+<p>Let's begin with today's questions...</p>`
+    };
 
     function registerComponent() {
         Alpine.data('callLogConfig', () => ({
@@ -42,6 +95,18 @@
 
             init() {
                 this.loadFromRaw();
+                this.$watch('activeTab', (tab) => {
+                    if (tab === 'calls') {
+                        this.$nextTick(() => {
+                            this.initAllScriptEditors();
+                        });
+                    }
+                });
+                if (this.activeTab === 'calls') {
+                    this.$nextTick(() => {
+                        this.initAllScriptEditors();
+                    });
+                }
             },
 
             get defaultHolidaysMap() {
@@ -184,6 +249,8 @@
                 const visInd = r.visit_indicator || [];
                 const visEvts = r.visit_include_events || [];
 
+                const scripts = r.call_script || [];
+
                 this.callTypes = ids.map((id, i) => {
                     let rEvts = toArray(remEvts[i]);
                     let fEvts = toArray(folEvts[i]);
@@ -199,10 +266,16 @@
                         vEvts = [singleEventId];
                     }
 
+                    const tmpl = templates[i] || 'new';
                     return {
+                        _uid: 'ct_' + (i + 1) + '_' + Math.random().toString(36).substring(2, 7),
                         id: id || '',
                         name: names[i] || '',
-                        template: templates[i] || 'new',
+                        template: tmpl,
+                        script: getVal(scripts, i, ''),
+                        guideOpen: false,
+                        fieldPickerOpen: false,
+                        fieldPickerFilter: '',
                         hideAfterAttempt: hides[i] || '',
                         expectedDuration: getVal(durations, i, 30),
                         newExpireDays: getVal(newExp, i, ''),
@@ -363,10 +436,15 @@
                 const defaultEvts = singleEventId ? [singleEventId] : [];
 
                 const nextNum = this.callTypes.length + 1;
-                this.callTypes.push({
+                const newCallType = {
+                    _uid: 'ct_' + nextNum + '_' + Math.random().toString(36).substring(2, 7),
                     id: 'call_' + nextNum,
                     name: 'New Call Type ' + nextNum,
                     template: 'new',
+                    script: this.getStarterScript('new'),
+                    guideOpen: false,
+                    fieldPickerOpen: false,
+                    fieldPickerFilter: '',
                     hideAfterAttempt: '',
                     expectedDuration: 30,
                     newExpireDays: '',
@@ -385,11 +463,176 @@
                     adhocReason: '',
                     visitIndicator: '',
                     visitEvents: [...defaultEvts]
+                };
+                this.callTypes.push(newCallType);
+                this.$nextTick(() => {
+                    this.initScriptEditor(newCallType);
                 });
             },
 
             removeCallType(index) {
+                const ct = this.callTypes[index];
+                if (ct) {
+                    this.destroyScriptEditor(ct);
+                }
                 this.callTypes.splice(index, 1);
+            },
+
+            getStarterScript(template) {
+                return starterCallScripts[template] || starterCallScripts['new'] || '';
+            },
+
+            initScriptEditor(callType) {
+                if (!callType || !callType._uid) return;
+                const editorId = 'call_script_' + callType._uid;
+
+                const doInit = () => {
+                    if (typeof window.tinymce === 'undefined') return;
+                    if (window.tinymce.get(editorId)) {
+                        return; // already initialized
+                    }
+                    const el = document.getElementById(editorId);
+                    if (!el) return;
+
+                    const webroot = window.app_path_webroot || '';
+                    window.tinymce.init({
+                        selector: '#' + editorId,
+                        height: 250,
+                        license_key: 'gpl',
+                        branding: false,
+                        statusbar: true,
+                        elementpath: false,
+                        menubar: false,
+                        plugins: 'autolink lists link image searchreplace code fullscreen table directionality hr',
+                        toolbar1: 'fontfamily blocks fontsize bold italic underline strikethrough forecolor backcolor',
+                        toolbar2: 'align bullist numlist outdent indent table pre hr link fullscreen searchreplace removeformat undo redo code',
+                        content_css: webroot + "Resources/webpack/css/bootstrap.min.css," + webroot + "Resources/webpack/css/fontawesome/css/all.min.css," + webroot + "Resources/css/style.css",
+                        relative_urls: false,
+                        convert_urls: false,
+                        extended_valid_elements: 'i[class]',
+                        setup: function(editor) {
+                            const sync = () => {
+                                callType.script = editor.getContent();
+                            };
+                            editor.on('change keyup NodeChange SetContent', sync);
+                            editor.on('blur', () => {
+                                sync();
+                                if (typeof window.tinymce.triggerSave === 'function') {
+                                    window.tinymce.triggerSave();
+                                }
+                            });
+                        }
+                    });
+                };
+
+                if (typeof window.tinymce === 'undefined') {
+                    const webroot = window.app_path_webroot || '';
+                    if (typeof window.loadJS === 'function' && webroot) {
+                        window.loadJS(webroot + "Resources/webpack/css/tinymce/tinymce.min.js");
+                        let tries = 0;
+                        const checkInterval = setInterval(() => {
+                            tries++;
+                            if (typeof window.tinymce !== 'undefined') {
+                                clearInterval(checkInterval);
+                                doInit();
+                            } else if (tries > 50) {
+                                clearInterval(checkInterval);
+                            }
+                        }, 100);
+                    }
+                } else {
+                    doInit();
+                }
+            },
+
+            destroyScriptEditor(callType) {
+                if (window.tinymce && callType && callType._uid) {
+                    const ed = window.tinymce.get('call_script_' + callType._uid);
+                    if (ed) {
+                        try {
+                            ed.remove();
+                        } catch (e) {}
+                    }
+                }
+            },
+
+            initAllScriptEditors() {
+                if (!Array.isArray(this.callTypes)) return;
+                this.callTypes.forEach(ct => {
+                    this.initScriptEditor(ct);
+                });
+            },
+
+            insertScriptTag(callType, tag) {
+                const editorId = 'call_script_' + callType._uid;
+                const editor = (window.tinymce && window.tinymce.get) ? window.tinymce.get(editorId) : null;
+                if (editor && !editor.isHidden()) {
+                    editor.insertContent(tag);
+                    editor.focus();
+                    callType.script = editor.getContent();
+                } else {
+                    const el = document.getElementById(editorId);
+                    if (!el) {
+                        callType.script = (callType.script || '') + tag;
+                        return;
+                    }
+                    const start = el.selectionStart ?? el.value.length;
+                    const end = el.selectionEnd ?? el.value.length;
+                    const current = el.value || '';
+                    const updated = current.substring(0, start) + tag + current.substring(end);
+                    callType.script = updated;
+                    el.value = updated;
+                    this.$nextTick(() => {
+                        el.focus();
+                        el.setSelectionRange(start + tag.length, start + tag.length);
+                    });
+                }
+            },
+
+            setScriptContent(callType, html) {
+                callType.script = html;
+                const editorId = 'call_script_' + callType._uid;
+                const editor = (window.tinymce && window.tinymce.get) ? window.tinymce.get(editorId) : null;
+                if (editor) {
+                    editor.setContent(html);
+                }
+                const el = document.getElementById(editorId);
+                if (el) {
+                    el.value = html;
+                }
+            },
+
+            confirmLoadStarterScript(callType) {
+                const starter = this.getStarterScript(callType.template);
+                const current = (callType.script || '').trim();
+                if (!current || current === '<p></p>' || current === '<p><br></p>') {
+                    this.setScriptContent(callType, starter);
+                    return;
+                }
+                const templateName = this.meta.callTemplateOptions?.[callType.template] || callType.template;
+                const title = 'Replace Call Script?';
+                const text = `This will overwrite your current call script with the starter template for ${templateName}.`;
+                
+                const executeReplace = () => this.setScriptContent(callType, starter);
+
+                if (module.swal && typeof module.swal.confirm === 'function') {
+                    module.swal.confirm(title, text, 'Replace Script', true).then(confirmed => {
+                        if (confirmed) executeReplace();
+                    });
+                } else if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: title,
+                        text: text,
+                        showCancelButton: true,
+                        confirmButtonText: 'Replace Script',
+                        confirmButtonColor: '#dc2626'
+                    }).then(res => {
+                        if (res.isConfirmed) executeReplace();
+                    });
+                } else if (confirm(text)) {
+                    executeReplace();
+                }
             },
 
             addCallTab() {
@@ -488,7 +731,10 @@
                 const events = this.meta.events || [];
                 const targetEventId = events.length === 1 ? events[0].id : (document.getElementById('deployTargetEventSelect')?.value || null);
                 if (events.length > 1 && !targetEventId) {
-                    Swal.fire({ icon: 'warning', title: 'Event Required', text: 'Please select an event.' });
+                    (module.swal ? module.swal.warning : Swal.fire)({
+                        title: 'Event Required',
+                        text: 'Please select a target event before deploying instruments.'
+                    });
                     return;
                 }
 
@@ -496,13 +742,23 @@
                 module.ajax("deployInstruments", { event_id: targetEventId }).then((res) => {
                     this.deploying = false;
                     if (res && res.success) {
-                        Swal.fire({ icon: 'success', title: 'Instruments Deployed', text: res.message || 'Deployed successfully.' }).then(() => location.reload());
+                        (module.swal ? module.swal.success : Swal.fire)({
+                            title: 'Instruments Deployed',
+                            text: res.message || 'Call Log instruments were deployed successfully.',
+                            confirmButtonText: '<i class="fas fa-check me-1.5"></i> Continue'
+                        }).then(() => location.reload());
                     } else {
-                        Swal.fire({ icon: 'error', title: 'Deployment Failed', text: res.message || 'Error deploying.' });
+                        (module.swal ? module.swal.error : Swal.fire)({
+                            title: 'Deployment Failed',
+                            text: res.message || 'Could not deploy Call Log instruments.'
+                        });
                     }
                 }).catch(err => {
                     this.deploying = false;
-                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || err });
+                    (module.swal ? module.swal.error : Swal.fire)({
+                        title: 'Deployment Error',
+                        text: err.message || String(err)
+                    });
                 });
             },
 
@@ -513,26 +769,34 @@
                 module.ajax("enableRepeatable", { event_id: eventId }).then((res) => {
                     this.enablingRepeatable = false;
                     if (res && res.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Call Log Repeatable Enabled',
-                            text: res.message || 'Call Log instrument has been enabled as repeatable.'
+                        (module.swal ? module.swal.success : Swal.fire)({
+                            title: 'Repeatable Enabled',
+                            text: res.message || 'Call Log instrument has been successfully configured as repeatable.',
+                            confirmButtonText: '<i class="fas fa-check me-1.5"></i> Continue'
                         }).then(() => location.reload());
                     } else {
-                        Swal.fire({
-                            icon: 'error',
+                        (module.swal ? module.swal.error : Swal.fire)({
                             title: 'Setup Failed',
                             text: res.message || 'Error updating repeatable instrument status.'
                         });
                     }
                 }).catch(err => {
                     this.enablingRepeatable = false;
-                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || err });
+                    (module.swal ? module.swal.error : Swal.fire)({
+                        title: 'Configuration Error',
+                        text: err.message || String(err)
+                    });
                 });
             },
 
             saveConfig() {
                 this.saving = true;
+
+                if (window.tinymce && typeof window.tinymce.triggerSave === 'function') {
+                    try {
+                        window.tinymce.triggerSave();
+                    } catch (e) {}
+                }
 
                 const payload = {
                     show_record_home_button: [this.showRecordHomeButton ? '1' : '0'],
@@ -551,6 +815,7 @@
                     call_id: this.callTypes.map(c => c.id.trim()),
                     call_name: this.callTypes.map(c => c.name.trim()),
                     call_template: this.callTypes.map(c => c.template),
+                    call_script: this.callTypes.map(c => c.script || ''),
                     call_expected_duration: this.callTypes.map(c => c.expectedDuration || 30),
                     hide_after_attempts: this.callTypes.map(c => c.hideAfterAttempt),
                     new_expire_days: this.callTypes.map(c => c.newExpireDays),
@@ -585,14 +850,26 @@
                 module.ajax("saveConfig", { settings: payload }).then((res) => {
                     this.saving = false;
                     if (res && res.saved) {
-                        Swal.fire({ icon: 'success', title: 'Configuration Saved', text: 'Call Log settings were updated successfully.', timer: 1500, showConfirmButton: false })
-                            .then(() => location.reload());
+                        (module.swal ? module.swal.fire : Swal.fire)({
+                            icon: 'success',
+                            title: 'Configuration Saved',
+                            text: 'Call Log settings were updated successfully.',
+                            timer: 3000,
+                            timerProgressBar: true,
+                            showConfirmButton: false
+                        }).then(() => location.reload());
                     } else {
-                        Swal.fire({ icon: 'error', title: 'Save Failed', text: 'Could not update settings.' });
+                        (module.swal ? module.swal.error : Swal.fire)({
+                            title: 'Save Failed',
+                            text: 'Could not update Call Log settings. Please check the logs and try again.'
+                        });
                     }
                 }).catch(err => {
                     this.saving = false;
-                    Swal.fire({ icon: 'error', title: 'Error', text: err.message || err });
+                    (module.swal ? module.swal.error : Swal.fire)({
+                        title: 'Error Saving Settings',
+                        text: err.message || String(err)
+                    });
                 });
             }
         }));

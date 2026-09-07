@@ -1,0 +1,341 @@
+/**
+ * Custom & Uniform SweetAlert2 Theme for Call Log External Module
+ */
+
+/* Container Backdrop */
+.call-log-swal-container,
+.swal2-container.call-log-theme {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    background: rgba(15, 23, 42, 0.45) !important;
+    transition: backdrop-filter 0.2s ease;
+    z-index: 10050 !important;
+}
+
+/* Modal Card */
+.call-log-swal-popup,
+.swal2-popup.call-log-swal-popup {
+    border-radius: 16px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08) !important;
+    background-color: #ffffff !important;
+    padding: 1.75rem 1.5rem 1.5rem 1.5rem !important;
+    font-family: inherit !important;
+    max-width: 480px !important;
+    width: 92% !important;
+    box-sizing: border-box !important;
+}
+
+/* Icon Badges (Refined, Compact 52px Badge Design) */
+.call-log-swal-popup .swal2-icon,
+.call-log-swal-popup .call-log-swal-icon {
+    width: 52px !important;
+    height: 52px !important;
+    margin: 0.25rem auto 1.25rem auto !important;
+    border-radius: 50% !important;
+    border-width: 1.5px !important;
+    border-style: solid !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Success Badge (Emerald) */
+.call-log-swal-popup .swal2-icon.swal2-success {
+    background-color: #ecfdf5 !important;
+    border-color: #a7f3d0 !important;
+    color: #059669 !important;
+}
+.call-log-swal-popup .swal2-icon.swal2-success .swal2-success-circular-line-left,
+.call-log-swal-popup .swal2-icon.swal2-success .swal2-success-circular-line-right,
+.call-log-swal-popup .swal2-icon.swal2-success .swal2-success-fix {
+    display: none !important;
+}
+.call-log-swal-popup .swal2-icon.swal2-success .swal2-success-ring {
+    display: none !important;
+}
+.call-log-swal-popup .swal2-icon.swal2-success .swal2-success-line-tip {
+    top: 27px !important;
+    left: 11px !important;
+    width: 12px !important;
+    height: 3px !important;
+    background-color: #059669 !important;
+    border-radius: 2px !important;
+}
+.call-log-swal-popup .swal2-icon.swal2-success .swal2-success-line-long {
+    top: 23px !important;
+    right: 12px !important;
+    width: 22px !important;
+    height: 3px !important;
+    background-color: #059669 !important;
+    border-radius: 2px !important;
+}
+
+/* Warning Badge (Amber) */
+.call-log-swal-popup .swal2-icon.swal2-warning {
+    background-color: #fffbeb !important;
+    border-color: #fde68a !important;
+    color: #d97706 !important;
+}
+.call-log-swal-popup .swal2-icon.swal2-warning .swal2-icon-content {
+    font-family: inherit !important;
+    font-size: 1.6rem !important;
+    font-weight: 700 !important;
+    color: #d97706 !important;
+    line-height: 50px !important;
+}
+
+/* Error Badge (Rose/Red) */
+.call-log-swal-popup .swal2-icon.swal2-error {
+    background-color: #fef2f2 !important;
+    border-color: #fecaca !important;
+    color: #dc2626 !important;
+}
+.call-log-swal-popup .swal2-icon.swal2-error .swal2-x-mark {
+    position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+}
+.call-log-swal-popup .swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+    top: 24px !important;
+    height: 3px !important;
+    border-radius: 2px !important;
+    background-color: #dc2626 !important;
+}
+.call-log-swal-popup .swal2-icon.swal2-error .swal2-x-mark-line-left {
+    left: 14px !important;
+    width: 24px !important;
+}
+.call-log-swal-popup .swal2-icon.swal2-error .swal2-x-mark-line-right {
+    right: 14px !important;
+    width: 24px !important;
+}
+
+/* Info Badge (Blue) */
+.call-log-swal-popup .swal2-icon.swal2-info {
+    background-color: #eff6ff !important;
+    border-color: #bfdbfe !important;
+    color: #2563eb !important;
+}
+.call-log-swal-popup .swal2-icon.swal2-info .swal2-icon-content {
+    font-family: inherit !important;
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    color: #2563eb !important;
+    line-height: 50px !important;
+}
+
+/* Custom Badge Header (for Modals without default icon, e.g. Settings) */
+.call-log-swal-custom-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0.25rem auto 1.25rem auto;
+    border-radius: 50%;
+    border: 1.5px solid #bfdbfe;
+    background-color: #eff6ff;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    box-sizing: border-box;
+}
+.call-log-swal-custom-icon.icon-warning {
+    background-color: #fffbeb;
+    border-color: #fde68a;
+    color: #d97706;
+}
+.call-log-swal-custom-icon.icon-danger {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+.call-log-swal-custom-icon.icon-success {
+    background-color: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #059669;
+}
+
+/* Title */
+.call-log-swal-popup .swal2-title,
+.call-log-swal-title {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    margin: 0 0 0.5rem 0 !important;
+    padding: 0 !important;
+    line-height: 1.4 !important;
+    text-align: center !important;
+}
+
+/* Content / Text */
+.call-log-swal-popup .swal2-content,
+.call-log-swal-popup .swal2-html-container,
+.call-log-swal-content {
+    font-size: 0.9125rem !important;
+    color: #475569 !important;
+    line-height: 1.6 !important;
+    margin: 0 0 1.25rem 0 !important;
+    padding: 0 !important;
+    text-align: center !important;
+}
+
+/* Actions Row */
+.call-log-swal-popup .swal2-actions,
+.call-log-swal-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    margin: 1.25rem auto 0 auto;
+    padding: 0;
+    width: 100%;
+}
+
+/* Explicitly enforce display: none when SweetAlert hides actions or buttons */
+.call-log-swal-popup .swal2-actions[style*="display: none"],
+.call-log-swal-popup .swal2-actions.swal2-loading[style*="display: none"],
+.call-log-swal-popup.call-log-swal-no-buttons .swal2-actions,
+.call-log-swal-popup [style*="display: none"] {
+    display: none !important;
+}
+
+/* Button Base */
+.call-log-swal-popup .swal2-actions button,
+.call-log-swal-btn {
+    height: 38px;
+    padding: 0 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all 0.15s ease-in-out;
+    outline: none;
+    margin: 0;
+    line-height: 1;
+}
+
+.call-log-swal-popup .swal2-actions button[style*="display: none"],
+.call-log-swal-popup .call-log-swal-btn[style*="display: none"] {
+    display: none !important;
+}
+
+/* Confirm Primary Button */
+.call-log-swal-popup .swal2-confirm,
+.call-log-swal-confirm {
+    background-color: #2563eb !important;
+    border: 1px solid #2563eb !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.15) !important;
+}
+.call-log-swal-popup .swal2-confirm:hover,
+.call-log-swal-confirm:hover {
+    background-color: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25) !important;
+}
+.call-log-swal-popup .swal2-confirm:focus,
+.call-log-swal-confirm:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Confirm Destructive / Danger Button */
+.call-log-swal-popup .swal2-confirm.call-log-swal-destructive,
+.call-log-swal-destructive {
+    background-color: #dc2626 !important;
+    border: 1px solid #dc2626 !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(220, 38, 38, 0.15) !important;
+}
+.call-log-swal-popup .swal2-confirm.call-log-swal-destructive:hover,
+.call-log-swal-destructive:hover {
+    background-color: #b91c1c !important;
+    border-color: #b91c1c !important;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.25) !important;
+}
+.call-log-swal-popup .swal2-confirm.call-log-swal-destructive:focus,
+.call-log-swal-destructive:focus {
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3) !important;
+}
+
+/* Cancel Secondary Button */
+.call-log-swal-popup .swal2-cancel,
+.call-log-swal-cancel {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+.call-log-swal-popup .swal2-cancel:hover,
+.call-log-swal-cancel:hover {
+    background-color: #f8fafc !important;
+    color: #1e293b !important;
+    border-color: #94a3b8 !important;
+}
+.call-log-swal-popup .swal2-cancel:focus,
+.call-log-swal-cancel:focus {
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.3) !important;
+}
+
+/* Timer Progress Bar */
+.call-log-swal-popup .swal2-timer-progress-bar {
+    background: rgba(37, 99, 235, 0.5) !important;
+    height: 3px !important;
+}
+
+/* Call Metadata Checklist Card */
+.call-metadata-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.5rem;
+    max-height: 280px;
+    overflow-y: auto;
+    text-align: left;
+    margin-top: 0.75rem;
+}
+.call-metadata-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.75rem;
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+    cursor: pointer;
+    margin-bottom: 2px;
+    user-select: none;
+}
+.call-metadata-item:hover {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.call-metadata-item .form-check-input {
+    cursor: pointer;
+    margin-top: 0;
+    width: 1.15em;
+    height: 1.15em;
+}
+.call-metadata-item .call-name-label {
+    margin-left: 0.6rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    flex-grow: 1;
+}
+.call-metadata-item .call-id-tag {
+    font-size: 0.75rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background-color: #e2e8f0;
+    color: #475569;
+    font-weight: 500;
+}

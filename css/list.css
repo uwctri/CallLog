@@ -410,6 +410,60 @@
     color: #ffffff !important;
 }
 
+/* Button Bouncing Ball Loader (No slider track, no text) */
+.call-list-dashboard .btn-bounce-ball-stage {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    position: relative;
+    width: 38px;
+    height: 14px;
+    margin: 0 auto;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0;
+    overflow: visible;
+}
+
+.call-list-dashboard .btn-bounce-ball {
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: currentColor;
+    position: absolute;
+    top: 3px;
+    left: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    animation: ballBounceLeftRight 0.65s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite alternate;
+}
+
+@keyframes ballBounceLeftRight {
+    0% {
+        transform: translateX(0) scale(0.88, 1.12);
+    }
+    12% {
+        transform: translateX(3px) scale(1, 1);
+    }
+    50% {
+        transform: translateX(15px) scale(1.12, 0.9);
+    }
+    88% {
+        transform: translateX(27px) scale(1, 1);
+    }
+    100% {
+        transform: translateX(30px) scale(0.88, 1.12);
+    }
+}
+
+.call-list-dashboard .btn-loading {
+    cursor: wait !important;
+    pointer-events: none !important;
+    opacity: 0.92;
+    justify-content: center !important;
+}
+
 /* Status Badges in Column 0 */
 .call-list-dashboard .badge-icon-cell {
     width: 24px !important;

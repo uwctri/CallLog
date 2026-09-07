@@ -2,6 +2,11 @@
 // Call Log Custom Configuration Interface
 $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? (int)PROJECT_ID : 0);
 ?>
+<script type="text/javascript">
+if (typeof tinymce === 'undefined') {
+    document.write('<script type="text/javascript" src="<?= (defined('APP_PATH_WEBROOT') ? APP_PATH_WEBROOT : '/redcap_v17.4.0/') ?>Resources/webpack/css/tinymce/tinymce.min.js"><\/script>');
+}
+</script>
 <div class="container-fluid py-3 px-4 call-config-dashboard m-0" style="max-width: 1300px;" x-data="callLogConfig">
     
     <!-- Top Action Bar -->
@@ -563,7 +568,7 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
             </div>
 
             <div class="d-flex flex-column gap-4 mb-4">
-                <template x-for="(callType, index) in callTypes" :key="index">
+                <template x-for="(callType, index) in callTypes" :key="callType._uid || index">
                     <div class="card border shadow-sm rounded-3">
                         <div class="card-header bg-light border-bottom d-flex justify-content-between align-items-center py-2.5 px-3">
                             <div class="d-flex align-items-center gap-2">
@@ -987,6 +992,205 @@ $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? 
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Call Script Section -->
+                            <div class="call-script-section mt-4">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-file-alt text-primary fs-6"></i>
+                                            <span class="fw-bold text-dark fs-6">Call Script</span>
+                                            <span class="badge bg-light text-secondary border px-2 py-0.5 small fw-semibold">Rich Text</span>
+                                        </div>
+                                        <div class="text-muted small mt-0.5">
+                                            Rich text talking points, questions, and protocol reminders displayed to callers. Supports custom tags, smart variables, and piping.
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <button type="button" 
+                                                @click="confirmLoadStarterScript(callType)" 
+                                                class="btn-script-action btn-script-starter" 
+                                                title="Load standard starter script for this template">
+                                            <i class="fas fa-magic"></i>
+                                            <span>Starter Script</span>
+                                        </button>
+                                        <button type="button" 
+                                                @click="callType.guideOpen = !callType.guideOpen" 
+                                                class="btn-script-action btn-script-guide" 
+                                                :class="{ 'active': callType.guideOpen }">
+                                            <i class="fas" :class="callType.guideOpen ? 'fa-book-open' : 'fa-info-circle'"></i>
+                                            <span x-text="callType.guideOpen ? 'Hide Tag Guide' : 'Tag Guide'"></span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Variable Insertion Toolbar -->
+                                <div class="call-script-toolbar">
+                                    <span class="small fw-bold text-secondary me-1 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.04em;">Insert Tag:</span>
+                                    
+                                    <!-- Custom Call Log Pipes (Double Braces) -->
+                                    <span class="script-tag-chip chip-custom" @click="insertScriptTag(callType, '{{participant_name}}')" title="Participant Name">
+                                        {{participant_name}}
+                                    </span>
+                                    <span class="script-tag-chip chip-custom" @click="insertScriptTag(callType, '{{call_name}}')" title="Call Type Name">
+                                        {{call_name}}
+                                    </span>
+                                    <span class="script-tag-chip chip-custom" @click="insertScriptTag(callType, '{{call_date}}')" title="Target / Scheduled Date">
+                                        {{call_date}}
+                                    </span>
+                                    <span class="script-tag-chip chip-custom" @click="insertScriptTag(callType, '{{call_time}}')" title="Target / Scheduled Time">
+                                        {{call_time}}
+                                    </span>
+                                    <span class="script-tag-chip chip-custom" @click="insertScriptTag(callType, '{{expected_duration}}')" title="Call Length in Minutes">
+                                        {{expected_duration}}
+                                    </span>
+                                    <span class="script-tag-chip chip-custom" @click="insertScriptTag(callType, '{{attempt_num}}')" title="Current Call Attempt Number">
+                                        {{attempt_num}}
+                                    </span>
+                                    <span class="script-tag-chip chip-custom" @click="insertScriptTag(callType, '{{reason}}')" title="Ad-hoc Selected Reason">
+                                        {{reason}}
+                                    </span>
+
+                                    <div class="vr my-1 mx-1 opacity-25"></div>
+
+                                    <!-- REDCap Smart Variables (Single Brackets) -->
+                                    <span class="script-tag-chip chip-smart" @click="insertScriptTag(callType, '[user-fullname]')" title="REDCap Smart Variable: Logged in user's full name">
+                                        [user-fullname]
+                                    </span>
+                                    <span class="script-tag-chip chip-smart" @click="insertScriptTag(callType, '[record-name]')" title="REDCap Smart Variable: Record ID">
+                                        [record-name]
+                                    </span>
+                                    <span class="script-tag-chip chip-smart" @click="insertScriptTag(callType, '[event-name]')" title="REDCap Smart Variable: Current event name">
+                                        [event-name]
+                                    </span>
+                                    <span class="script-tag-chip chip-smart" @click="insertScriptTag(callType, '[project-id]')" title="REDCap Smart Variable: Project ID">
+                                        [project-id]
+                                    </span>
+
+                                    <div class="vr my-1 mx-1 opacity-25"></div>
+
+                                    <!-- Searchable Project Field Dropdown -->
+                                    <div class="position-relative d-inline-block" @click.outside="callType.fieldPickerOpen = false">
+                                        <button type="button" 
+                                                class="chip-field-btn"
+                                                @click="callType.fieldPickerOpen = !callType.fieldPickerOpen">
+                                            <i class="fas fa-plus-circle me-1"></i> Project Field...
+                                            <i class="fas fa-caret-down ms-1.5 opacity-75"></i>
+                                        </button>
+                                        <div class="searchable-field-menu shadow-lg p-2" 
+                                             x-show="callType.fieldPickerOpen" 
+                                             x-transition 
+                                             style="position: absolute; top: 100%; left: 0; z-index: 1050; min-width: 260px; max-width: 320px; max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px;">
+                                            <input type="text" 
+                                                   class="form-control form-control-sm mb-2" 
+                                                   x-model="callType.fieldPickerFilter" 
+                                                   placeholder="Search project fields..." 
+                                                   @click.stop>
+                                            <template x-for="f in (meta.fields || []).filter(field => !callType.fieldPickerFilter || (field.label || field.id).toLowerCase().includes(callType.fieldPickerFilter.toLowerCase()))" :key="f.id">
+                                                <div class="searchable-field-item small py-1 px-2 cursor-pointer hover-bg-light rounded text-truncate" 
+                                                     @click="insertScriptTag(callType, '[' + f.id + ']'); callType.fieldPickerOpen = false;"
+                                                     :title="f.name || f.id">
+                                                    <span class="fw-bold font-monospace text-primary" x-text="`[${f.id}]`"></span>
+                                                    <span class="text-muted ms-1" x-text="f.name ? `- ${f.name}` : ''"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Collapsible Tag Reference Guide -->
+                                <div class="call-script-guide-card mb-3" x-show="callType.guideOpen" x-transition>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-book-open text-primary me-1.5"></i> Script Piping & Tag Reference Guide</h6>
+                                        <button type="button" @click="callType.guideOpen = false" class="btn btn-sm btn-link text-muted p-0 text-decoration-none">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <span class="fw-bold text-dark d-block mb-1 small">Custom Call Log Tags (<code>{{variable}}</code>)</span>
+                                            <table class="call-script-guide-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Tag</th>
+                                                        <th>Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td><code>{{participant_name}}</code></td>
+                                                        <td>Participant's full name from configured display field</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>{{call_name}}</code></td>
+                                                        <td>Call type display name (e.g. Baseline Follow-up)</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>{{call_date}}</code> / <code>{{call_time}}</code></td>
+                                                        <td>Target appointment or scheduled date & time</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>{{expected_duration}}</code></td>
+                                                        <td>Expected duration in minutes (e.g. 30)</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>{{attempt_num}}</code></td>
+                                                        <td>Ordinal attempt number for active call (e.g. 1st, 2nd)</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>{{reason}}</code></td>
+                                                        <td>Selected reason description for ad-hoc calls</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <span class="fw-bold text-dark d-block mb-1 small">REDCap Piping & Smart Variables</span>
+                                            <table class="call-script-guide-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Syntax</th>
+                                                        <th>Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td><code>[user-fullname]</code></td>
+                                                        <td>Logged-in REDCap user's full name</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>[record-name]</code></td>
+                                                        <td>Current participant record identifier</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>[event-name]</code></td>
+                                                        <td>Current event label or arm identifier</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>[project-id]</code></td>
+                                                        <td>REDCap Project ID number</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><code>[field_name]</code></td>
+                                                        <td>Any field piped from the participant's record</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                            <div class="alert alert-light border py-1.5 px-2 mt-2 mb-0 small text-muted">
+                                                <i class="fas fa-lightbulb text-warning me-1"></i>
+                                                <strong>Tip:</strong> Use the rich text toolbar to format talking points with bold text, bulleted lists, and colors for critical questions.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- TinyMCE Textarea -->
+                                <textarea :id="`call_script_${callType._uid || index}`"
+                                          class="form-control form-control-sm call-script-editor"
+                                          style="height: 220px; width: 100%;"
+                                          x-model="callType.script"
+                                          placeholder="Enter talking points, greetings, or instructions for this call type..."></textarea>
                             </div>
                         </div>
                     </div>

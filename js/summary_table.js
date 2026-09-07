@@ -4,21 +4,24 @@
     const getParam = (name) => (module.utils && module.utils.getParam) ? module.utils.getParam(name) : (typeof window.getParameterByName === 'function' ? window.getParameterByName(name) : null);
 
     const threeDotClick = () => {
-        if (typeof Swal === 'undefined') return;
+        if (typeof Swal === 'undefined' && (!module.swal || !module.swal.fire)) return;
 
-        let settingsHtml = module.renderers ? module.renderers.renderCallHistorySettings() : '';
+        let settingsHtml = module.renderers ? module.renderers.renderCallHistorySettings() : '<div class="call-metadata-card">';
         let callHistoryRows = "";
         $.each(module.metadata, (k, v) => {
             if (module.renderers && module.renderers.renderCallHistoryRow) {
                 callHistoryRows += module.renderers.renderCallHistoryRow(v.name || '', k, !!v.complete);
             }
         });
-        settingsHtml += callHistoryRows;
+        settingsHtml += callHistoryRows + '</div>';
 
-        Swal.fire({
+        (module.swal ? module.swal.fire : Swal.fire)({
             title: 'Call Metadata Settings',
+            customIcon: '<i class="fas fa-sliders-h"></i>',
             html: settingsHtml,
             showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-check me-1.5"></i> Save Settings',
+            cancelButtonText: 'Cancel',
             focusCancel: true
         }).then((result) => {
             if (!result.isConfirmed) return;
@@ -63,20 +66,30 @@
     };
 
     const openDeleteModal = () => {
-        if (typeof Swal === 'undefined') return;
+        if (typeof Swal === 'undefined' && (!module.swal || !module.swal.confirm)) return;
 
-        Swal.fire({
-            icon: 'warning',
-            title: 'Are you sure?',
-            text: "Are you sure you want to delete the previous instance of Call Log",
-            showCancelButton: true,
-            showConfirmButton: true,
-            focusCancel: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#337ab7',
-            cancelButtonText: 'Close',
-            confirmButtonText: 'Delete Call Log'
-        }).then((result) => {
+        let confirmPromise = module.swal
+            ? module.swal.confirm(
+                'Delete Call Log Instance',
+                'Are you sure you want to delete the previous instance of this Call Log? This action cannot be undone.',
+                {
+                    confirmButtonText: '<i class="fas fa-trash-alt me-1.5"></i> Delete Instance',
+                    cancelButtonText: 'Cancel',
+                    isDestructive: true,
+                    focusCancel: true
+                }
+            )
+            : Swal.fire({
+                icon: 'warning',
+                title: 'Delete Call Log Instance',
+                text: 'Are you sure you want to delete the previous instance of this Call Log? This action cannot be undone.',
+                showCancelButton: true,
+                confirmButtonText: 'Delete Instance',
+                cancelButtonText: 'Cancel',
+                focusCancel: true
+            });
+
+        confirmPromise.then((result) => {
             if (!result.isConfirmed) return;
 
             let instance = getParam('instance') > 1 ? getParam('instance') - 1 : 1;

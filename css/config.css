@@ -370,3 +370,206 @@
     display: inline-block;
     flex-shrink: 0;
 }
+
+/* Call Script & Talking Points Section */
+.call-config-dashboard .call-script-section {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 20px;
+}
+
+.call-config-dashboard .call-script-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.call-config-dashboard .script-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    font-size: 0.775rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease-in-out;
+    border: 1px solid transparent;
+}
+
+.call-config-dashboard .script-tag-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.call-config-dashboard .script-tag-chip:active {
+    transform: translateY(0);
+}
+
+.call-config-dashboard .chip-custom {
+    background-color: #f5f3ff;
+    border-color: #ddd6fe;
+    color: #6d28d9;
+}
+
+.call-config-dashboard .chip-custom:hover {
+    background-color: #ede9fe;
+    border-color: #c4b5fd;
+    color: #5b21b6;
+}
+
+.call-config-dashboard .chip-smart {
+    background-color: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #047857;
+}
+
+.call-config-dashboard .chip-smart:hover {
+    background-color: #d1fae5;
+    border-color: #6ee7b7;
+    color: #065f46;
+}
+
+.call-config-dashboard .chip-field-btn {
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    font-size: 0.775rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+}
+
+.call-config-dashboard .chip-field-btn:hover {
+    background-color: #dbeafe;
+    border-color: #93c5fd;
+    color: #1e40af;
+}
+
+/* Script Action Buttons (Starter Script, Tag Guide) */
+.call-config-dashboard .btn-script-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 31px;
+    padding: 0 12px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    color: #334155;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease-in-out;
+}
+
+.call-config-dashboard .btn-script-action:hover {
+    background-color: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+.call-config-dashboard .btn-script-action:active {
+    transform: translateY(0);
+    background-color: #f1f5f9;
+}
+
+.call-config-dashboard .btn-script-starter {
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+.call-config-dashboard .btn-script-starter i {
+    color: #2563eb;
+}
+
+.call-config-dashboard .btn-script-starter:hover i {
+    color: #1d4ed8;
+}
+
+.call-config-dashboard .btn-script-guide {
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+.call-config-dashboard .btn-script-guide i {
+    color: #0284c7;
+}
+
+.call-config-dashboard .btn-script-guide.active {
+    background-color: #eff6ff !important;
+    border-color: #3b82f6 !important;
+    color: #1d4ed8 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+    font-weight: 700 !important;
+}
+
+.call-config-dashboard .btn-script-guide.active i {
+    color: #1d4ed8 !important;
+}
+
+/* TinyMCE Editor Wrapper Polish */
+.call-config-dashboard .call-script-section .tox.tox-tinymce {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    overflow: hidden;
+}
+
+.call-config-dashboard .call-script-section .tox.tox-tinymce.tox-edit-focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15) !important;
+}
+
+.call-config-dashboard .call-script-section .tox .tox-toolbar-overlord,
+.call-config-dashboard .call-script-section .tox .tox-toolbar,
+.call-config-dashboard .call-script-section .tox .tox-toolbar__primary {
+    background-color: #f8fafc !important;
+}
+
+/* Call Script Guide Card */
+.call-config-dashboard .call-script-guide-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 0.8125rem;
+    color: #475569;
+}
+
+.call-config-dashboard .call-script-guide-table {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.call-config-dashboard .call-script-guide-table th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 6px 8px;
+}
+
+.call-config-dashboard .call-script-guide-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
