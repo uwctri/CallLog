@@ -420,7 +420,7 @@
                     items.push(`<strong>${opts.nts || 'Need to Schedule'} / NTS:</strong> Scheduled Appointment Date, Days-Before Window tracking`);
                 }
                 if (templatesFound.has('adhoc')) {
-                    items.push(`<strong>${opts.adhoc || 'Ad-hoc'} Calls:</strong> Target Adhoc Available Date, Adhoc Reason selection`);
+                    items.push(`<strong>${opts.adhoc || 'Adhoc'} Calls:</strong> Target Adhoc Available Date, Adhoc Reason selection`);
                 }
                 if (templatesFound.has('new')) {
                     items.push(`<strong>${opts.new || 'New Entry'} Calls:</strong> Generated Date, Entry Expiration Status & Days remaining`);

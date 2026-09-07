@@ -158,7 +158,7 @@ class LoggingService
     }
 
     /**
-     * Log when an ad-hoc call is created
+     * Log when an adhoc call is created
      */
     public function logAdhocCreated(
         int $projectId,
@@ -170,7 +170,7 @@ class LoggingService
         string $source = 'ui',
         array $details = []
     ): void {
-        $message = "Ad-hoc call created: {$callName} for record {$record}";
+        $message = "Adhoc call created: {$callName} for record {$record}";
         $params = array_merge([
             'action' => 'adhoc_created',
             'project_id' => $projectId,
@@ -186,7 +186,7 @@ class LoggingService
     }
 
     /**
-     * Log when an ad-hoc call is resolved via API
+     * Log when an adhoc call is resolved via API
      */
     public function logAdhocResolved(
         int $projectId,
@@ -195,7 +195,7 @@ class LoggingService
         string $reason,
         int $resolvedCount
     ): void {
-        $message = "Ad-hoc call resolved via API for record {$record}";
+        $message = "Adhoc call resolved via API for record {$record}";
         $this->log($message, [
             'action' => 'adhoc_resolved',
             'project_id' => $projectId,

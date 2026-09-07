@@ -31,16 +31,19 @@
         },
         renderNotesEntry: function () {
             return `<tr id="call_notes_custom-tr">
-                <td colspan="2">
-                    <div class="d-flex w-100 border rounded shadow-xs" style="height: 180px;">
-                        <div class="panel-left p-2 bg-light border-end" style="width: 50%;">
-                            <label class="form-label small fw-bold text-secondary mb-1">Previous Call Notes</label>
-                            <textarea class="form-control form-control-sm notesOld bg-white" readonly style="height: 140px; resize: none;"></textarea>
+                <td colspan="2" class="p-2 border-0">
+                    <div class="call-notes-grid">
+                        <div class="call-notes-col">
+                            <label class="form-label small fw-semibold text-muted mb-1 d-flex align-items-center">
+                                <i class="fas fa-history me-1"></i> Previous Call Notes
+                            </label>
+                            <textarea class="form-control form-control-sm notesOld bg-light" readonly placeholder="No previous notes recorded for this call type."></textarea>
                         </div>
-                        <div class="splitter cursor-col-resize bg-secondary opacity-25" style="width: 5px; cursor: col-resize;"></div>
-                        <div class="panel-right p-2 flex-grow-1 bg-white">
-                            <label class="form-label small fw-bold text-dark mb-1">New Call Notes</label>
-                            <textarea class="form-control form-control-sm notesNew" placeholder="Enter notes for this call..." style="height: 140px; resize: none;"></textarea>
+                        <div class="call-notes-col">
+                            <label class="form-label small fw-semibold text-dark mb-1 d-flex align-items-center">
+                                <i class="fas fa-pen me-1 text-primary"></i> Current Call Notes
+                            </label>
+                            <textarea class="form-control form-control-sm notesNew" placeholder="Enter notes for this call..."></textarea>
                         </div>
                     </div>
                 </td>
@@ -61,18 +64,20 @@
         renderCallWrapper: function () {
             return `<tr id="call_log_wrapper-tr">
                 <td colspan="2" class="p-0">
-                    <div class="card border-0 shadow-xs mb-3">
-                        <div class="card-header bg-light border-bottom p-2">
-                            <ul class="nav nav-tabs card-header-tabs m-0"></ul>
+                    <div class="call-tabs-bar d-flex flex-wrap align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <ul class="nav nav-pills card-header-tabs m-0 call-tabs-nav p-0 border-0 gap-2"></ul>
                         </div>
+                        <div class="d-flex align-items-center gap-2 call-adhoc-actions ms-auto"></div>
                     </div>
                 </td>
             </tr>`;
         },
-        renderCallLogTab: function (callID, name) {
+        renderCallLogTab: function (callID, name, isComplete) {
+            const icon = isComplete ? '<i class="fas fa-check-circle text-success me-2 mr-2"></i>' : '<i class="fas fa-phone-alt me-2 mr-2 text-secondary opacity-75"></i>';
             return `<li class="nav-item">
-                <button type="button" class="nav-link callTab py-1.5 px-3 fw-semibold cursor-pointer" data-call-id="${callID}">
-                    ${name}
+                <button type="button" class="callTab custom-nav-pill cursor-pointer" data-call-id="${callID}">
+                    ${icon} <span>${name}</span>
                 </button>
             </li>`;
         },
@@ -84,42 +89,52 @@
                 </td>
             </tr>`;
         },
-        renderAdhocBtn: function (adhocId, label) {
-            return `<button type="button" class="btn btn-outline-primary btn-sm me-2 adhocButton" data-bs-toggle="modal" data-bs-target="#${adhocId}">
-                <i class="fas fa-plus me-1"></i> ${label}
+        renderAdhocBtn: function (label) {
+            const btnText = label || 'New Adhoc Call';
+            return `<button type="button" class="btn btn-outline-primary btn-sm adhocButton shadow-xs py-1 px-2.5" data-bs-toggle="modal" data-bs-target="#adhocModal" data-toggle="modal" data-target="#adhocModal">
+                <i class="fas fa-plus me-1"></i> ${btnText}
             </button>`;
         },
-        renderAdhocModal: function (adhocId, title) {
-            return `<div class="modal fade" id="${adhocId}" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
+        renderAdhocModal: function (hasMultipleTypes, title) {
+            const modalTitle = title || 'New Adhoc Call';
+            return `<div class="modal fade" id="adhocModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow">
                         <div class="modal-header bg-primary text-white py-2 px-3">
-                            <h5 class="modal-title fs-6 fw-bold">${title}</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <h5 class="modal-title fs-6 fw-bold d-flex align-items-center">
+                                <i class="fas fa-phone-volume me-2"></i> ${modalTitle}
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body p-3">
+                            <div class="mb-3" id="adhocCallTypeGroup" style="${hasMultipleTypes ? '' : 'display: none;'}">
+                                <label class="form-label small fw-bold text-dark">Call Type</label>
+                                <select class="form-select form-select-sm" name="callType"></select>
+                            </div>
                             <div class="mb-3">
-                                <label class="form-label small fw-bold">Reason</label>
+                                <label class="form-label small fw-bold text-dark">Reason</label>
                                 <select class="form-select form-select-sm" name="reason"></select>
                             </div>
                             <div class="row g-2 mb-3">
                                 <div class="col-6">
-                                    <label class="form-label small fw-bold">Date</label>
+                                    <label class="form-label small fw-bold text-dark">Date</label>
                                     <input type="text" class="form-control form-control-sm" name="callDate" placeholder="YYYY-MM-DD">
                                 </div>
                                 <div class="col-6">
-                                    <label class="form-label small fw-bold">Time</label>
+                                    <label class="form-label small fw-bold text-dark">Time</label>
                                     <input type="text" class="form-control form-control-sm" name="callTime" placeholder="HH:MM">
                                 </div>
                             </div>
                             <div class="mb-2">
-                                <label class="form-label small fw-bold">Notes</label>
+                                <label class="form-label small fw-bold text-dark">Notes</label>
                                 <textarea class="form-control form-control-sm" name="notes" rows="3" placeholder="Optional call notes..."></textarea>
                             </div>
                         </div>
-                        <div class="modal-footer py-2 px-3">
-                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary btn-sm callModalSave">Save Call</button>
+                        <div class="modal-footer py-2 px-3 bg-light">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary btn-sm callModalSave">
+                                <i class="fas fa-save me-1"></i> Save Call
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -136,11 +151,23 @@
         renderCallHistoryTable: function () {
             return `<div class="callHistoryContainer card border shadow-xs mb-4">
                 <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark"><i class="fas fa-history me-1.5 text-primary"></i> Participant Call History</span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary callSummarySettings border-0 px-2 py-1"><i class="fas fa-cog"></i></button>
+                    <span class="fw-bold text-dark small"><i class="fas fa-history me-1.5 text-primary"></i> Participant Call History</span>
+                    <button type="button" class="btn btn-sm btn-link text-muted p-0 callSummarySettings" title="Call Settings"><i class="fas fa-cog"></i></button>
                 </div>
-                <div class="card-body p-2">
-                    <table class="table table-sm table-hover callSummaryTable w-100"></table>
+                <div class="card-body p-2 callHistoryBody">
+                    <table class="table table-sm table-hover callSummaryTable w-100 mb-0"></table>
+                </div>
+            </div>`;
+        },
+        renderCallHistoryEmpty: function () {
+            return `<div class="callHistoryContainer card border shadow-xs mb-4">
+                <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-dark small"><i class="fas fa-history me-1.5 text-primary"></i> Participant Call History</span>
+                    <button type="button" class="btn btn-sm btn-link text-muted p-0 callSummarySettings" title="Call Settings"><i class="fas fa-cog"></i></button>
+                </div>
+                <div class="card-body p-3 text-center text-muted small">
+                    <i class="fas fa-phone-slash text-secondary opacity-50 fs-4 mb-2 d-block"></i>
+                    No call history recorded for this participant yet.
                 </div>
             </div>`;
         },

@@ -25,7 +25,7 @@ enum CallTemplateType: string
             self::FOLLOWUP->value => 'Follow Up',
             self::MCV->value => 'Missed / Cancelled Visit',
             self::NTS->value => 'Need to Schedule',
-            self::ADHOC->value => 'Ad-hoc',
+            self::ADHOC->value => 'Adhoc',
             self::VISIT->value => 'Scheduled Phone Visit',
         ];
     }

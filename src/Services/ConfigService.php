@@ -423,7 +423,8 @@ class ConfigService
                     $ntsConfig[] = $arr;
                 }
             } elseif ($template === "adhoc") {
-                $reasons = $settings["adhoc_reason"][$i][0] ?? $settings["adhoc_reason"][$i] ?? '';
+                $rawReason = $settings["adhoc_reason"][$i] ?? '';
+                $reasons = is_array($rawReason) ? ($rawReason[0] ?? '') : (string)$rawReason;
                 if (empty($reasons)) continue;
                 $adhocConfig[] = array_merge([
                     "reasons" => $this->explodeCodedValueText($reasons),
@@ -670,16 +671,28 @@ class ConfigService
     {
         $settings = $this->getRawProjectSettings($projectId);
         $config = [];
-        foreach ($settings["call_template"] as $i => $template) {
+        $templates = $settings["call_template"] ?? [];
+        foreach ($templates as $i => $template) {
             if ($template === "adhoc") {
                 $callId = $settings["call_id"][$i] ?? null;
-                $reasons = $settings["adhoc_reason"][$i][0] ?? $settings["adhoc_reason"][$i] ?? '';
-                if ($callId && !empty($reasons)) {
-                    $config[$callId] = [
-                        "name" => $settings["call_name"][$i] ?? '',
-                        "reasons" => $this->explodeCodedValueText($reasons)
-                    ];
-                }
+                if (empty($callId)) continue;
+                $rawReason = $settings["adhoc_reason"][$i] ?? '';
+                $reasons = is_array($rawReason) ? ($rawReason[0] ?? '') : (string)$rawReason;
+                $reasons = trim($reasons);
+                $parsedReasons = !empty($reasons) ? $this->explodeCodedValueText($reasons) : [
+                    "1" => "General",
+                    "2" => "Follow-up",
+                    "3" => "Urgent"
+                ];
+                $script = $settings["call_script"][$i] ?? '';
+                if (is_array($script)) $script = reset($script);
+                $config[$callId] = [
+                    "id" => $callId,
+                    "name" => !empty($settings["call_name"][$i]) ? $settings["call_name"][$i] : 'Adhoc Call',
+                    "reasons" => $parsedReasons,
+                    "script" => (string)$script,
+                    "hideAfterAttempt" => !empty($settings["hide_after_attempt"][$i]) ? (int)$settings["hide_after_attempt"][$i] : 9999
+                ];
             }
         }
         return $config;

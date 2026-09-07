@@ -55,12 +55,12 @@
             return;
         }
         let data = (module.data && module.data[row.data()['instance']]) ? module.data[row.data()['instance']] : {};
-        let date = data['call_open_datetime'] || '';
+        let date = data['call_open_datetime'] || (data['call_open_date'] ? `${data['call_open_date']} ${data['call_open_time'] || ''}`.trim() : '');
         let note = data['call_notes'] ? data['call_notes'] : "No Notes Taken";
         let logClosed = data['call_outcome'] === "1" ? (module.renderers ? module.renderers.renderCallClosed() : '') : "";
         let userName = data['call_open_user_full_name'] || '';
 
-        row.child(`<b>${date}</b><br>${userName} - ${note}${logClosed}`, 'dataTableChild').show();
+        row.child(`<div class="call-child-note p-2 border-start border-3 border-primary bg-light"><div class="small text-muted mb-1"><strong>${userName || 'User'}</strong> &bull; ${date} ${logClosed}</div><div class="small text-dark" style="white-space: pre-wrap;">${note}</div></div>`, 'dataTableChild').show();
         $(target).next().addClass($(target).hasClass('even') ? 'even' : 'odd');
         $(target).addClass('shown');
     };
@@ -107,55 +107,178 @@
         });
     };
 
+    const positionHistoryContainer = () => {
+        const $container = $('.callHistoryContainer');
+        if (!$container.length) return;
+
+        const $form = $('#form').length ? $('#form') : ($('#questiontable').length ? $('#questiontable') : null);
+        if (!$form || !$form.length) return;
+
+        const $table = $('#center table.form_border').length ? $('#center table.form_border') : $form;
+        const formOffset = $table.offset() || $form.offset();
+        const formWidth = Math.min($table.outerWidth() || $form.outerWidth() || 800, 820);
+        const windowWidth = $(window).width();
+        const windowHeight = $(window).height();
+        const scrollTop = $(window).scrollTop();
+        const sideMargin = 16;
+        const maxSidebarWidth = 380;
+        const minSidebarWidth = 310;
+
+        const targetLeft = Math.round(formOffset.left + formWidth + sideMargin);
+        const availableRight = windowWidth - targetLeft - 15;
+
+        if (availableRight >= minSidebarWidth) {
+            const sidebarWidth = Math.min(maxSidebarWidth, availableRight);
+            const formTop = Math.round(formOffset.top);
+            const $fixedNav = $('.navbar.fixed-top, #redcap-header, .rcproject-navbar');
+            const minTop = $fixedNav.length ? Math.round($fixedNav.outerHeight() + 10) : 55;
+            const dockedTop = Math.max(formTop - scrollTop, minTop);
+            const maxHeight = Math.max(200, windowHeight - dockedTop - 20);
+
+            $container.removeClass('callHistoryStacked').addClass('callHistoryDocked').css({
+                position: 'fixed',
+                left: `${targetLeft}px`,
+                top: `${dockedTop}px`,
+                width: `${sidebarWidth}px`,
+                'max-width': `${sidebarWidth}px`,
+                'max-height': `${maxHeight}px`,
+                'overflow-y': 'auto',
+                'z-index': 1000,
+                margin: 0,
+                display: 'block'
+            });
+        } else {
+            $container.removeClass('callHistoryDocked').addClass('callHistoryStacked').css({
+                position: 'relative',
+                left: 'auto',
+                top: 'auto',
+                width: '100%',
+                'max-width': `${formWidth}px`,
+                'max-height': 'none',
+                'overflow-y': 'visible',
+                'z-index': 'auto',
+                'margin-top': '24px',
+                'margin-bottom': '24px',
+                display: 'block'
+            });
+            if ($form.next()[0] !== $container[0]) {
+                $form.after($container);
+            }
+        }
+    };
+
     const buildCallSummaryTable = () => {
         if (!module.metadata || !module.renderers || !module.renderers.renderCallHistoryTable) return;
-        if (!module.data || !(Object.keys(module.data).length > 1 || !module.data[1] || module.data[1]['call_id'])) return;
 
-        if ($("#center").length && !$(".callHistoryContainer").length) {
-            $("#center").append(module.renderers.renderCallHistoryTable());
-            let targetOffset = $("#record_id-tr").length ? $("#record_id-tr").offset().top : 0;
-            if (targetOffset) {
-                $('.callHistoryContainer').css('top', targetOffset);
+        const validInstances = [];
+        if (module.data && typeof module.data === 'object') {
+            $.each(module.data, function (inst, d) {
+                if (d && (d['call_id'] || d['call_open_datetime'] || d['call_open_date'] || d['call_outcome'])) {
+                    validInstances.push({ instance: inst, data: d });
+                }
+            });
+        }
+
+        if (!$(".callHistoryContainer").length) {
+            const htmlToAppend = validInstances.length > 0
+                ? module.renderers.renderCallHistoryTable()
+                : (module.renderers.renderCallHistoryEmpty ? module.renderers.renderCallHistoryEmpty() : module.renderers.renderCallHistoryTable());
+            
+            const $form = $('#form');
+            if ($form.length) {
+                $form.after(htmlToAppend);
+            } else {
+                $("#center").append(htmlToAppend);
             }
         }
 
+        $(".callSummarySettings").off('click').on('click', threeDotClick);
+
+        if (validInstances.length === 0) {
+            positionHistoryContainer();
+            setTimeout(positionHistoryContainer, 150);
+            $(window).off('resize.callHistory scroll.callHistory').on('resize.callHistory scroll.callHistory', positionHistoryContainer);
+            $(window).on('load', positionHistoryContainer);
+            if (window.ResizeObserver && $('#center').length && !window.__callHistoryResizeObserver) {
+                window.__callHistoryResizeObserver = new ResizeObserver(() => {
+                    positionHistoryContainer();
+                });
+                window.__callHistoryResizeObserver.observe($('#center')[0]);
+                if ($('#west').length) window.__callHistoryResizeObserver.observe($('#west')[0]);
+            }
+            return;
+        }
+
+        const isCallLogPage = (getParam('page') === (module.static ? module.static.instrument : 'call_log'));
+        const lastValidIndex = validInstances[validInstances.length - 1].instance;
+
         $('.callSummaryTable').DataTable({
             pageLength: 20,
-            dom: Object.keys(module.data).length > callSummaryPageSize ? 'rtp' : 'rt',
+            dom: validInstances.length > callSummaryPageSize ? 'rtp' : 'rt',
             order: [
                 [0, "desc"]
             ],
             createdRow: (row) => $(row).addClass('dataTablesRow'),
             columns: [
-                { title: '#', data: 'instance', className: 'dt-center' },
-                { title: 'Call', data: 'name' },
+                { title: '#', data: 'instance', className: 'dt-center text-muted small' },
+                { title: 'Call', data: 'name', className: 'fw-semibold' },
                 { title: 'Msg', data: 'leftMessage', className: 'dt-body-center' },
-                { title: 'Call time', data: 'datetime' },
-                { title: '', data: 'deleteInstance', bSortable: false }
+                { title: 'Call time', data: 'datetime', className: 'small' },
+                { title: '', data: 'deleteInstance', bSortable: false, className: 'dt-body-right' }
             ],
-            data: $.map(module.data, (data, index) => {
-                let m = module.metadata[data['call_id']];
-                let dataKeys = Object.keys(module.data);
-                let allowDelete = (dataKeys[dataKeys.length - 1] == index);
+            data: validInstances.map((item) => {
+                const data = item.data;
+                const index = item.instance;
+                const m = (module.metadata && data['call_id']) ? module.metadata[data['call_id']] : null;
+                const allowDelete = isCallLogPage && (lastValidIndex === index);
+                let callName = (m && m['name']) ? m['name'] : '';
+                if (!callName && data['call_id']) {
+                    const cid = String(data['call_id']);
+                    const baseId = cid.split('|')[0].split('||')[0];
+                    if (module.callNames && module.callNames[baseId]) {
+                        callName = module.callNames[baseId];
+                    } else if (cid.includes('||')) {
+                        callName = 'Adhoc Call';
+                    } else {
+                        callName = cid;
+                    }
+                }
                 return {
                     instance: index,
-                    name: (m && m['name']) ? m['name'] : (data['call_id'] || "Unknown"),
-                    datetime: data['call_open_datetime'] || '',
-                    leftMessage: (data['call_left_message'] && data['call_left_message'][1] === "1") ? 'Yes' : 'No',
+                    name: callName || "Unknown Call",
+                    datetime: data['call_open_datetime'] || (data['call_open_date'] ? `${data['call_open_date']} ${data['call_open_time'] || ''}`.trim() : ''),
+                    leftMessage: (data['call_left_message'] && (data['call_left_message'][1] === "1" || data['call_left_message'] === "1")) ? '<span class="badge bg-info text-white">Yes</span>' : '<span class="text-muted small">No</span>',
                     deleteInstance: allowDelete ? (module.renderers ? module.renderers.renderDeleteLog() : '') : ''
                 };
             })
         });
 
         $(".callHistoryContainer .sorting_disabled").html(module.renderers ? module.renderers.renderSettingsButton() : '');
-        $(".callSummarySettings").on('click', threeDotClick);
 
-        $('body').on('click', '.dataTablesRow', childRowExpand);
+        $('body').off('click', '.dataTablesRow').on('click', '.dataTablesRow', childRowExpand);
 
-        if (getParam('page') !== module.static.instrument) return;
+        if (isCallLogPage) {
+            $('.deleteInstance').off('click').on('click', function (e) {
+                e.stopPropagation();
+                openDeleteModal();
+            });
+        }
 
-        $('.deleteInstance').on('click', openDeleteModal);
+        positionHistoryContainer();
+        setTimeout(positionHistoryContainer, 150);
+        $(window).off('resize.callHistory scroll.callHistory').on('resize.callHistory scroll.callHistory', positionHistoryContainer);
+        $(window).on('load', positionHistoryContainer);
+
+        if (window.ResizeObserver && $('#center').length && !window.__callHistoryResizeObserver) {
+            window.__callHistoryResizeObserver = new ResizeObserver(() => {
+                positionHistoryContainer();
+            });
+            window.__callHistoryResizeObserver.observe($('#center')[0]);
+            if ($('#west').length) window.__callHistoryResizeObserver.observe($('#west')[0]);
+        }
     };
 
-    buildCallSummaryTable();
+    $(function () {
+        buildCallSummaryTable();
+    });
 })();
