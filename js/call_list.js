@@ -689,6 +689,26 @@
                 }
             },
 
+            setButtonLoading($btn) {
+                let originalHtml = $btn.html();
+                let originalWidth = $btn.outerWidth();
+                if (originalWidth > 0) {
+                    $btn.css('min-width', originalWidth + 'px');
+                }
+                $btn.prop('disabled', true)
+                    .addClass('btn-loading')
+                    .html('<span class="btn-bounce-ball-stage" aria-hidden="true"><span class="btn-bounce-ball"></span></span>');
+                $btn.siblings('.drawer-action-btn').prop('disabled', true);
+
+                return function restoreButton() {
+                    $btn.html(originalHtml)
+                        .css('min-width', '')
+                        .prop('disabled', false)
+                        .removeClass('btn-loading');
+                    $btn.siblings('.drawer-action-btn').prop('disabled', false);
+                };
+            },
+
             setupDataTables() {
                 const self = this;
 
@@ -730,8 +750,10 @@
                 $(document).on('click', '.startCallButton', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    let record = $(this).data('record');
-                    let callId = $(this).data('callid');
+                    let $btn = $(this);
+                    let record = $btn.data('record');
+                    let callId = $btn.data('callid');
+                    let restore = self.setButtonLoading($btn);
                     module.ajax("setCallStarted", {
                         record: record,
                         id: callId
@@ -739,14 +761,17 @@
                         self.refreshTableData();
                     }).catch(err => {
                         console.error("Failed to start call:", err);
+                        restore();
                     });
                 });
 
                 $(document).on('click', '.noCallsButton', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    let record = $(this).data('record');
-                    let callId = $(this).data('callid');
+                    let $btn = $(this);
+                    let record = $btn.data('record');
+                    let callId = $btn.data('callid');
+                    let restore = self.setButtonLoading($btn);
                     module.ajax("setNoCallsToday", {
                         record: record,
                         id: callId
@@ -754,14 +779,17 @@
                         self.refreshTableData();
                     }).catch(err => {
                         console.error("Failed to set no calls today:", err);
+                        restore();
                     });
                 });
 
                 $(document).on('click', '.endCallButton', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    let record = $(this).data('record');
-                    let callId = $(this).data('callid');
+                    let $btn = $(this);
+                    let record = $btn.data('record');
+                    let callId = $btn.data('callid');
+                    let restore = self.setButtonLoading($btn);
                     module.ajax("setCallEnded", {
                         record: record,
                         id: callId
@@ -769,6 +797,7 @@
                         self.refreshTableData();
                     }).catch(err => {
                         console.error("Failed to end call:", err);
+                        restore();
                     });
                 });
 

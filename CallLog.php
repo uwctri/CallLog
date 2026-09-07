@@ -44,6 +44,12 @@ class CallLog extends AbstractExternalModule
     private string $metadataField = "call_metadata";
     private int $startedCallGrace = 30;
 
+    public function __construct()
+    {
+        parent::__construct();
+        $this->disableUserBasedSettingPermissions();
+    }
+
     private ?ConfigService $configService = null;
     private ?CallMetadataRepository $metadataRepo = null;
     private ?DateMathService $dateMathService = null;
@@ -159,12 +165,15 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 $this->passArgument('rawConfig', $this->getConfigService()->getRawProjectSettings((int)$project_id));
                 $this->passArgument('metaInfo', $this->getConfigService()->getProjectMetadataInfo((int)$project_id));
                 $this->includeCss('css/config.css');
+                $this->includeCss('css/swal.css');
+                echo "<script type='text/javascript' src='" . APP_PATH_WEBROOT . "Resources/webpack/css/tinymce/tinymce.min.js'></script>\n";
                 $this->includeJs('js/config.js', true);
                 $this->includeJs('js/alpine.min.js', true);
             } else {
                 // Dependency: ColReorder v1.7.0 paired with REDCap built-in DataTables v1.13.11
                 $this->includeCss('css/colReorder.dataTables.min.css');
                 $this->includeCss('css/list.css');
+                $this->includeCss('css/swal.css');
                 $this->includeJs('js/dataTables.colReorder.min.js', true);
                 $this->includeJs('js/call_list.js', true);
                 $this->includeJs('js/alpine.min.js', true);
@@ -215,6 +224,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             $this->passArgument('metadata', $this->getMetadataRepo()->getMetadata($project_id, $record));
             $this->passArgument('data', $this->getAllCallData($project_id, $record));
             $this->includeCss('css/log.css');
+            $this->includeCss('css/swal.css');
             $this->includeJs('js/summary_table.js');
         }
     }

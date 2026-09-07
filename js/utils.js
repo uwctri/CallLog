@@ -148,4 +148,143 @@
             return this.formatPhpDate(parsed.date, useFmt);
         }
     };
+
+    const SWAL_DEFAULTS = {
+        customClass: {
+            container: 'call-log-swal-container',
+            popup: 'call-log-swal-popup',
+            header: 'call-log-swal-header',
+            title: 'call-log-swal-title',
+            content: 'call-log-swal-content',
+            htmlContainer: 'call-log-swal-content',
+            actions: 'call-log-swal-actions',
+            confirmButton: 'call-log-swal-btn call-log-swal-confirm',
+            cancelButton: 'call-log-swal-btn call-log-swal-cancel',
+            denyButton: 'call-log-swal-btn call-log-swal-deny',
+            icon: 'call-log-swal-icon'
+        },
+        buttonsStyling: false,
+        showCloseButton: false,
+        focusConfirm: false
+    };
+
+    function isCallLogContext() {
+        if (typeof window === 'undefined') return false;
+        if (window.location && window.location.href && window.location.href.includes('prefix=call_log')) return true;
+        if (typeof document !== 'undefined') {
+            return !!(
+                document.getElementById('callLogConfig') ||
+                document.querySelector('.call-list-dashboard') ||
+                document.querySelector('.callSummaryTable') ||
+                document.querySelector('.callHistoryContainer') ||
+                document.getElementById('call_log_wrapper-tr') ||
+                document.querySelector('.callTable')
+            );
+        }
+        return false;
+    }
+
+    function mergeSwalOptions(userOpts = {}) {
+        let opts = typeof userOpts === 'string' ? { title: userOpts } : { ...userOpts };
+        let customClass = Object.assign({}, SWAL_DEFAULTS.customClass, opts.customClass || {});
+
+        if (opts.isDestructive || opts.confirmButtonColor === '#d33' || opts.confirmButtonColor === '#dc3545' || opts.confirmButtonColor === '#dc2626') {
+            customClass.confirmButton = ((customClass.confirmButton || '') + ' call-log-swal-destructive').trim();
+        }
+
+        if (opts.showConfirmButton === false && !opts.showCancelButton) {
+            customClass.popup = ((customClass.popup || '') + ' call-log-swal-no-buttons').trim();
+        }
+
+        let merged = Object.assign({}, SWAL_DEFAULTS, opts, {
+            customClass: customClass,
+            buttonsStyling: false
+        });
+
+        if (opts.customIcon && !opts.icon) {
+            let iconHtml = `<div class="call-log-swal-custom-icon ${opts.customIconClass || ''}">${opts.customIcon}</div>`;
+            if (opts.html) {
+                merged.html = iconHtml + opts.html;
+            } else if (opts.text) {
+                merged.html = `${iconHtml}<p class="call-log-swal-content">${opts.text}</p>`;
+                delete merged.text;
+            } else {
+                merged.html = iconHtml;
+            }
+        }
+
+        return merged;
+    }
+
+    module.swal = {
+        defaults: SWAL_DEFAULTS,
+        mergeOptions: mergeSwalOptions,
+
+        fire(options, ...rest) {
+            let swalObj = (typeof window !== 'undefined' && window.Swal) ? window.Swal : (typeof Swal !== 'undefined' ? Swal : null);
+            if (!swalObj) {
+                console.warn("SweetAlert2 is not defined on this page.");
+                let msg = (options && (options.title || options.text)) ? `${options.title || ''}\n${options.text || ''}` : 'Alert';
+                if (typeof window !== 'undefined' && window.alert) window.alert(msg);
+                return Promise.resolve({ isConfirmed: true, isDismissed: false });
+            }
+            let merged = mergeSwalOptions(options);
+            let targetFn = swalObj.originalFire || swalObj.fire;
+            return targetFn.call(swalObj, merged, ...rest);
+        },
+
+        success(title, text = '', options = {}) {
+            return this.fire(Object.assign({ icon: 'success', title: title, text: text }, options));
+        },
+
+        error(title, text = '', options = {}) {
+            return this.fire(Object.assign({ icon: 'error', title: title, text: text }, options));
+        },
+
+        warning(title, text = '', options = {}) {
+            return this.fire(Object.assign({ icon: 'warning', title: title, text: text }, options));
+        },
+
+        info(title, text = '', options = {}) {
+            return this.fire(Object.assign({ icon: 'info', title: title, text: text }, options));
+        },
+
+        confirm(title, text = '', options = {}) {
+            let isDestructive = options.isDestructive || options.confirmButtonColor === '#d33';
+            let defaults = {
+                icon: 'warning',
+                title: title,
+                text: text,
+                showCancelButton: true,
+                showConfirmButton: true,
+                confirmButtonText: isDestructive ? '<i class="fas fa-trash-alt me-1.5"></i> Delete' : 'Confirm',
+                cancelButtonText: 'Cancel',
+                focusCancel: true
+            };
+            return this.fire(Object.assign({}, defaults, options));
+        }
+    };
+
+    function attachSwalDecorator() {
+        let swalObj = (typeof window !== 'undefined' && window.Swal) ? window.Swal : (typeof Swal !== 'undefined' ? Swal : null);
+        if (swalObj && !swalObj.originalFire) {
+            swalObj.originalFire = swalObj.fire;
+            swalObj.fire = function (...args) {
+                if (isCallLogContext()) {
+                    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
+                        return module.swal.fire(args[0]);
+                    } else if (args.length > 0) {
+                        let [title, html, icon] = args;
+                        return module.swal.fire({ title: title, html: html, icon: icon });
+                    }
+                }
+                return swalObj.originalFire.apply(this, args);
+            };
+        }
+    }
+
+    attachSwalDecorator();
+    if (typeof document !== 'undefined') {
+        document.addEventListener('DOMContentLoaded', attachSwalDecorator);
+    }
 })();

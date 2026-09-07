@@ -42,6 +42,7 @@ class ConfigService
             'call_id' => [],
             'call_name' => [],
             'call_template' => [],
+            'call_script' => [],
             'display_name_field' => '',
             'call_expected_duration' => [],
             'hide_after_attempts' => [],
@@ -318,11 +319,14 @@ class ConfigService
             $hide = $settings["hide_after_attempts"][$i] ?? null;
             $duration = $settings["call_expected_duration"][$i] ?? null;
             if (is_array($duration)) $duration = reset($duration);
+            $script = $settings["call_script"][$i] ?? '';
+            if (is_array($script)) $script = reset($script);
             $commonConfig = [
                 "id" => $settings["call_id"][$i] ?? '',
                 "name" => $settings["call_name"][$i] ?? '',
                 "hideAfterAttempt" => $hide ? (int)$hide : 9999,
-                "callDuration" => ($duration !== null && $duration !== '' && is_numeric($duration)) ? (int)$duration : 30
+                "callDuration" => ($duration !== null && $duration !== '' && is_numeric($duration)) ? (int)$duration : 30,
+                "script" => (string)$script
             ];
 
             if ($template === "new") {

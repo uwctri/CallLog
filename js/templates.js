@@ -145,15 +145,18 @@
             </div>`;
         },
         renderCallHistorySettings: function () {
-            return `<div class="text-start mb-3">
-                <p class="small text-muted mb-2">Select which call types to mark complete or active for this participant:</p>
-            </div>`;
+            return `<div class="text-start mb-2">
+                <p class="small text-muted mb-2">Manage completion status for scheduled call types for this participant:</p>
+            </div><div class="call-metadata-card">`;
         },
         renderCallHistoryRow: function (name, callId, isComplete) {
-            return `<div class="form-check text-start mb-2">
-                <input class="form-check-input callMetadataEdit" type="checkbox" data-call="${callId}" id="meta_${callId}" ${isComplete ? 'checked' : ''}>
-                <label class="form-check-label small fw-semibold text-dark" for="meta_${callId}">${name} (${callId})</label>
-            </div>`;
+            return `<label class="call-metadata-item" for="meta_${callId}">
+                <div class="d-flex align-items-center flex-grow-1">
+                    <input class="form-check-input callMetadataEdit me-2" type="checkbox" data-call="${callId}" id="meta_${callId}" ${isComplete ? 'checked' : ''}>
+                    <span class="call-name-label">${name}</span>
+                </div>
+                <span class="call-id-tag">${callId}</span>
+            </label>`;
         },
         renderCallClosed: function () {
             return `<span class="badge bg-success ms-2"><i class="fas fa-check me-1"></i> Log Closed</span>`;
