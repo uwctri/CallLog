@@ -49,10 +49,24 @@
             availableCallers: [],
             displayedData: {},
             dataLoaded: false,
+            lastDataPullTime: null,
+            lastDataPullText: '',
+            isRefreshing: false,
             persistTimeout: null,
+            unlockedTabs: {},
+
+            isTabUnlocked(tab_id) {
+                return Boolean(this.unlockedTabs && this.unlockedTabs[tab_id]);
+            },
 
             init() {
                 const tabs = (module.tabs && module.tabs.config) ? module.tabs.config : [];
+                let initialUnlocked = {};
+                tabs.forEach(t => {
+                    initialUnlocked[t.tab_id] = false;
+                });
+                this.unlockedTabs = initialUnlocked;
+
                 const firstTabId = tabs.length ? tabs[0].tab_id : '';
                 const savedState = getDashboardCookie() || {};
                 
@@ -78,6 +92,7 @@
                 }
 
                 this.setupDataTables();
+                this.setupColumnContextMenu();
                 this.refreshTableData();
 
                 setInterval(() => this.refreshTableData(), pageRefresh);
@@ -157,7 +172,7 @@
                 // Maintained for compatibility
             },
 
-            createColConfig(tabIdOrIndex) {
+            createColConfig(tabIdOrIndex, ignoreUserSettings = false) {
                 let defaultTab = { fields: [] };
                 if (module.tabs && module.tabs.config) {
                     if (typeof tabIdOrIndex === 'string') {
@@ -171,26 +186,62 @@
 
                 let config = [
                     {
-                        title: '',
+                        name: '_badges',
+                        title: '<span class="badge-col-header"></span>',
                         data: '_record_id',
                         className: 'leftListIcon',
+                        width: '40px',
                         bSortable: false,
+                        orderable: false,
+                        searchable: false,
                         render: (val, type, row) => {
                             if (type !== "display") return val;
-                            let icons = [];
-                            if (row['_isCallStarted']) {
-                                const user = module.userNameMap ? (module.userNameMap[row['_callStartedBy']] || row['_callStartedBy']) : row['_callStartedBy'];
-                                icons.push(module.renderers.renderCallStartedIcon(user));
+
+                            let hasCallStarted = Boolean(row['_isCallStarted']);
+                            let hasCallback = Boolean(row['_callbackRequestor']);
+                            let hasMultiTabs = Boolean(row['_onMultipleTabs']);
+
+                            let otherTabsStr = (Array.isArray(row['_otherTabs']) && row['_otherTabs'].length)
+                                ? row['_otherTabs'].join(', ')
+                                : '';
+                            let cbWho = row['_callbackRequestor'] === '1'
+                                ? 'Participant'
+                                : (row['_callbackRequestor'] === '2' ? 'Staff' : (row['_callbackRequestor'] || ''));
+
+                            let iconHtml = '';
+
+                            if (hasCallStarted) {
+                                // Priority 1: Ongoing Call (Active Lock)
+                                const user = module.userNameMap ? (module.userNameMap[row['_callStartedBy']] || row['_callStartedBy']) : (row['_callStartedBy'] || '');
+                                let secondary = [];
+                                if (hasCallback) secondary.push(cbWho ? `Callback requested (${cbWho})` : 'Callback requested');
+                                if (hasMultiTabs) secondary.push(otherTabsStr ? `Also on: ${otherTabsStr}` : 'On multiple tabs');
+
+                                let tooltip = user ? `On a call (${user})` : 'On a call';
+                                if (secondary.length) tooltip += ` • ${secondary.join(' • ')}`;
+
+                                iconHtml = module.renderers.renderCallStartedIcon(user, tooltip);
+                            } else if (hasCallback) {
+                                // Priority 2: Callback Requested (Actionable Task)
+                                let secondary = [];
+                                if (hasMultiTabs) secondary.push(otherTabsStr ? `Also on: ${otherTabsStr}` : 'On multiple tabs');
+
+                                let tooltip = cbWho ? `Callback requested (${cbWho})` : 'Callback requested';
+                                if (secondary.length) tooltip += ` • ${secondary.join(' • ')}`;
+
+                                iconHtml = module.renderers.renderCallbackMsgIcon(tooltip);
+                            } else if (hasMultiTabs) {
+                                // Priority 3: Queued on Multiple Tabs
+                                let tooltip = otherTabsStr ? `Record is on multiple tabs: ${otherTabsStr}` : 'Record is on multiple tabs';
+
+                                iconHtml = module.renderers.renderMultiTabIcon(row['_otherTabs'], tooltip);
                             }
-                            if (row['_onMultipleTabs']) {
-                                icons.push(module.renderers.renderMultiTabIcon(row['_otherTabs']));
+
+                            if (!iconHtml) {
+                                return '<div class="badge-icon-cell d-flex align-items-center justify-content-center mx-auto"></div>';
                             }
-                            if (row['_callbackRequestor']) {
-                                icons.push(module.renderers.renderCallbackMsgIcon());
-                            } else if (row['_callNotes'] || row['_hasNotes']) {
-                                icons.push(module.renderers.renderNotesIcon());
-                            }
-                            return `<div class="d-inline-flex align-items-center gap-1">${icons.join('')}</div>`;
+
+                            return `<div class="badge-icon-cell d-flex align-items-center justify-content-center mx-auto">${iconHtml}</div>`;
                         }
                     }
                 ];
@@ -204,8 +255,10 @@
                     }
 
                     let fieldDisplayName = fieldIndex === 0 ? 'Record ID' : (fieldConfig.displayName || colName);
+                    let internalName = fieldIndex === 0 ? 'record_id' : colName;
 
                     let col = {
+                        name: internalName,
                         title: fieldDisplayName,
                         data: colName,
                         defaultContent: fieldConfig.default || '',
@@ -257,6 +310,7 @@
 
                     if (fieldIndex === 0) {
                         config.push({
+                            name: 'call_attempt',
                             title: 'Attempts',
                             data: 'call_attempt',
                             className: 'text-center',
@@ -269,6 +323,7 @@
                         });
 
                         config.push({
+                            name: '_participantName',
                             title: 'Name',
                             data: '_participantName',
                             defaultContent: '',
@@ -280,8 +335,9 @@
                     }
                 });
 
-                if (!config.some(c => c.title === 'Attempts')) {
+                if (!config.some(c => c.name === 'call_attempt')) {
                     config.push({
+                        name: 'call_attempt',
                         title: 'Attempts',
                         data: 'call_attempt',
                         className: 'text-center',
@@ -294,8 +350,9 @@
                     });
                 }
 
-                if (!config.some(c => c.title === 'Name')) {
+                if (!config.some(c => c.name === '_participantName')) {
                     config.push({
+                        name: '_participantName',
                         title: 'Name',
                         data: '_participantName',
                         defaultContent: '',
@@ -308,6 +365,7 @@
 
                 if (defaultTab.showVisit) {
                     config.push({
+                        name: '_visitName',
                         title: 'Visit',
                         data: '_visitName',
                         defaultContent: '',
@@ -322,6 +380,7 @@
 
                 if (isNewCallType) {
                     config.push({
+                        name: '_call_date_gen',
                         title: 'Generated',
                         data: '_call_date',
                         className: 'callDateCol',
@@ -342,6 +401,7 @@
 
                 if (defaultTab.showNewExpiration) {
                     config.push({
+                        name: '_expireDate',
                         title: 'Expiration Date',
                         data: '_expireDate',
                         defaultContent: 'No Expiration',
@@ -363,6 +423,7 @@
 
                 if (defaultTab.showFollowupWindows) {
                     config.push({
+                        name: '_windowLower',
                         title: 'Start Calling',
                         data: '_windowLower',
                         defaultContent: 'Not Specified',
@@ -372,6 +433,7 @@
                         }
                     });
                     config.push({
+                        name: '_windowUpper',
                         title: 'Complete by',
                         data: '_windowUpper',
                         defaultContent: 'Not Specified',
@@ -384,6 +446,7 @@
 
                 if (defaultTab.showReminderAppt) {
                     config.push({
+                        name: '_appt_dt',
                         title: 'Appointment Date/Time',
                         data: '_appt_dt',
                         defaultContent: 'Not Specified',
@@ -396,6 +459,7 @@
 
                 if (defaultTab.showMissedDateTime) {
                     config.push({
+                        name: '_missed_dt',
                         title: 'Missed Date',
                         data: '_appt_dt',
                         defaultContent: 'Not Specified',
@@ -408,11 +472,13 @@
 
                 if (defaultTab.showAdhocDates) {
                     config.push({
+                        name: '_adhocReason',
                         title: 'Reason',
                         data: '_adhocReason',
                         defaultContent: ''
                     });
                     config.push({
+                        name: '_adhocContactOn',
                         title: 'Call on',
                         data: '_adhocContactOn',
                         defaultContent: '',
@@ -425,6 +491,7 @@
 
                 if (!isNewCallType) {
                     config.push({
+                        name: '_call_date',
                         title: 'Call Date/Time',
                         data: '_call_date',
                         className: 'callDateCol',
@@ -443,12 +510,58 @@
                 }
 
                 config.push({
+                    name: '_callNotes',
                     title: 'Call Notes',
                     data: '_callNotes',
                     visible: false,
                     className: 'callNotesCol',
                     defaultContent: ''
                 });
+
+                // Apply saved user column customization (order & visibility) if enabled
+                if (!ignoreUserSettings) {
+                    let tabId = typeof tabIdOrIndex === 'string' ? tabIdOrIndex : (defaultTab.tab_id || '');
+                    let userTabSettings = (module.userSettings && module.userSettings.tabs && module.userSettings.tabs[tabId]) ? module.userSettings.tabs[tabId] : null;
+
+                    if (userTabSettings) {
+                        let savedOrder = userTabSettings.order || [];
+                        let savedHidden = userTabSettings.hidden || [];
+
+                        if (savedHidden.length) {
+                            config.forEach(col => {
+                                if (col.name && col.name !== '_badges' && col.name !== '_callNotes') {
+                                    if (savedHidden.includes(col.name)) {
+                                        col.visible = false;
+                                    }
+                                }
+                            });
+                        }
+
+                        if (savedOrder.length) {
+                            let badgeCol = config.find(c => c.name === '_badges');
+                            let notesCol = config.find(c => c.name === '_callNotes');
+                            let reorderableCols = config.filter(c => c.name !== '_badges' && c.name !== '_callNotes');
+
+                            let orderedCols = [];
+                            savedOrder.forEach(colName => {
+                                let found = reorderableCols.find(c => c.name === colName);
+                                if (found) {
+                                    orderedCols.push(found);
+                                }
+                            });
+                            reorderableCols.forEach(col => {
+                                if (!orderedCols.some(c => c.name === col.name)) {
+                                    orderedCols.push(col);
+                                }
+                            });
+
+                            config = [];
+                            if (badgeCol) config.push(badgeCol);
+                            config.push(...orderedCols);
+                            if (notesCol) config.push(notesCol);
+                        }
+                    }
+                }
 
                 return config;
             },
@@ -493,9 +606,39 @@
                 let record = rowData['_record_id'] || '';
 
                 let actionButtonsHtml = '';
+                let ongoingCallInfoHtml = '';
+
                 if (rowData['_isCallStarted']) {
-                    let callerText = rowData['_callStartedBy'] ? ` (${rowData['_callStartedBy']})` : '';
-                    actionButtonsHtml += `<button type="button" class="btn btn-sm btn-danger endCallButton drawer-action-btn" data-record="${record}" data-callid="${callId}" title="End ongoing call"><i class="fas fa-phone-slash"></i> End Call${callerText}</button>`;
+                    actionButtonsHtml += `<button type="button" class="btn btn-sm btn-danger endCallButton drawer-action-btn" data-record="${record}" data-callid="${callId}" title="End ongoing call"><i class="fas fa-phone-slash"></i> End Call</button>`;
+
+                    let caller = rowData['_callStartedBy'] || '';
+                    let callerDisplayName = module.userNameMap ? (module.userNameMap[caller] || caller) : (caller || 'Unknown');
+                    let startedTime = rowData['_callStartedTime'] ? formatDateTime(rowData['_callStartedTime']) : '';
+                    let duration = rowData['_callDuration'] || 30;
+
+                    ongoingCallInfoHtml = `
+                        <div class="drawer-ongoing-call-info ms-1" title="Ongoing call details">
+                            <span class="d-inline-flex align-items-center gap-1">
+                                <i class="fas fa-user"></i>
+                                <span>Caller:</span>
+                                <span class="ongoing-val">${callerDisplayName}</span>
+                            </span>
+                            ${startedTime ? `
+                                <span class="ongoing-divider">|</span>
+                                <span class="d-inline-flex align-items-center gap-1">
+                                    <i class="far fa-clock"></i>
+                                    <span>Started:</span>
+                                    <span class="ongoing-val">${startedTime}</span>
+                                </span>
+                            ` : ''}
+                            <span class="ongoing-divider">|</span>
+                            <span class="d-inline-flex align-items-center gap-1">
+                                <i class="fas fa-hourglass-half"></i>
+                                <span>Expected:</span>
+                                <span class="ongoing-val">${duration} min</span>
+                            </span>
+                        </div>
+                    `;
                 } else {
                     actionButtonsHtml += `<button type="button" class="btn btn-sm btn-success startCallButton drawer-action-btn" data-record="${record}" data-callid="${callId}" title="Flag call as started"><i class="fas fa-phone-alt"></i> Start Call</button>`;
                 }
@@ -513,6 +656,7 @@
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2 border-bottom">
                         <div class="d-flex align-items-center flex-wrap gap-2">
                             ${actionButtonsHtml}
+                            ${ongoingCallInfoHtml}
                         </div>
                         ${callGenHtml}
                     </div>
@@ -664,107 +808,469 @@
                 let savedState = getDashboardCookie() || {};
 
                 $('.callTable').each((index, el) => {
-                    let tab_id = $(el).closest('.tab-pane').prop('id');
-                    childRows[tab_id] = "";
-                    colConfig[tab_id] = self.createColConfig(tab_id);
+                    self.initSingleDataTable(el);
+                });
+            },
 
-                    let tabState = (savedState.tabs && savedState.tabs[tab_id]) ? savedState.tabs[tab_id] : null;
-                    let savedLen = (tabState && tabState.len) ? tabState.len : 100;
-                    let colCount = colConfig[tab_id].length;
-                    let savedOrder = [[1, 'asc']];
-                    if (tabState && Array.isArray(tabState.order) && tabState.order.length) {
-                        if (tabState.order.every(o => Array.isArray(o) && o[0] < colCount)) {
-                            savedOrder = tabState.order;
-                        }
+            initSingleDataTable(el) {
+                const self = this;
+                let tab_id = $(el).closest('.tab-pane').prop('id');
+                childRows[tab_id] = "";
+                colConfig[tab_id] = self.createColConfig(tab_id);
+
+                let savedState = getDashboardCookie() || {};
+                let tabState = (savedState.tabs && savedState.tabs[tab_id]) ? savedState.tabs[tab_id] : null;
+                let savedLen = (tabState && tabState.len) ? tabState.len : 100;
+                let colCount = colConfig[tab_id].length;
+                let savedOrder = [[1, 'asc']];
+                if (tabState && Array.isArray(tabState.order) && tabState.order.length) {
+                    if (tabState.order.every(o => Array.isArray(o) && o[0] < colCount)) {
+                        savedOrder = tabState.order;
                     }
+                }
 
-                    let dt = $(el).DataTable({
-                        pageLength: savedLen,
-                        iDisplayLength: savedLen,
-                        order: savedOrder,
-                        language: {
-                            emptyTable: `
-                                <div class="py-4 text-center my-2">
-                                    <div class="placeholder-icon-circle bg-light text-success mx-auto">
-                                        <i class="fas fa-clipboard-check fa-2x"></i>
-                                    </div>
-                                    <h6 class="fw-bold text-dark mb-1">No Calls to Display</h6>
-                                    <p class="text-muted small mb-0">There are currently no calls queued for this tab.</p>
+                let isUnlocked = Boolean(self.unlockedTabs[tab_id]);
+
+                let dt = $(el).DataTable({
+                    autoWidth: false,
+                    colReorder: {
+                        enable: isUnlocked,
+                        fixedColumnsLeft: 1
+                    },
+                    pageLength: savedLen,
+                    iDisplayLength: savedLen,
+                    order: savedOrder,
+                    language: {
+                        emptyTable: `
+                            <div class="py-4 text-center my-2">
+                                <div class="placeholder-icon-circle bg-light text-success mx-auto">
+                                    <i class="fas fa-clipboard-check fa-2x"></i>
                                 </div>
-                            `,
-                            zeroRecords: `
-                                <div class="py-4 text-center my-2">
-                                    <div class="placeholder-icon-circle bg-light text-muted mx-auto">
-                                        <i class="fas fa-search fa-2x opacity-50"></i>
-                                    </div>
-                                    <h6 class="fw-bold text-dark mb-1">No Calls Match Current Filters</h6>
+                                <h6 class="fw-bold text-dark mb-1">No Calls to Display</h6>
+                                <p class="text-muted small mb-0">There are currently no calls queued for this tab.</p>
+                            </div>
+                        `,
+                        zeroRecords: `
+                            <div class="py-4 text-center my-2">
+                                <div class="placeholder-icon-circle bg-light text-muted mx-auto">
+                                    <i class="fas fa-search fa-2x opacity-50"></i>
                                 </div>
-                            `
-                        },
-                        columns: colConfig[tab_id],
-                        createdRow: (row) => $(row).addClass('dataTablesRow'),
-                        sDom: 't<"dataTables_footer d-flex flex-wrap align-items-center justify-content-between px-3 py-2"ip>'
-                    });
+                                <h6 class="fw-bold text-dark mb-1">No Calls Match Current Filters</h6>
+                            </div>
+                        `
+                    },
+                    columns: colConfig[tab_id],
+                    createdRow: (row) => $(row).addClass('dataTablesRow'),
+                    sDom: 't<"dataTables_footer d-flex flex-wrap align-items-center justify-content-between px-3 py-2"ip>'
+                });
 
-                    if (tabState && tabState.search) {
-                        let $pane = $(el).closest('.tab-pane');
-                        $pane.find('.customSearch').val(tabState.search);
-                        dt.search(tabState.search);
-                    }
+                if (isUnlocked) {
+                    $(el).addClass('columns-unlocked');
+                } else {
+                    $(el).removeClass('columns-unlocked');
+                }
 
-                    dt.on('order.dt page.dt', () => {
-                        if (self.dataLoaded) {
-                            self.debouncePersist();
-                        }
-                    });
+                if (tabState && tabState.search) {
+                    let $pane = $(el).closest('.tab-pane');
+                    $pane.find('.customSearch').val(tabState.search);
+                    dt.search(tabState.search);
+                }
 
-                    let $wrapper = $(el).closest('.dataTables_wrapper');
-                    let $info = $wrapper.find('.dataTables_info');
-
-                    let $infoContainer = $('<div class="dataTables_info_wrapper d-flex align-items-center flex-wrap gap-2"></div>');
-                    $info.before($infoContainer);
-                    $infoContainer.append($info);
-
-                    let $lenControl = $(`
-                        <div class="d-inline-flex align-items-center gap-1 ms-2 ps-2 border-start call-len-box">
-                            <label class="small text-muted fw-semibold mb-0" for="call_len_${tab_id}">Show:</label>
-                            <input type="number" id="call_len_${tab_id}" class="form-control form-control-sm custom-page-len-input" value="${savedLen === -1 ? 'All' : savedLen}" min="1" step="10" style="width: 75px; height: 28px; text-align: center; font-size: 0.85rem;" title="Enter number of calls to display">
-                            <span class="small text-muted">calls</span>
-                        </div>
-                    `);
-                    $infoContainer.append($lenControl);
-
-                    const applyLen = function(inputEl) {
-                        let rawVal = $(inputEl).val().trim();
-                        if (rawVal.toLowerCase() === 'all' || rawVal === '-1') {
-                            dt.page.len(-1).draw(false);
-                        } else {
-                            let num = parseInt(rawVal, 10);
-                            if (!isNaN(num) && num > 0) {
-                                dt.page.len(num).draw(false);
-                            } else {
-                                $(inputEl).val(100);
-                                dt.page.len(100).draw(false);
-                            }
-                        }
+                dt.on('order.dt page.dt', () => {
+                    if (self.dataLoaded) {
                         self.debouncePersist();
-                    };
+                    }
+                });
 
-                    $lenControl.find('.custom-page-len-input').on('change', function() {
-                        applyLen(this);
-                    }).on('keydown', function(e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            applyLen(this);
-                            $(this).trigger('blur');
+                dt.on('column-reorder.dt', (_e, _settings, details) => {
+                    if (self.dataLoaded && details && details.drop) {
+                        self.saveUserColumns(tab_id);
+                    }
+                });
+
+                let $wrapper = $(el).closest('.dataTables_wrapper');
+                let $info = $wrapper.find('.dataTables_info');
+
+                let $infoContainer = $('<div class="dataTables_info_wrapper d-flex align-items-center flex-wrap gap-2"></div>');
+                $info.before($infoContainer);
+                $infoContainer.append($info);
+
+                let $lenControl = $(`
+                    <div class="d-inline-flex align-items-center gap-1 ms-2 ps-2 border-start call-len-box">
+                        <label class="small text-muted fw-semibold mb-0" for="call_len_${tab_id}">Show:</label>
+                        <input type="number" id="call_len_${tab_id}" class="form-control form-control-sm custom-page-len-input" value="${savedLen === -1 ? 'All' : savedLen}" min="1" step="10" style="width: 75px; height: 28px; text-align: center; font-size: 0.85rem;" title="Enter number of calls to display">
+                        <span class="small text-muted">calls</span>
+                    </div>
+                `);
+                $infoContainer.append($lenControl);
+
+                const applyLen = function(inputEl) {
+                    let rawVal = $(inputEl).val().trim();
+                    if (rawVal.toLowerCase() === 'all' || rawVal === '-1') {
+                        dt.page.len(-1).draw(false);
+                    } else {
+                        let num = parseInt(rawVal, 10);
+                        if (!isNaN(num) && num > 0) {
+                            dt.page.len(num).draw(false);
+                        } else {
+                            $(inputEl).val(100);
+                            dt.page.len(100).draw(false);
                         }
+                    }
+                    self.debouncePersist();
+                };
+
+                $lenControl.find('.custom-page-len-input').on('change', function() {
+                    applyLen(this);
+                }).on('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyLen(this);
+                        $(this).trigger('blur');
+                    }
+                });
+
+                return dt;
+            },
+
+            reinitTabDataTable(tab_id) {
+                let $pane = $(`#${tab_id}`);
+                let $table = $pane.find('.callTable');
+                if (!$table.length || !$.fn.DataTable.isDataTable($table[0])) return;
+                let dt = $table.DataTable();
+                let page = dt.page();
+                let search = dt.search();
+
+                let $wrapper = $table.closest('.dataTables_wrapper');
+                $wrapper.find('.dataTables_info_wrapper').remove();
+
+                dt.destroy();
+                $table.empty();
+                $table.removeClass('columns-unlocked');
+
+                let newDt = this.initSingleDataTable($table[0]);
+                let rows = this.displayedData[tab_id] || [];
+                newDt.clear().rows.add(rows);
+                if (search) newDt.search(search);
+                if (typeof page === 'number' && page >= 0) newDt.page(page);
+                newDt.draw(false);
+                newDt.columns.adjust();
+            },
+
+            toggleLockColumns(tab_id) {
+                let currentVal = Boolean(this.unlockedTabs && this.unlockedTabs[tab_id]);
+                let nextVal = !currentVal;
+                this.unlockedTabs = {
+                    ...this.unlockedTabs,
+                    [tab_id]: nextVal
+                };
+
+                let $pane = $(`#${tab_id}`);
+                let $table = $pane.find('.callTable');
+                if ($table.length && $.fn.DataTable.isDataTable($table[0])) {
+                    let dt = $table.DataTable();
+                    if (nextVal) {
+                        dt.colReorder.enable();
+                        $table.addClass('columns-unlocked');
+                    } else {
+                        dt.colReorder.disable();
+                        $table.removeClass('columns-unlocked');
+                    }
+                }
+            },
+
+            saveUserColumns(tab_id) {
+                let $pane = $(`#${tab_id}`);
+                let $table = $pane.find('.callTable');
+                if (!$table.length || !$.fn.DataTable.isDataTable($table[0])) return;
+                let dt = $table.DataTable();
+                let aoColumns = dt.settings()[0].aoColumns;
+
+                let order = aoColumns
+                    .map(c => c.sName)
+                    .filter(name => name && name !== '_badges' && name !== '_callNotes');
+
+                let hidden = aoColumns
+                    .filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_callNotes')
+                    .map(c => c.sName);
+
+                if (!module.userSettings) module.userSettings = {};
+                if (!module.userSettings.tabs) module.userSettings.tabs = {};
+                module.userSettings.tabs[tab_id] = {
+                    order: order,
+                    hidden: hidden,
+                    updated_at: new Date().toISOString()
+                };
+
+                module.ajax('saveUserColumns', {
+                    tab_id: tab_id,
+                    order: order,
+                    hidden: hidden
+                }).catch(err => {
+                    console.error("Failed to save user column settings:", err);
+                });
+            },
+
+            hideColumn(tab_id, colName) {
+                if (!colName || colName === '_badges' || colName === '_callNotes') return;
+                let $pane = $(`#${tab_id}`);
+                let $table = $pane.find('.callTable');
+                if (!$table.length || !$.fn.DataTable.isDataTable($table[0])) return;
+                let dt = $table.DataTable();
+                let col = dt.column(colName + ':name');
+                if (col && col.length) {
+                    col.visible(false);
+                    dt.columns.adjust().draw(false);
+                    this.saveUserColumns(tab_id);
+                }
+            },
+
+            unhideColumn(tab_id, colName) {
+                let $pane = $(`#${tab_id}`);
+                let $table = $pane.find('.callTable');
+                if (!$table.length || !$.fn.DataTable.isDataTable($table[0])) return;
+                let dt = $table.DataTable();
+                let col = dt.column(colName + ':name');
+                if (col && col.length) {
+                    col.visible(true);
+                    dt.columns.adjust().draw(false);
+                    this.saveUserColumns(tab_id);
+                }
+            },
+
+            unhideAllColumns(tab_id) {
+                let $pane = $(`#${tab_id}`);
+                let $table = $pane.find('.callTable');
+                if (!$table.length || !$.fn.DataTable.isDataTable($table[0])) return;
+                let dt = $table.DataTable();
+                let aoColumns = dt.settings()[0].aoColumns;
+                aoColumns.forEach(c => {
+                    if (c.sName && c.sName !== '_callNotes') {
+                        dt.column(c.sName + ':name').visible(true);
+                    }
+                });
+                dt.columns.adjust().draw(false);
+                this.saveUserColumns(tab_id);
+            },
+
+            resetColumns(tab_id) {
+                if (module.userSettings && module.userSettings.tabs) {
+                    delete module.userSettings.tabs[tab_id];
+                }
+                this.unlockedTabs = {
+                    ...this.unlockedTabs,
+                    [tab_id]: false
+                };
+                this.reinitTabDataTable(tab_id);
+                module.ajax('resetUserColumns', { tab_id: tab_id }).catch(err => {
+                    console.error("Failed to reset user columns on server:", err);
+                });
+            },
+
+            resetAllColumns(tab_id) {
+                this.resetColumns(tab_id);
+            },
+
+            autofitColumns(tab_id) {
+                let $pane = $(`#${tab_id}`);
+                let $table = $pane.find('.callTable');
+                if ($table.length && $.fn.DataTable.isDataTable($table[0])) {
+                    $table.DataTable().columns.adjust().draw(false);
+                }
+            },
+
+            setupColumnContextMenu() {
+                const self = this;
+                let $menu = $('#callHeaderContextMenu');
+                if (!$menu.length) {
+                    $menu = $('<div id="callHeaderContextMenu" class="dropdown-menu shadow call-header-context-menu" style="display: none; position: fixed; z-index: 10050;"></div>');
+                    $('body').append($menu);
+                }
+
+                const hideMenu = () => {
+                    $menu.hide().empty();
+                };
+
+                $(document).on('click', (e) => {
+                    if (!$(e.target).closest('#callHeaderContextMenu').length) {
+                        hideMenu();
+                    }
+                });
+
+                $(document).on('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        hideMenu();
+                    }
+                });
+
+                $(window).on('scroll resize', hideMenu);
+
+                $(document).on('contextmenu', '.callTable thead th', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    let $th = $(this);
+                    let $table = $th.closest('.callTable');
+                    let tab_id = $th.closest('.tab-pane').prop('id');
+                    if (!tab_id || !$table.length || !$.fn.DataTable.isDataTable($table[0])) {
+                        return;
+                    }
+
+                    let dt = $table.DataTable();
+                    let colIdx = dt.column($th).index();
+                    let aoColumns = dt.settings()[0].aoColumns;
+                    let clickedCol = aoColumns[colIdx];
+                    let colName = clickedCol ? clickedCol.sName : null;
+                    let isCol0 = !colName || colName === '_badges';
+
+                    let colTitle = '';
+                    if (!isCol0) {
+                        colTitle = (clickedCol && clickedCol.sTitle) ? clickedCol.sTitle : $th.text().trim();
+                        colTitle = colTitle.replace(/<[^>]*>?/gm, '').trim();
+                    }
+
+                    let isUnlocked = Boolean(self.unlockedTabs[tab_id]);
+
+                    let visibleDataCols = aoColumns.filter(c => c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_callNotes');
+                    let hiddenCols = aoColumns.filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_callNotes');
+
+                    let menuHtml = '';
+
+                    // 1. Lock / Unlock
+                    if (isUnlocked) {
+                        menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="toggle-lock"><i class="fas fa-lock me-2 text-primary"></i> Lock Columns</a>`;
+                    } else {
+                        menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="toggle-lock"><i class="fas fa-unlock me-2 text-primary"></i> Unlock Columns (Drag & Drop)</a>`;
+                    }
+
+                    menuHtml += `<hr class="dropdown-divider my-1">`;
+
+                    // 2. Hide column
+                    if (isCol0) {
+                        menuHtml += `<span class="dropdown-item disabled text-muted py-1.5"><i class="fas fa-eye-slash me-2"></i> Cannot Hide Status Column</span>`;
+                    } else if (visibleDataCols.length <= 1) {
+                        menuHtml += `<span class="dropdown-item disabled text-muted py-1.5" title="At least one column must remain visible"><i class="fas fa-eye-slash me-2"></i> Cannot Hide Only Visible Column</span>`;
+                    } else {
+                        let label = colTitle ? `Hide "${colTitle}"` : 'Hide Column';
+                        menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="hide-col" data-colname="${colName}"><i class="fas fa-eye-slash me-2 text-secondary"></i> ${label}</a>`;
+                    }
+
+                    // 3. Unhide submenu
+                    if (hiddenCols.length > 0) {
+                        menuHtml += `
+                            <div class="dropdown-submenu">
+                                <a class="dropdown-item dropdown-toggle py-1.5" href="#" data-action="none"><i class="fas fa-eye me-2 text-success"></i> Unhide Column (${hiddenCols.length})</a>
+                                <div class="dropdown-menu shadow submenu-popup py-1">
+                        `;
+                        hiddenCols.forEach(hc => {
+                            let hTitle = hc.sTitle || hc.sName;
+                            hTitle = hTitle.replace(/<[^>]*>?/gm, '').trim();
+                            menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="unhide-col" data-colname="${hc.sName}"><i class="fas fa-plus me-2 text-muted"></i> ${hTitle}</a>`;
+                        });
+                        menuHtml += `
+                                    <hr class="dropdown-divider my-1">
+                                    <a class="dropdown-item py-1.5 text-primary fw-medium" href="#" data-action="unhide-all"><i class="fas fa-check-double me-2"></i> Unhide All (${hiddenCols.length})</a>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        menuHtml += `<span class="dropdown-item disabled text-muted py-1.5"><i class="fas fa-eye me-2"></i> Unhide Column (None Hidden)</span>`;
+                    }
+
+                    menuHtml += `<hr class="dropdown-divider my-1">`;
+
+                    // 4. Auto-fit column widths
+                    menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="autofit"><i class="fas fa-arrows-alt-h me-2 text-secondary"></i> Auto-fit Column Widths</a>`;
+
+                    menuHtml += `<hr class="dropdown-divider my-1">`;
+
+                    // 5. Reset Columns (unhides all columns and restores default order)
+                    menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="reset-columns"><i class="fas fa-undo me-2 text-warning"></i> Reset Columns</a>`;
+
+                    $menu.html(menuHtml);
+
+                    // Action handlers
+                    $menu.find('a[data-action]').off('click').on('click', function(evt) {
+                        evt.preventDefault();
+                        evt.stopPropagation();
+                        let action = $(this).data('action');
+                        let targetCol = $(this).data('colname');
+
+                        if (action === 'toggle-lock') {
+                            self.toggleLockColumns(tab_id);
+                        } else if (action === 'hide-col') {
+                            self.hideColumn(tab_id, targetCol);
+                        } else if (action === 'unhide-col') {
+                            self.unhideColumn(tab_id, targetCol);
+                        } else if (action === 'unhide-all') {
+                            self.unhideAllColumns(tab_id);
+                        } else if (action === 'autofit') {
+                            self.autofitColumns(tab_id);
+                        } else if (action === 'reset-columns') {
+                            self.resetColumns(tab_id);
+                        }
+                        hideMenu();
+                    });
+
+                    // Show and position
+                    $menu.css({ display: 'block', visibility: 'hidden', left: 0, top: 0 });
+                    let menuWidth = $menu.outerWidth();
+                    let menuHeight = $menu.outerHeight();
+                    let posX = e.clientX;
+                    let posY = e.clientY;
+
+                    if (posX + menuWidth > $(window).width()) {
+                        posX = $(window).width() - menuWidth - 10;
+                    }
+                    if (posY + menuHeight > $(window).height()) {
+                        posY = $(window).height() - menuHeight - 10;
+                    }
+                    if (posX < 0) posX = 5;
+                    if (posY < 0) posY = 5;
+
+                    $menu.css({
+                        left: posX + 'px',
+                        top: posY + 'px',
+                        visibility: 'visible'
+                    });
+
+                    // Submenu hover & boundary handling
+                    $menu.find('.dropdown-submenu').each(function() {
+                        let $sub = $(this).find('.submenu-popup');
+                        $(this).on('mouseenter', function() {
+                            $sub.css({ display: 'block', visibility: 'hidden' });
+                            let subWidth = $sub.outerWidth();
+                            let subHeight = $sub.outerHeight();
+                            let subOffset = $(this).offset();
+
+                            if (posX + menuWidth + subWidth > $(window).width()) {
+                                $sub.css({ left: 'auto', right: '100%' });
+                            } else {
+                                $sub.css({ left: '100%', right: 'auto' });
+                            }
+
+                            if (subOffset.top + subHeight > $(window).height() + $(window).scrollTop()) {
+                                $sub.css({ top: 'auto', bottom: '0' });
+                            } else {
+                                $sub.css({ top: '-6px', bottom: 'auto' });
+                            }
+
+                            $sub.css({ visibility: 'visible' });
+                        }).on('mouseleave', function() {
+                            $sub.css({ display: 'none' });
+                        });
                     });
                 });
             },
 
             refreshTableData() {
                 const self = this;
+                this.isRefreshing = true;
                 module.ajax("getData", {}).then((response) => {
+                    this.isRefreshing = false;
+                    this.lastDataPullTime = new Date();
+                    this.lastDataPullText = formatDateTime(this.lastDataPullTime, true);
+
                     if (!response) return;
 
                     let rawData = response.data !== undefined ? response.data : response;
@@ -862,6 +1368,7 @@
                     this.toggleCallBackCol();
                 }).catch((err) => {
                     console.error("Error fetching call list data:", err);
+                    this.isRefreshing = false;
                     this.dataLoaded = true;
                 });
             }

@@ -28,6 +28,13 @@ spl_autoload_register(function ($class) {
     }
 });
 
+/**
+ * DEPENDENCY NOTE:
+ * REDCap 17.4.0 supplies DataTables v1.13.11.
+ * This module includes DataTables ColReorder v1.7.0 (js/dataTables.colReorder.min.js & css/colReorder.dataTables.min.css).
+ * These are manually managed dependencies. If REDCap is upgraded to a version using DataTables 2.0+,
+ * ColReorder must be manually updated to v2.x to maintain compatibility.
+ */
 class CallLog extends AbstractExternalModule
 {
     public array $tabsConfig = [];
@@ -155,13 +162,22 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 $this->includeJs('js/config.js', true);
                 $this->includeJs('js/alpine.min.js', true);
             } else {
+                // Dependency: ColReorder v1.7.0 paired with REDCap built-in DataTables v1.13.11
+                $this->includeCss('css/colReorder.dataTables.min.css');
                 $this->includeCss('css/list.css');
+                $this->includeJs('js/dataTables.colReorder.min.js', true);
                 $this->includeJs('js/call_list.js', true);
                 $this->includeJs('js/alpine.min.js', true);
                 $this->tabsConfig = $this->getConfigService()->getTabConfig((int)$project_id);
                 $this->passArgument('tabs', $this->tabsConfig);
                 $rawSettings = $this->getConfigService()->getRawProjectSettings((int)$project_id);
                 $this->passArgument('dateTimeFormat', $rawSettings['datetime_format'][0] ?? 'm/d/Y g:i A');
+
+                $userSettingsRaw = $this->getUserSetting('user-settings');
+                $userSettings = (!empty($userSettingsRaw) && is_string($userSettingsRaw))
+                    ? json_decode($userSettingsRaw, true)
+                    : (is_array($userSettingsRaw) ? $userSettingsRaw : []);
+                $this->passArgument('userSettings', $userSettings ?: (object)[]);
             }
         } elseif ($this->isPage('DataEntry/record_home.php') && !empty($_GET['id'])) {
             $this->includeJs('js/record_home_page.js', 'defer');
@@ -292,6 +308,44 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 } else {
                     $success = false;
                     $result['error'] = "Missing or invalid project ID.";
+                }
+                break;
+            case "saveUserColumns":
+                $tabId = $payload['tab_id'] ?? '';
+                $order = $payload['order'] ?? [];
+                $hidden = $payload['hidden'] ?? [];
+                if (!empty($tabId)) {
+                    $raw = $this->getUserSetting('user-settings');
+                    $userSettings = (!empty($raw) && is_string($raw))
+                        ? json_decode($raw, true)
+                        : (is_array($raw) ? $raw : []);
+                    if (!is_array($userSettings)) {
+                        $userSettings = [];
+                    }
+                    if (!isset($userSettings['tabs'])) {
+                        $userSettings['tabs'] = [];
+                    }
+                    $userSettings['tabs'][$tabId] = [
+                        'order' => is_array($order) ? array_values($order) : [],
+                        'hidden' => is_array($hidden) ? array_values($hidden) : [],
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                    $this->setUserSetting('user-settings', json_encode($userSettings));
+                    $result['saved'] = true;
+                }
+                break;
+            case "resetUserColumns":
+                $tabId = $payload['tab_id'] ?? '';
+                if (!empty($tabId)) {
+                    $raw = $this->getUserSetting('user-settings');
+                    $userSettings = (!empty($raw) && is_string($raw))
+                        ? json_decode($raw, true)
+                        : (is_array($raw) ? $raw : []);
+                    if (is_array($userSettings) && isset($userSettings['tabs'][$tabId])) {
+                        unset($userSettings['tabs'][$tabId]);
+                        $this->setUserSetting('user-settings', json_encode($userSettings));
+                    }
+                    $result['saved'] = true;
                 }
                 break;
         }

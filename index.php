@@ -139,14 +139,25 @@ $activeTabId = (!empty($savedTab) && in_array($savedTab, $validTabIds, true))
                                     There are currently no active calls queued for <strong><?php echo htmlspecialchars($tab["tab_name"]); ?></strong>. Any newly generated calls or scheduled appointments will appear here automatically.
                                 </p>
                                 <div>
-                                    <button type="button" @click="refreshTableData()" class="btn btn-sm px-3 shadow-xs empty-refresh-btn">
-                                        <i class="fas fa-sync-alt me-1"></i> Refresh
+                                    <button type="button" @click="refreshTableData()" class="btn btn-sm px-3 shadow-xs empty-refresh-btn" :disabled="isRefreshing">
+                                        <i class="fas fa-sync-alt me-1" :class="{ 'fa-spin': isRefreshing }"></i> Refresh
                                     </button>
                                 </div>
                             </div>
 
                             <!-- Data Table Container -->
                             <div x-show="dataLoaded && (displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'] && displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'].length > 0)" class="table-responsive" style="display: none;">
+                                <!-- Columns Unlocked Notification Banner -->
+                                <div x-show="isTabUnlocked('<?php echo htmlspecialchars($tab['tab_id']); ?>')" x-cloak class="columns-unlocked-banner py-1 px-3 border-bottom" style="display: none;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fas fa-arrows-alt text-warning"></i>
+                                        <span><strong>Column reordering active:</strong> Drag column headers to reposition them. Right-click any header for more options.</span>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" @click="toggleLockColumns('<?php echo htmlspecialchars($tab['tab_id']); ?>')">
+                                        <i class="fas fa-lock me-1"></i> Lock Columns
+                                    </button>
+                                </div>
+
                                 <table class="table table-hover align-middle mb-0 callTable" style="width:100%">
                                 </table>
                             </div>
@@ -154,6 +165,20 @@ $activeTabId = (!empty($savedTab) && in_array($savedTab, $validTabIds, true))
 
                     </div>
                 <?php } ?>
+            </div>
+
+            <!-- Call List Footer: Most Recent Data Pull Time -->
+            <div class="card-footer py-2 px-3 d-flex flex-wrap align-items-center justify-content-between text-muted small call-list-footer" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-radius: 0 0 10px 10px;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="far fa-clock text-secondary last-pull-icon"></i>
+                    <span>Most recent data pull: <strong class="text-dark last-pull-time" x-text="lastDataPullText || 'Loading...'"></strong></span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" @click="refreshTableData()" class="btn btn-sm btn-link text-decoration-none text-secondary p-0 d-inline-flex align-items-center gap-1" :disabled="isRefreshing" title="Refresh call data now">
+                        <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
+                        <span x-text="isRefreshing ? 'Refreshing...' : 'Refresh'"></span>
+                    </button>
+                </div>
             </div>
 
         </div>
