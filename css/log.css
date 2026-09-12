@@ -15,6 +15,7 @@ form#form {
 form#form > table.form_border {
     max-width: 820px !important;
     width: 100% !important;
+    border-bottom: 1px solid #CCCCCC !important;
 }
 
 /* Hide Record ID row and Section Navigator on Call Log form */
@@ -295,6 +296,11 @@ form#form tr[id*="_hdr_"] td {
     text-transform: uppercase !important;
 }
 
+#call_hdr_end-tr,
+#call_hdr_end-tr td {
+    border-bottom: 1px solid #CCCCCC !important;
+}
+
 /* Subsection Headers: .call-section-header, .callSxnHeader (legacy: .formSxnHeader) */
 .call-section-header,
 .callSxnHeader,
@@ -522,12 +528,48 @@ table.callHistoryTable tbody tr.dataTablesRow.shown td {
 .callHistorySettings {
     cursor: pointer;
     color: #6c757d;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     line-height: 1;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 26px !important;
+    height: 26px !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    text-decoration: none !important;
+    border-radius: 4px;
+    vertical-align: middle !important;
 }
 
 .callHistorySettings:hover {
     color: #0d6efd;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.callHistorySettings i {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+}
+
+.callHistoryContainer .card-header i {
+    vertical-align: middle;
+}
+
+table.callHistoryTable th.dt-center,
+table.callHistoryTable td.dt-center,
+table.callHistoryTable td.dt-body-center {
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+table.callHistoryTable td {
+    vertical-align: middle !important;
 }
 
 .call-history-settings-danger {
@@ -543,9 +585,22 @@ table.callHistoryTable tbody tr.dataTablesRow.shown td {
 }
 
 .call-history-settings-danger .deleteCallHistoryInstance {
-    box-shadow: 0 1px 2px rgba(127, 29, 29, 0.16);
-    font-weight: 600;
-    white-space: nowrap;
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(127, 29, 29, 0.16) !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+}
+
+.call-history-settings-danger .deleteCallHistoryInstance:hover,
+.call-history-settings-danger .deleteCallHistoryInstance:focus,
+.call-history-settings-danger .deleteCallHistoryInstance:active {
+    background-color: #bb2d3b !important;
+    border-color: #b02a37 !important;
+    color: #ffffff !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.35) !important;
 }
 
 /* Call Metadata Settings Modal Items */
@@ -556,8 +611,8 @@ table.callHistoryTable tbody tr.dataTablesRow.shown td {
 
 .call-history-settings-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-    gap: 1rem;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.85fr);
+    gap: 1.25rem;
     text-align: left;
 }
 
@@ -590,61 +645,91 @@ table.callHistoryTable tbody tr.dataTablesRow.shown td {
 .call-metadata-card {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
-    max-height: min(350px, 42vh);
+    gap: 0.5rem;
+    max-height: min(420px, 50vh);
     overflow-y: auto;
     padding: 0.25rem 0;
 }
 
 .call-metadata-item {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.45rem 0.6rem;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.55rem 0.75rem;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
     cursor: pointer;
-    transition: background-color 0.12s ease;
+    transition: all 0.15s ease;
     margin-bottom: 0;
 }
 
 .call-metadata-item:hover {
-    background-color: #e9ecef;
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
 }
 
-.call-metadata-main,
+.call-metadata-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    gap: 0.6rem;
+}
+
+.call-metadata-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.call-metadata-header .form-check-input {
+    flex: 0 0 auto;
+    margin: 0;
+    cursor: pointer;
+    width: 1.15rem;
+    height: 1.15rem;
+}
+
+.call-name-label {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #1e293b;
+    word-break: break-word;
+}
+
 .call-metadata-meta {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
 }
 
-.call-metadata-main {
-    min-width: 0;
-    gap: 0.5rem;
+.call-metadata-sub {
+    display: flex;
+    align-items: center;
+    padding-left: 1.75rem;
+    width: 100%;
 }
 
-.call-metadata-main .form-check-input {
-    flex: 0 0 auto;
-    margin: 0;
-}
-
-.call-metadata-action {
-    color: #94a3b8;
-    font-size: 0.7rem;
-    white-space: nowrap;
-}
-
-.call-metadata-meta {
-    flex: 0 0 auto;
-    gap: 0.4rem;
+.call-id-tag {
+    font-size: 0.73rem;
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    background-color: #e2e8f0;
+    color: #475569;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    word-break: break-all;
 }
 
 .call-metadata-status {
-    padding: 0.18rem 0.45rem;
+    padding: 0.2rem 0.5rem;
     border: 1px solid transparent;
     border-radius: 999px;
-    font-size: 0.68rem;
+    font-size: 0.7rem;
     font-weight: 700;
     line-height: 1.2;
     white-space: nowrap;
@@ -662,19 +747,23 @@ table.callHistoryTable tbody tr.dataTablesRow.shown td {
     color: #9a3412;
 }
 
-.call-name-label {
-    font-size: 0.88rem;
-    font-weight: 500;
-    color: #212529;
+.call-metadata-status.is-expired {
+    background-color: #fee2e2;
+    border-color: #fecaca;
+    color: #991b1b;
 }
 
-.call-id-tag {
-    font-size: 0.75rem;
-    font-family: monospace;
-    background-color: #e9ecef;
-    color: #6c757d;
-    padding: 0.15rem 0.4rem;
-    border-radius: 3px;
+select.callMetadataStatusSelect {
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 1.6rem 0.2rem 0.55rem;
+    background-position: right 0.4rem center;
+    background-size: 10px 8px;
+    height: auto;
+    width: auto;
+    display: inline-block;
+    box-shadow: none !important;
 }
 
 .call-history-raw-section {
@@ -805,4 +894,139 @@ input:checked + .slider:before {
 
 .slider.round:before {
     border-radius: 50%;
+}
+
+/* Adhoc Modal Styling & Schedule Call Back Spacing */
+#adhocModal .generation-note {
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+#adhocModal .generation-note i {
+    font-size: 0.9rem;
+    margin-right: 0.5rem !important;
+    vertical-align: -1px;
+    flex-shrink: 0;
+}
+
+#adhocModal .schedule-callback-card {
+    background-color: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 1rem !important;
+    border-radius: 8px !important;
+    margin-bottom: 1rem !important;
+}
+
+#adhocModal .schedule-callback-card .form-check.form-switch {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-left: 2.5em;
+}
+
+#adhocModal #adhocCallbackContainer {
+    margin-top: 0.85rem !important;
+    padding-top: 0.85rem !important;
+    border-top: 1px solid #e2e8f0 !important;
+}
+
+#adhocModal #adhocCallbackContainer .form-label {
+    margin-bottom: 0.35rem !important;
+}
+
+#adhocModal #adhocCallbackContainer .form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0;
+}
+
+/* No Calls Empty State Card & Table Row */
+#no-calls-display-tr td,
+#no-calls-display-tr td.no-calls-cell {
+    border-left: 1px solid #CCCCCC !important;
+    border-right: 1px solid #CCCCCC !important;
+    border-bottom: 1px solid #CCCCCC !important;
+    background-color: #f8fafc !important;
+    padding: 1.5rem !important;
+    text-align: center !important;
+}
+
+.no-calls-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+    margin: 1rem auto !important;
+    max-width: 580px;
+    width: 100%;
+    text-align: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: box-shadow 0.2s ease;
+}
+
+.no-calls-card .no-calls-icon-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+}
+
+.no-calls-card h5 {
+    color: #1e293b;
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.no-calls-card .no-calls-subtitle {
+    color: #64748b;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.no-calls-card .no-calls-adhoc-section {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-top: 1.5rem;
+    border: 1px dashed #cbd5e1;
+    width: 100% !important;
+    text-align: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.no-calls-card .no-calls-adhoc-section p {
+    color: #475569;
+    font-size: 0.9rem;
+    margin-bottom: 0.85rem;
+    text-align: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.no-calls-card .btn-primary {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+.no-calls-card .btn-primary:hover {
+    background-color: #1d4ed8;
+    border-color: #1d4ed8;
 }

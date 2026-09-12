@@ -224,6 +224,14 @@
     vertical-align: middle;
 }
 
+.call-list-dashboard .callTable th.statusBadgeCol,
+.call-list-dashboard .callTable td.statusBadgeCol {
+    text-align: center !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+    width: 110px;
+}
+
 .call-list-dashboard .callTable .rowLink {
     color: inherit;
     text-decoration: none;
@@ -516,8 +524,9 @@
     justify-content: center !important;
 }
 
-/* Toolbar Toggle Hidden Calls Button */
-.call-list-dashboard .toggle-hidden-calls-btn {
+/* Toolbar Call Visibility & Toggle Hidden Calls Buttons */
+.call-list-dashboard .toggle-hidden-calls-btn,
+.call-list-dashboard .call-visibility-btn {
     width: 32px !important;
     height: 32px !important;
     min-width: 32px !important;
@@ -539,7 +548,12 @@
 .call-list-dashboard .toggle-hidden-calls-btn:hover:not(:disabled),
 .call-list-dashboard .toggle-hidden-calls-btn:focus:not(:disabled),
 .call-list-dashboard .toggle-hidden-calls-btn:active:not(:disabled),
-.call-list-dashboard .toggle-hidden-calls-btn:focus-visible:not(:disabled) {
+.call-list-dashboard .toggle-hidden-calls-btn:focus-visible:not(:disabled),
+.call-list-dashboard .call-visibility-btn:hover:not(:disabled),
+.call-list-dashboard .call-visibility-btn:focus:not(:disabled),
+.call-list-dashboard .call-visibility-btn:active:not(:disabled),
+.call-list-dashboard .call-visibility-btn:focus-visible:not(:disabled),
+.call-list-dashboard .call-visibility-btn.active:not(:disabled) {
     background-color: #f1f5f9 !important;
     border-color: #94a3b8 !important;
     color: #0f172a !important;
@@ -550,7 +564,12 @@
 .call-list-dashboard .toggle-hidden-calls-btn:hover:not(:disabled) i,
 .call-list-dashboard .toggle-hidden-calls-btn:focus:not(:disabled) i,
 .call-list-dashboard .toggle-hidden-calls-btn:active:not(:disabled) i,
-.call-list-dashboard .toggle-hidden-calls-btn:focus-visible:not(:disabled) i {
+.call-list-dashboard .toggle-hidden-calls-btn:focus-visible:not(:disabled) i,
+.call-list-dashboard .call-visibility-btn:hover:not(:disabled) i,
+.call-list-dashboard .call-visibility-btn:focus:not(:disabled) i,
+.call-list-dashboard .call-visibility-btn:active:not(:disabled) i,
+.call-list-dashboard .call-visibility-btn:focus-visible:not(:disabled) i,
+.call-list-dashboard .call-visibility-btn.active:not(:disabled) i {
     color: #0f172a !important;
 }
 

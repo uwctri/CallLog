@@ -21,21 +21,88 @@
         getParam(name, url = window.location.href) {
             return window.getParameterByName(name);
         },
+        parseTime24(val) {
+            if (!val) return '';
+            let s = String(val).trim().toLowerCase();
+            if (!s) return '';
+
+            let isPm = false;
+            let isAm = false;
+            if (/p\.?m?\.?$/i.test(s)) {
+                isPm = true;
+                s = s.replace(/p\.?m?\.?$/i, '').trim();
+            } else if (/a\.?m?\.?$/i.test(s)) {
+                isAm = true;
+                s = s.replace(/a\.?m?\.?$/i, '').trim();
+            }
+
+            let hours, minutes;
+            if (s.includes(':') || s.includes('.')) {
+                const parts = s.split(/[:.]/);
+                hours = parseInt(parts[0], 10);
+                minutes = parseInt(parts[1], 10);
+                if (isNaN(minutes)) minutes = 0;
+            } else if (/^\d+$/.test(s)) {
+                if (s.length === 1 || s.length === 2) {
+                    hours = parseInt(s, 10);
+                    minutes = 0;
+                } else if (s.length === 3) {
+                    hours = parseInt(s.substring(0, 1), 10);
+                    minutes = parseInt(s.substring(1), 10);
+                } else if (s.length === 4) {
+                    hours = parseInt(s.substring(0, 2), 10);
+                    minutes = parseInt(s.substring(2), 10);
+                } else {
+                    return '';
+                }
+            } else {
+                return '';
+            }
+
+            if (isNaN(hours) || isNaN(minutes) || minutes < 0 || minutes > 59) return '';
+            if (isPm && hours < 12) hours += 12;
+            if (isAm && hours === 12) hours = 0;
+            if (hours < 0 || hours > 23) return '';
+
+            return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+        },
         parseDateComponents(str) {
             if (!str) return null;
             if (str instanceof Date && !isNaN(str.getTime())) {
                 return { date: str, hasTime: true };
             }
             let s = String(str).trim();
-            let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-            if (!m) return null;
-            let [, y, mo, d, h, mi, sec] = m;
+            let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*([ap]m))?)?/i);
+            let y, mo, d, h, mi, sec, ampm;
+            if (m) {
+                [, y, mo, d, h, mi, sec, ampm] = m;
+            } else {
+                m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*([ap]m))?)?/i);
+                if (m) {
+                    [, mo, d, y, h, mi, sec, ampm] = m;
+                } else {
+                    return null;
+                }
+            }
             let hasTime = (h !== undefined);
+            let hour = h !== undefined ? parseInt(h, 10) : 0;
+            if (ampm) {
+                const lower = ampm.toLowerCase();
+                if (lower === 'pm' && hour < 12) hour += 12;
+                if (lower === 'am' && hour === 12) hour = 0;
+            }
+            let month = parseInt(mo, 10);
+            let day = parseInt(d, 10);
+            if (month > 12 && day <= 12) {
+                const temp = month;
+                month = day;
+                day = temp;
+            }
             let dateObj = new Date(
                 parseInt(y, 10),
-                parseInt(mo, 10) - 1,
-                parseInt(d, 10),
-                h !== undefined ? parseInt(h, 10) : 0,
+                month - 1,
+                day,
+                hour,
                 mi !== undefined ? parseInt(mi, 10) : 0,
                 sec !== undefined ? parseInt(sec, 10) : 0
             );

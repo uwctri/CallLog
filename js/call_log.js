@@ -30,13 +30,17 @@
     };
 
     const goToCallList = () => {
-        const link = $("#external_modules_panel a:contains('Call List')").prop('href');
-        if (typeof appendHiddenInputToForm === 'function' && typeof dataEntrySubmit === 'function') {
-            appendHiddenInputToForm('save-and-redirect', link);
-            dataEntrySubmit('submit-btn-savecontinue');
-        } else {
-            window.location.href = link;
+        const link = module.callListUrl || $("#external_modules_panel a:contains('Call List')").prop('href');
+        if ($(".callTab").length === 0 || typeof appendHiddenInputToForm !== 'function' || typeof dataEntrySubmit !== 'function') {
+            if (link) {
+                window.location.href = link;
+            } else {
+                window.history.back();
+            }
+            return false;
         }
+        appendHiddenInputToForm('save-and-redirect', link);
+        dataEntrySubmit('submit-btn-savecontinue');
         return false;
     };
 
@@ -46,7 +50,7 @@
         const raw = [date, time].filter(Boolean).join(' ').trim();
         if (!raw) return '';
         if (module.utils && module.utils.formatDateTime) {
-            return module.utils.formatDateTime(raw, !!time);
+            return module.utils.formatDateTime(raw, true);
         }
         return raw;
     };
@@ -57,7 +61,10 @@
         let lastInst = instances.slice(-1)[0];
         let data = module.data[lastInst];
         if (!data) return "";
-        return formatCallDatetime(data['call_open_date'] || '', data['call_open_time'] || '');
+        const dt = data['call_open_datetime'] || '';
+        const d = data['call_open_date'] || '';
+        const t = data['call_open_time'] || '';
+        return dt ? formatCallDatetime(dt, '') : formatCallDatetime(d, t);
     };
 
     const getPreviousCallTasks = (callID) => {
@@ -368,15 +375,32 @@
         $.each(module.metadata || {}, function (callID, callData) {
             const isCurrentCall = (callID === currentCallId || (paramCallId && callID === paramCallId));
             if (!isCurrentCall) {
-                if (callData.complete || (callID[0] === "_") || (callID === "") ||
+                if (callData.status === 'complete' || (callID[0] === "_") || (callID === "") ||
                     (callData.start && (callData.start > today)) ||
                     (callData.autoRemove && callData.end && (callData.end < today))) {
                     return;
                 }
             }
             const tabName = getCallName(callID, callData);
-            const tabHtml = module.renderers.renderCallLogTab(callID, tabName, !!callData.complete);
+            const tabHtml = module.renderers.renderCallLogTab(callID, tabName, callData.status === 'complete');
             $(".card-header-tabs").append(tabHtml);
+        });
+    };
+
+    const hasConfiguredAdhoc = () => {
+        if (!module.adhoc || typeof module.adhoc !== 'object') {
+            return false;
+        }
+        const entries = Object.values(module.adhoc);
+        if (entries.length === 0) {
+            return false;
+        }
+        return entries.some(cfg => {
+            if (!cfg || typeof cfg !== 'object') return false;
+            const hasId = Boolean(cfg.id && String(cfg.id).trim().length > 0);
+            const hasName = Boolean(cfg.name && String(cfg.name).trim().length > 0);
+            const hasReasons = Boolean(cfg.reasons && typeof cfg.reasons === 'object' && Object.keys(cfg.reasons).length > 0);
+            return hasId && (hasName || hasReasons);
         });
     };
 
@@ -384,11 +408,14 @@
         $(".call-adhoc-actions").empty();
         $("#adhocModal").remove();
 
-        if (!module.adhoc || !module.renderers || !module.renderers.renderAdhocBtn || !module.renderers.renderAdhocModal) {
+        if (!hasConfiguredAdhoc() || !module.renderers || !module.renderers.renderAdhocBtn || !module.renderers.renderAdhocModal) {
             return;
         }
 
-        const adhocKeys = Object.keys(module.adhoc);
+        const adhocKeys = Object.keys(module.adhoc).filter(k => {
+            const cfg = module.adhoc[k];
+            return cfg && cfg.id && (cfg.name || (cfg.reasons && Object.keys(cfg.reasons).length > 0));
+        });
         if (adhocKeys.length === 0) {
             return;
         }
@@ -438,6 +465,16 @@
 
             $modal.find('input[name=callDate]').val(dateStr);
             $modal.find('input[name=callTime]').val(timeStr);
+            if (typeof formatCallDatetime === 'function') {
+                $modal.find('#adhocGenerationText').text(formatCallDatetime(dateStr, timeStr));
+            } else {
+                $modal.find('#adhocGenerationText').text(`${dateStr} ${timeStr}`);
+            }
+            $modal.find('input[name=scheduleCallback]').prop('checked', false);
+            $modal.find('#adhocCallbackContainer').hide();
+            $modal.find('input[name=callbackDate]').val('');
+            $modal.find('input[name=callbackTime]').val('');
+            $modal.find('input[name=callbackRequestor][value="1"]').prop('checked', true);
             $modal.find('textarea[name=notes]').val('');
             if (adhocKeys.length > 0) {
                 $typeSelect.val(adhocKeys[0]);
@@ -448,16 +485,56 @@
         // Initialize fields now
         initModalFields();
 
-        // Also re-init on modal open
-        $(".adhocButton").off('click.adhocInit').on('click.adhocInit', function () {
+        // Also re-init on modal open (delegated for dynamically added buttons)
+        $(document).off('click.adhocInit', '.adhocButton').on('click.adhocInit', '.adhocButton', function () {
             initModalFields();
             if (typeof $.fn.modal === 'function') {
                 $modal.modal('show');
             }
         });
 
+        $(document).off('click.goToCallList', '.goToCallListBtn').on('click.goToCallList', '.goToCallListBtn', function (e) {
+            e.preventDefault();
+            goToCallList();
+        });
+
+        // Toggle Schedule Call Back section
+        $modal.find('input[name=scheduleCallback]').off('change').on('change', function () {
+            const isChecked = $(this).is(':checked');
+            const $container = $modal.find('#adhocCallbackContainer');
+            if (isChecked) {
+                $container.slideDown(150);
+                const $cbDate = $modal.find('input[name=callbackDate]');
+                if (!$cbDate.val()) {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    $cbDate.val(tomorrow.toISOString().split('T')[0]);
+                }
+                const $cbTime = $modal.find('input[name=callbackTime]');
+                if (!$cbTime.val()) {
+                    $cbTime.val('09:00');
+                }
+            } else {
+                $container.slideUp(150);
+            }
+        });
+
+        const formatTimeInput = function () {
+            const raw = $(this).val();
+            if (!raw) return;
+            const parseFn = (module.utils && module.utils.parseTime24) || module.parseTime24;
+            if (typeof parseFn === 'function') {
+                const parsed = parseFn(raw);
+                if (parsed) {
+                    $(this).val(parsed);
+                }
+            }
+        };
+
+        $modal.find('input[name=callbackTime]').off('blur.parseTime change.parseTime').on('blur.parseTime change.parseTime', formatTimeInput);
+
         if (typeof $.fn.datepicker === 'function') {
-            $modal.find('input[name=callDate]').datepicker();
+            $modal.find('input[name=callDate], input[name=callbackDate]').datepicker({ dateFormat: 'yy-mm-dd' });
         }
 
         // Save handler
@@ -467,6 +544,18 @@
 
             const dateVal = $modal.find('input[name=callDate]').val();
             const timeVal = $modal.find('input[name=callTime]').val();
+            const isCbScheduled = $modal.find('input[name=scheduleCallback]').is(':checked');
+            const cbDateVal = isCbScheduled ? $modal.find('input[name=callbackDate]').val() : '';
+            let cbTimeVal = isCbScheduled ? $modal.find('input[name=callbackTime]').val() : '';
+            const parseFn = (module.utils && module.utils.parseTime24) || module.parseTime24;
+            if (cbTimeVal && typeof parseFn === 'function') {
+                const parsed = parseFn(cbTimeVal);
+                if (parsed) {
+                    cbTimeVal = parsed;
+                    $modal.find('input[name=callbackTime]').val(parsed);
+                }
+            }
+            const cbRequestorVal = isCbScheduled ? ($modal.find('input[name=callbackRequestor]:checked').val() || '1') : '';
             const reasonVal = $reasonSelect.val();
             const notesVal = ($modal.find('textarea[name=notes]').val() || '').replace(/"/g, "'");
 
@@ -478,11 +567,24 @@
                 id: selectedTypeId,
                 date: dateVal,
                 time: timeVal,
+                generationDate: dateVal,
+                generationTime: timeVal,
+                scheduleCallback: isCbScheduled ? '1' : '0',
+                callbackDate: cbDateVal,
+                callbackTime: cbTimeVal,
+                callbackRequestor: cbRequestorVal,
                 reason: reasonVal,
                 notes: notesVal,
                 reporter: module.user
             }).then(function () {
                 window.onbeforeunload = function () { };
+                if (getParam('showReturn')) {
+                    const returnUrl = module.callListUrl || $("#external_modules_panel a:contains('Call List')").prop('href');
+                    if (returnUrl) {
+                        window.location.href = returnUrl;
+                        return;
+                    }
+                }
                 window.location = (window.location + "").replace('index', 'record_home');
             }).catch(function (err) {
                 console.error(err);
@@ -524,30 +626,80 @@
 
         isHistoricLog();
 
+        // Ensure all metadata entries have instances array and status string,
+        // and sync instances from module.data.
+        $.each(module.metadata || {}, function (id, call) {
+            if (!call || typeof call !== 'object') return;
+            if (!call.instances || !Array.isArray(call.instances)) {
+                call.instances = [];
+            }
+            if (!call.status) {
+                call.status = 'incomplete';
+            }
+            const instances = getCallInstanceIds(id);
+            if (instances.length > call.instances.length) {
+                call.instances = instances;
+            }
+        });
+
+        // If any logged call has outcome == 1, ensure marked complete in metadata
+        $.each(module.data || {}, function (_, d) {
+            if (d && d.call_id && module.metadata && module.metadata[d.call_id]) {
+                if (String(d.call_outcome) === '1') {
+                    module.metadata[d.call_id].status = 'complete';
+                }
+            }
+        });
+
         buildTabs();
         buildAdhocMenu();
 
         if ($(".callTab").length === 0) {
             module.disableBranchingLogic = true;
             $("#call_hdr_details-tr").nextAll('tr').addBack().hide();
-            const adhocCount = module.adhoc ? Object.keys(module.adhoc).length : 0;
-            if (!adhocCount) {
-                $("#call_log_wrapper-tr").hide();
-            }
+            $("#call_log_wrapper-tr").hide();
+            $("#call_notes_custom-tr").hide();
+            $("#historic-display-tr").hide();
+            $("#__SUBMITBUTTONS__-div, #formSaveTip, #submit-btn-saverecord, #submit-btn-dropdown, #form-submit-div, .submit-buttons-container, table#form-save-btn-container, #form_response_header").hide();
+
+            const hasAdhoc = hasConfiguredAdhoc();
+            const metadataCalls = Object.values(module.metadata || {});
+            const hasAnyCalls = metadataCalls.length > 0;
+            const allCompleted = hasAnyCalls && metadataCalls.every(c => c && c.status === 'complete');
+            const recordId = module.recordId || getParam('id') || '';
+            const participantName = module.participantName || '';
+            const callListUrl = module.callListUrl || $("#external_modules_panel a:contains('Call List')").prop('href') || '';
+
             if (module.renderers && module.renderers.renderNoCallsDisplay) {
-                $(".formtbody").append(module.renderers.renderNoCallsDisplay());
+                $(".formtbody").append(module.renderers.renderNoCallsDisplay({
+                    hasAdhoc: hasAdhoc,
+                    allCompleted: allCompleted,
+                    recordId: recordId,
+                    participantName: participantName,
+                    callListUrl: callListUrl
+                }));
+            }
+            if ($("#call_hdr_end-tr").length) {
+                $("#call_hdr_end-tr").appendTo(".formtbody").show();
             }
             $("#formSaveTip").remove();
             updateCallScript('');
         }
 
-        // Bind tab click handler and schedule initial tab selection regardless of
-        // whether there is existing call data (fixes first-call-ever scenario).
-        setTimeout(() => {
-            $("#CallLogCurrentTime").text(
-                ($("input[name=call_open_date]").val() || '') + " " + ($("input[name=call_open_time]").val() || '')
-            );
-        }, 200);
+        const updateCurrentCallTime = () => {
+            const dt = $("input[name=call_open_datetime]").val();
+            const d = $("input[name=call_open_date]").val();
+            const t = $("input[name=call_open_time]").val();
+            const text = dt ? formatCallDatetime(dt, '') : formatCallDatetime(d, t);
+            if (text) {
+                $("#CallLogCurrentTime").text(text);
+            }
+        };
+
+        updateCurrentCallTime();
+        setTimeout(updateCurrentCallTime, 200);
+        setTimeout(updateCurrentCallTime, 500);
+        $("input[name=call_open_date], input[name=call_open_time], input[name=call_open_datetime]").on('input change', updateCurrentCallTime);
 
         $(".callTab").off('click').on('click', (event) => {
             const el = event.currentTarget;
@@ -556,6 +708,10 @@
             let id = $(el).data('call-id');
             let call = module.metadata[id] || {};
             let instances = getCallInstanceIds(id);
+            call.instances = instances;
+            if (module.metadata && module.metadata[id]) {
+                module.metadata[id].instances = instances;
+            }
             $("#CallLogCurrentCall").text(getCallName(id, call));
             $("#CallLogPreviousTime").text(instances.length === 0 ? 'None' : getPreviousCalldatetime(id));
             populateCallFormFields(id, call, instances.length + 1);
@@ -583,6 +739,10 @@
         });
 
         const updateSubmitButtonState = () => {
+            if ($(".callTab").length === 0) {
+                $("#__SUBMITBUTTONS__-div, #formSaveTip, #submit-btn-saverecord, #submit-btn-dropdown, #form-submit-div, .submit-buttons-container, table#form-save-btn-container").hide();
+                return;
+            }
             const outcomeVal = $("input[name=call_outcome]").val();
             const hasVal = (outcomeVal !== "" && outcomeVal !== undefined);
             $("#submit-btn-saverecord, #goto-call-list").prop('disabled', !hasVal).css('pointer-events', hasVal ? 'inherit' : 'none');

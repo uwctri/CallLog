@@ -54,12 +54,15 @@ class CallQueryService
         $settings = $this->configService->getRawProjectSettings($projectId);
         $callIds = $settings['call_id'] ?? [];
         $callDurations = $settings['call_expected_duration'] ?? [];
+        $callTemplates = $settings['call_template'] ?? [];
         $callIdToDuration = [];
+        $callIdToTemplate = [];
         foreach ($callIds as $i => $cid) {
             if (!empty($cid)) {
                 $d = $callDurations[$i] ?? 30;
                 if (is_array($d)) $d = reset($d);
                 $callIdToDuration[$cid] = ($d !== null && $d !== '' && is_numeric($d)) ? (int)$d : 30;
+                $callIdToTemplate[$cid] = $callTemplates[$i] ?? '';
             }
         }
 
@@ -143,34 +146,61 @@ class CallQueryService
                     $targetTabs = !empty($targetTabs) ? [$targetTabs] : [];
                 }
 
-                if (!empty($call['complete']) || (substr($baseCallID, 0, 1) === '_') || empty($targetTabs)) {
+                // Fallback alias for call_new <-> call_1
+                if (empty($targetTabs)) {
+                    if ($baseCallID === 'call_new' && !empty($call2TabMap['call_1'])) {
+                        $targetTabs = is_array($call2TabMap['call_1']) ? $call2TabMap['call_1'] : [$call2TabMap['call_1']];
+                    } elseif ($baseCallID === 'call_1' && !empty($call2TabMap['call_new'])) {
+                        $targetTabs = is_array($call2TabMap['call_new']) ? $call2TabMap['call_new'] : [$call2TabMap['call_new']];
+                    }
+                }
+
+                if (empty($targetTabs) && (($call['template'] ?? '') === 'adhoc' || strpos($callID, '||') !== false)) {
+                    if (!empty($call2TabMap['adhoc'])) {
+                        $targetTabs = is_array($call2TabMap['adhoc']) ? $call2TabMap['adhoc'] : [$call2TabMap['adhoc']];
+                    }
+                    if (empty($targetTabs)) {
+                        foreach ($tabs['config'] as $tConfig) {
+                            if (!empty($tConfig['showAdhocDates']) || $tConfig['tab_id'] === 'adhoc' || $tConfig['tab_id'] === $baseCallID || stripos($tConfig['tab_name'] ?? '', 'adhoc') !== false) {
+                                $targetTabs[] = $tConfig['tab_id'];
+                            }
+                        }
+                    }
+                }
+
+                if ((substr($baseCallID, 0, 1) === '_') || empty($targetTabs)) {
                     continue;
                 }
 
-                $templateVal = $call['template'] ?? '';
+                $isCompleted = (($call['status'] ?? '') === 'complete');
+                $templateVal = $call['template'] ?? ($callIdToTemplate[$baseCallID] ?? (strpos($callID, '||') !== false ? 'adhoc' : 'new'));
+                if (empty($call['template'])) {
+                    $call['template'] = $templateVal;
+                }
 
-                if (in_array($templateVal, [CallTemplateType::REMINDER->value, CallTemplateType::FOLLOWUP->value], true) && !empty($call['start']) && ($call['start'] > $today)) {
+                if (!$isCompleted && in_array($templateVal, [CallTemplateType::REMINDER->value, CallTemplateType::FOLLOWUP->value], true) && !empty($call['start']) && ($call['start'] > $today)) {
                     continue;
                 }
 
-                if ($templateVal === CallTemplateType::REMINDER->value && !empty($call['end']) && ($call['end'] <= $today)) {
+                if (!$isCompleted && $templateVal === CallTemplateType::MCV->value && (explode(' ', $call['appt'] ?? '')[0] === $today) && !$dayOf) {
                     continue;
                 }
 
-                if ($templateVal === CallTemplateType::FOLLOWUP->value && ($autoRemoveConfig[$baseCallID] ?? false) && !empty($call['end']) && ($call['end'] < $today)) {
+                if (!$isCompleted && $templateVal === CallTemplateType::NTS->value && (($call['created'] ?? '') === $today) && !$dayOf) {
                     continue;
                 }
 
-                if ($templateVal === CallTemplateType::NEW->value && !empty($call['expire']) && (date('Y-m-d', strtotime("{$call['load']} +{$call['expire']} days")) < $today)) {
-                    continue;
-                }
-
-                if ($templateVal === CallTemplateType::MCV->value && (explode(' ', $call['appt'] ?? '')[0] === $today) && !$dayOf) {
-                    continue;
-                }
-
-                if ($templateVal === CallTemplateType::NTS->value && (($call['created'] ?? '') === $today) && !$dayOf) {
-                    continue;
+                $isExpired = false;
+                if (!$isCompleted) {
+                    if (($call['status'] ?? '') === 'expired') {
+                        $isExpired = true;
+                    } elseif ($templateVal === CallTemplateType::REMINDER->value && !empty($call['end']) && ($call['end'] <= $today)) {
+                        $isExpired = true;
+                    } elseif ($templateVal === CallTemplateType::FOLLOWUP->value && ($autoRemoveConfig[$baseCallID] ?? false) && !empty($call['end']) && ($call['end'] < $today)) {
+                        $isExpired = true;
+                    } elseif ($templateVal === CallTemplateType::NEW->value && !empty($call['expire']) && (date('Y-m-d', strtotime("{$call['load']} +{$call['expire']} days")) < $today)) {
+                        $isExpired = true;
+                    }
                 }
 
                 $instances = $call['instances'] ?? [];
@@ -178,7 +208,18 @@ class CallQueryService
                 $instanceData = $recordData['repeat_instances'][$callEvent]["call_log"][$lastInstance] ?? [];
                 $instanceEventData = $recordData[$call['event_id'] ?? ''] ?? [];
 
+                $allEventsData = [];
+                foreach ($recordData as $eId => $eData) {
+                    if ($eId === 'repeat_instances' || !is_array($eData)) continue;
+                    foreach ($eData as $fK => $fV) {
+                        if ($fV !== '' && $fV !== null && (!isset($allEventsData[$fK]) || $eId == ($call['event_id'] ?? ''))) {
+                            $allEventsData[$fK] = $fV;
+                        }
+                    }
+                }
+
                 $instanceData = array_merge(
+                    $allEventsData,
                     array_filter($instanceEventData, fn($v) => $v !== '' && $v !== null),
                     array_filter($recordData[$callEvent] ?? [], fn($v) => $v !== '' && $v !== null),
                     array_filter($instanceData, fn($v) => $v !== '' && $v !== null)
@@ -203,22 +244,51 @@ class CallQueryService
                 }
                 $instanceData['_visitName'] = $visitName;
 
-                $cbReq = $instanceData['call_requested_callback'][1] ?? '0';
-                $cbDate = $instanceData['call_callback_date'] ?? '';
+                if (!empty($call['requestedCallback']) && $call['requestedCallback'] === '1') {
+                    $cbReq = '1';
+                    $cbDate = $call['callbackDate'] ?? ($instanceData['call_callback_date'] ?? '');
+                    $cbTime = $call['callbackTime'] ?? ($instanceData['call_callback_time'] ?? '');
+                    $cbWho = $call['callbackRequestor'] ?? ($instanceData['call_callback_requested_by'] ?? '');
+                } else {
+                    $rawCbReq = $instanceData['call_requested_callback'] ?? ($call['requestedCallback'] ?? ($call['call_requested_callback'] ?? '0'));
+                    $cbReq = is_array($rawCbReq) ? ($rawCbReq[1] ?? '0') : (string)$rawCbReq;
+                    $cbDate = $instanceData['call_callback_date'] ?? ($call['callbackDate'] ?? ($call['call_callback_date'] ?? ''));
+                    $cbTime = $instanceData['call_callback_time'] ?? ($call['callbackTime'] ?? ($call['call_callback_time'] ?? ''));
+                    $cbWho = $instanceData['call_callback_requested_by'] ?? ($call['callbackRequestor'] ?? ($call['call_callback_requested_by'] ?? ''));
+                }
 
-                $instanceData['_callbackRequestor'] = $instanceData['call_callback_requested_by'] ?? $call['callbackRequestor'] ?? '';
-                $instanceData['_call_date'] = $cbDate ?: ($call['start'] ?? $call['appt'] ?? $call['load'] ?? $call['created'] ?? '');
+                if (!empty($cbDate) && strpos($cbDate, '/') !== false) {
+                    $cbTs = strtotime($cbDate);
+                    if ($cbTs !== false) {
+                        $cbDate = date('Y-m-d', $cbTs);
+                    }
+                }
 
-                $instanceData['_callbackNotToday'] = ($cbReq === '1' && $cbDate > $today);
-                $instanceData['_callbackToday'] = ($cbReq === '1' && $cbDate <= $today);
+                $instanceData['_callbackRequestor'] = $cbWho;
+                $instanceData['_callbackDate'] = $cbDate;
+                $instanceData['_callbackTime'] = $cbTime;
+                $instanceData['_call_date'] = ($cbReq === '1' && !empty($cbDate))
+                    ? (!empty($cbTime) ? trim("{$cbDate} {$cbTime}") : $cbDate)
+                    : ($call['start'] ?? $call['appt'] ?? $call['load'] ?? $call['created'] ?? '');
+
+                $nowDateTime = date('Y-m-d H:i');
+                $isCbFuture = false;
+                if ($cbReq === '1' && !empty($cbDate)) {
+                    if (!empty($cbTime)) {
+                        $cleanTime = (strlen($cbTime) > 5) ? substr($cbTime, 0, 5) : $cbTime;
+                        $isCbFuture = ("{$cbDate} {$cleanTime}" > $nowDateTime);
+                    } else {
+                        $isCbFuture = ($cbDate > $today);
+                    }
+                }
+
+                $instanceData['_callbackNotToday'] = ($cbReq === '1' && $isCbFuture);
+                $instanceData['_callbackToday'] = ($cbReq === '1' && !$isCbFuture);
 
                 if (!$instanceData['_callbackToday']) {
                     $autoField = $autoRemoveConfig[$baseCallID] ?? null;
-                    if (($call['template'] ?? '') === 'mcv' && $autoField && !empty($instanceData[$autoField]) && ($instanceData[$autoField] < $today)) {
-                        continue;
-                    }
-                    if (($call['template'] ?? '') === 'visit' && $autoField && !empty($instanceData[$autoField]) && ($instanceData[$autoField] < $today)) {
-                        continue;
+                    if (!$isCompleted && (($call['template'] ?? '') === 'mcv' || ($call['template'] ?? '') === 'visit') && $autoField && !empty($instanceData[$autoField]) && ($instanceData[$autoField] < $today)) {
+                        $isExpired = true;
                     }
 
                     $isWithdrawn = false;
@@ -247,6 +317,10 @@ class CallQueryService
                 }
 
                 $alwaysShowCallbackCol = $alwaysShowCallbackCol || ($cbReq === '1' && $cbDate <= $today);
+
+                $instanceData['_status'] = $isCompleted ? 'complete' : ($isExpired ? 'expired' : (($call['status'] ?? '') ?: 'incomplete'));
+                $instanceData['_isCompleted'] = $isCompleted;
+                $instanceData['_isExpired'] = $isExpired;
 
                 $callDuration = $callIdToDuration[$baseCallID] ?? 30;
                 $callStartedTime = $call['callStarted'] ?? '';
@@ -326,8 +400,15 @@ class CallQueryService
 
                 if (($call['template'] ?? '') === 'adhoc') {
                     $instanceData['_adhocReason'] = $adhocConfig[$baseCallID]['reasons'][$call['reason']] ?? '';
-                    $instanceData['_adhocContactOn'] = $call['contactOn'] ?? '';
-                    $instanceData['_futureAdhoc'] = ($call['start'] ?? '') > $today;
+                    $contactOn = $call['contactOn'] ?? '';
+                    $instanceData['_adhocContactOn'] = $contactOn;
+                    $contactTs = !empty($contactOn) ? strtotime($contactOn) : false;
+                    if ($contactTs !== false) {
+                        $instanceData['_futureAdhoc'] = (date('Y-m-d H:i', $contactTs) > $nowDateTime);
+                    } else {
+                        $startTs = !empty($call['start']) ? strtotime($call['start']) : false;
+                        $instanceData['_futureAdhoc'] = ($startTs !== false) ? (date('Y-m-d', $startTs) > $today) : false;
+                    }
                     $notes = !empty($call['initNotes']) ? $call['initNotes'] : "No Notes Taken";
                     if (!empty($call['reporter'])) {
                         $instanceData['_callNotes'] .= "{$call['reported']}||{$call['reporter']}||&nbsp;||{$notes}|||";

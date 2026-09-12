@@ -11,7 +11,7 @@ class CallItemDTO
     public array $instances;
     public int $voiceMails;
     public int $hideAfterAttempt;
-    public bool $complete;
+    public string $status;
     public ?string $completedBy;
     public ?string $start;
     public ?string $end;
@@ -27,6 +27,10 @@ class CallItemDTO
     public ?string $callStarted;
     public ?string $callStartedBy;
     public array $noCallsToday;
+    public ?string $requestedCallback;
+    public ?string $callbackDate;
+    public ?string $callbackTime;
+    public ?string $callbackRequestor;
 
     public function __construct(array $data = [])
     {
@@ -37,7 +41,7 @@ class CallItemDTO
         $this->instances = is_array($data['instances'] ?? null) ? $data['instances'] : [];
         $this->voiceMails = (int)($data['voiceMails'] ?? 0);
         $this->hideAfterAttempt = (int)($data['hideAfterAttempt'] ?? 9999);
-        $this->complete = (bool)($data['complete'] ?? false);
+        $this->status = (string)($data['status'] ?? 'incomplete');
         $this->completedBy = isset($data['completedBy']) ? (string)$data['completedBy'] : null;
         $this->start = isset($data['start']) ? (string)$data['start'] : null;
         $this->end = isset($data['end']) ? (string)$data['end'] : null;
@@ -52,6 +56,10 @@ class CallItemDTO
         $this->expire = isset($data['expire']) ? (int)$data['expire'] : null;
         $this->callStarted = isset($data['callStarted']) ? (string)$data['callStarted'] : null;
         $this->callStartedBy = isset($data['callStartedBy']) ? (string)$data['callStartedBy'] : null;
+        $this->requestedCallback = isset($data['requestedCallback']) ? (string)$data['requestedCallback'] : (isset($data['call_requested_callback']) ? (is_array($data['call_requested_callback']) ? ($data['call_requested_callback'][1] ?? '0') : (string)$data['call_requested_callback']) : null);
+        $this->callbackDate = isset($data['callbackDate']) ? (string)$data['callbackDate'] : (isset($data['call_callback_date']) ? (string)$data['call_callback_date'] : null);
+        $this->callbackTime = isset($data['callbackTime']) ? (string)$data['callbackTime'] : (isset($data['call_callback_time']) ? (string)$data['call_callback_time'] : null);
+        $this->callbackRequestor = isset($data['callbackRequestor']) ? (string)$data['callbackRequestor'] : (isset($data['call_callback_requested_by']) ? (string)$data['call_callback_requested_by'] : null);
 
         $noCalls = $data['noCallsToday'] ?? [];
         if (!is_array($noCalls)) {
@@ -70,7 +78,7 @@ class CallItemDTO
             'instances' => $this->instances,
             'voiceMails' => $this->voiceMails,
             'hideAfterAttempt' => $this->hideAfterAttempt,
-            'complete' => $this->complete,
+            'status' => $this->status,
             'noCallsToday' => $this->noCallsToday,
         ];
 
@@ -88,6 +96,10 @@ class CallItemDTO
         if ($this->expire !== null) $array['expire'] = $this->expire;
         if ($this->callStarted !== null) $array['callStarted'] = $this->callStarted;
         if ($this->callStartedBy !== null) $array['callStartedBy'] = $this->callStartedBy;
+        if ($this->requestedCallback !== null) $array['requestedCallback'] = $this->requestedCallback;
+        if ($this->callbackDate !== null) $array['callbackDate'] = $this->callbackDate;
+        if ($this->callbackTime !== null) $array['callbackTime'] = $this->callbackTime;
+        if ($this->callbackRequestor !== null) $array['callbackRequestor'] = $this->callbackRequestor;
 
         return $array;
     }

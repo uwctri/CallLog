@@ -109,9 +109,39 @@ $activeTabId = (!empty($savedTab) && in_array($savedTab, $validTabIds, true))
                                         </template>
                                     </select>
 
-                                    <button type="button" @click="toggleHiddenCalls()" :title="hideCalls ? 'Show Hidden Calls' : 'Hide Retiring Calls'" :aria-label="hideCalls ? 'Show Hidden Calls' : 'Hide Retiring Calls'" :disabled="!dataLoaded || (!displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'] || displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'].length === 0)" class="btn btn-sm d-inline-flex align-items-center justify-content-center toggle-hidden-calls-btn">
-                                        <i class="fas" :class="hideCalls ? 'fa-eye-slash' : 'fa-eye'"></i>
-                                    </button>
+                                    <div class="position-relative d-inline-block" x-data="{ openFilter: false }" @click.outside="openFilter = false">
+                                        <button type="button"
+                                                @click="openFilter = !openFilter"
+                                                class="btn btn-sm d-inline-flex align-items-center justify-content-center call-visibility-btn"
+                                                :class="{ 'active': openFilter }"
+                                                :disabled="!dataLoaded"
+                                                title="Filter Call Visibility">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <div x-show="openFilter"
+                                             x-transition
+                                             class="dropdown-menu show shadow-sm p-2 position-absolute end-0 mt-1"
+                                             style="min-width: 200px; z-index: 1050; display: block;"
+                                             @click.stop>
+                                            <div class="dropdown-header px-2 py-1 text-uppercase fw-bold text-muted" style="font-size: 0.68rem; letter-spacing: 0.5px;">Show Calls</div>
+                                            <label class="dropdown-item d-flex align-items-center gap-2 py-1.5 px-2 rounded cursor-pointer mb-0">
+                                                <input class="form-check-input mt-0" type="checkbox" x-model="showTypes.active">
+                                                <span class="small fw-medium text-dark">Active</span>
+                                            </label>
+                                            <label class="dropdown-item d-flex align-items-center gap-2 py-1.5 px-2 rounded cursor-pointer mb-0">
+                                                <input class="form-check-input mt-0" type="checkbox" x-model="showTypes.hidden">
+                                                <span class="small fw-medium text-dark">Hidden</span>
+                                            </label>
+                                            <label class="dropdown-item d-flex align-items-center gap-2 py-1.5 px-2 rounded cursor-pointer mb-0">
+                                                <input class="form-check-input mt-0" type="checkbox" x-model="showTypes.expired">
+                                                <span class="small fw-medium text-dark">Expired</span>
+                                            </label>
+                                            <label class="dropdown-item d-flex align-items-center gap-2 py-1.5 px-2 rounded cursor-pointer mb-0">
+                                                <input class="form-check-input mt-0" type="checkbox" x-model="showTypes.completed">
+                                                <span class="small fw-medium text-dark">Completed</span>
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

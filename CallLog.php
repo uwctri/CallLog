@@ -115,7 +115,7 @@ class CallLog extends AbstractExternalModule
         );
     }
 
-    public function redcap_save_record($project_id, $record, $instrument)
+    public function redcap_save_record($project_id, $record, $instrument, $event_id = null, $group_id = null, $survey_hash = null, $response_id = null, $repeat_instance = 1)
     {
         // Skip call generation evaluation when saving internal module metadata
         if ($instrument === $this->instrumentMeta) {
@@ -124,6 +124,10 @@ class CallLog extends AbstractExternalModule
 
         $project_id = (int)$project_id;
         $record = (string)$record;
+
+        if ($instrument === $this->instrumentCall) {
+            $this->syncMetadataWithCallInstances($project_id, $record);
+        }
 
         $this->getGeneratorService()->evaluateAndGenerateForRecord($project_id, $record, $instrument, 'save_record');
     }
@@ -245,6 +249,10 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         $this->passArgument('callDurations', $callDurations);
         $this->passArgument('callTemplates', $callTemplates);
 
+        $rawDateTimeFormat = $rawSettings['datetime_format'][0] ?? ($rawSettings['datetime_format'] ?? 'm/d/Y g:i A');
+        if (is_array($rawDateTimeFormat)) $rawDateTimeFormat = reset($rawDateTimeFormat);
+        $this->passArgument('dateTimeFormat', $rawDateTimeFormat ?: 'm/d/Y g:i A');
+
         // Pass event context for client-side call_event_name / call_event population
         try {
             $proj = new \Project($project_id);
@@ -284,7 +292,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             $metaRepo = $this->getMetadataRepo();
             $metaData = $metaRepo->getMetadata($project_id, $record);
             if (!isset($metaData[$callId]) || !is_array($metaData[$callId])) {
-                $metaData[$callId] = ['id' => $callId, 'complete' => false];
+                $metaData[$callId] = ['id' => $callId, 'status' => 'incomplete'];
             }
             if (empty($metaData[$callId]['name'])) {
                 $baseId = explode('|', explode('||', $callId)[0])[0];
@@ -307,10 +315,13 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
 
         if ($instrument === $this->instrumentCall) {
             $this->passArgument('adhoc', $this->getConfigService()->getAdhocTemplateConfig($project_id));
+            $this->passArgument('callListUrl', $this->getUrl('index.php'));
+            $this->passArgument('recordId', (string)$record);
             $this->includeJs('js/call_log.js', true);
         }
 
         if (in_array($instrument, array_merge($summary, [$this->instrumentCall]), true)) {
+            $this->syncMetadataWithCallInstances($project_id, $record);
             $metadata = $this->getMetadataRepo()->getMetadata($project_id, $record);
             foreach ($metadata as $k => &$item) {
                 if (is_array($item)) {
@@ -322,6 +333,12 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                         $item['template'] = $callTemplates[$baseId]
                             ?? ($callTemplates[$k]
                             ?? (strpos($k, '||') !== false ? 'adhoc' : 'new'));
+                    }
+                    if (!isset($item['instances']) || !is_array($item['instances'])) {
+                        $item['instances'] = [];
+                    }
+                    if (empty($item['status'])) {
+                        $item['status'] = 'incomplete';
                     }
                 }
             }
@@ -438,7 +455,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                             $metadata[$targetKey]['name'] = $rawSettings['call_name'][$i] ?? $targetKey;
                             $metadata[$targetKey]['template'] = $rawSettings['call_template'][$i] ?? 'new';
                             $metadata[$targetKey]['id'] = $targetKey;
-                            $metadata[$targetKey]['complete'] = false;
+                            $metadata[$targetKey]['status'] = 'incomplete';
                             break;
                         }
                     }
@@ -672,22 +689,83 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         echo "<script>Object.assign({$this->getJavascriptModuleObjectName()}, {$data});</script>";
     }
 
+    public function parseTimeTo24(?string $time): string
+    {
+        if (empty($time)) return '00:00';
+        $t = trim(strtolower($time));
+        $isPm = false;
+        $isAm = false;
+        if (preg_match('/p\.?m?\.?$/i', $t)) {
+            $isPm = true;
+            $t = trim(preg_replace('/p\.?m?\.?$/i', '', $t));
+        } elseif (preg_match('/a\.?m?\.?$/i', $t)) {
+            $isAm = true;
+            $t = trim(preg_replace('/a\.?m?\.?$/i', '', $t));
+        }
+        if (strpos($t, ':') !== false || strpos($t, '.') !== false) {
+            $parts = preg_split('/[:.]/', $t);
+            $hours = (int)$parts[0];
+            $minutes = isset($parts[1]) ? (int)$parts[1] : 0;
+        } elseif (ctype_digit($t)) {
+            $len = strlen($t);
+            if ($len === 1 || $len === 2) {
+                $hours = (int)$t;
+                $minutes = 0;
+            } elseif ($len === 3) {
+                $hours = (int)substr($t, 0, 1);
+                $minutes = (int)substr($t, 1);
+            } elseif ($len === 4) {
+                $hours = (int)substr($t, 0, 2);
+                $minutes = (int)substr($t, 2);
+            } else {
+                return '00:00';
+            }
+        } else {
+            return '00:00';
+        }
+        if ($minutes < 0 || $minutes > 59) return '00:00';
+        if ($isPm && $hours < 12) $hours += 12;
+        if ($isAm && $hours === 12) $hours = 0;
+        if ($hours < 0 || $hours > 23) return '00:00';
+        return sprintf('%02d:%02d', $hours, $minutes);
+    }
+
     private function metadataAdhoc(int $projectId, string $record, array $payload): bool
     {
         $config = $this->getConfigService()->getAdhocTemplateConfig($projectId);
         $adhocConfig = $config[$payload['id']] ?? null;
         if (!$adhocConfig) return false;
 
-        $metadata = $this->getMetadataRepo()->getMetadata($projectId, $record);
-        $date = !empty($payload['date']) ? $payload['date'] : date('Y-m-d');
-        $time = $payload['time'] ?? '00:00';
-        $reported = date('Y-m-d H:i:s');
+        $genDate = !empty($payload['generationDate']) ? $payload['generationDate'] : (!empty($payload['date']) ? $payload['date'] : date('Y-m-d'));
+        $rawGenTime = !empty($payload['generationTime']) ? $payload['generationTime'] : (!empty($payload['time']) ? $payload['time'] : date('H:i'));
+        $genTime = $this->parseTimeTo24($rawGenTime);
+        $reportedTs = strtotime("{$genDate} {$genTime}");
+        $reported = ($reportedTs !== false) ? date('Y-m-d H:i:s', $reportedTs) : date('Y-m-d H:i:s');
         $reporter = $this->getUserNameMap($projectId)[$payload['reporter'] ?? ''] ?? ($payload['reporter'] ?? '');
+
+        $hasCallback = !empty($payload['scheduleCallback']) && !empty($payload['callbackDate']);
+        if ($hasCallback) {
+            $cbDate = $payload['callbackDate'];
+            if (!empty($cbDate) && strpos($cbDate, '/') !== false) {
+                $ts = strtotime($cbDate);
+                if ($ts !== false) $cbDate = date('Y-m-d', $ts);
+            }
+            $cbTime = $this->parseTimeTo24($payload['callbackTime'] ?? '09:00');
+            $cbRequestor = !empty($payload['callbackRequestor']) ? (string)$payload['callbackRequestor'] : '1';
+            $startDate = $cbDate;
+            $contactOn = trim("{$cbDate} {$cbTime}");
+        } else {
+            $cbDate = null;
+            $cbTime = null;
+            $cbRequestor = null;
+            $startDate = $genDate;
+            $contactOn = trim("{$genDate} {$genTime}");
+        }
 
         $key = $adhocConfig['id'] . '||' . $reported;
         $metadata[$key] = [
-            "start" => $date,
-            "contactOn" => trim("{$date} {$time}"),
+            "start" => $startDate,
+            "contactOn" => $contactOn,
             "reported" => $reported,
             "reporter" => $reporter,
             "reason" => $payload['reason'] ?? '',
@@ -699,11 +777,27 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             "instances" => [],
             "voiceMails" => 0,
             "hideAfterAttempt" => $adhocConfig['hideAfterAttempt'] ?? 9999,
-            "complete" => false
+            "status" => "incomplete",
+            "requestedCallback" => $hasCallback ? '1' : '0',
+            "callbackDate" => $cbDate,
+            "callbackTime" => $cbTime,
+            "callbackRequestor" => $cbRequestor,
         ];
 
         $saved = $this->getMetadataRepo()->saveMetadata($projectId, $record, $metadata);
         if ($saved) {
+            $logExtra = [
+                'generation_date' => $genDate,
+                'generation_time' => $genTime,
+                'contact_date' => $startDate,
+                'contact_time' => $hasCallback ? $cbTime : $genTime
+            ];
+            if ($hasCallback) {
+                $logExtra['callback_scheduled'] = true;
+                $logExtra['callback_date'] = $cbDate;
+                $logExtra['callback_time'] = $cbTime;
+                $logExtra['callback_requestor'] = $cbRequestor;
+            }
             $this->getLoggingService()->logAdhocCreated(
                 $projectId,
                 $record,
@@ -712,16 +806,119 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 (string)($payload['reason'] ?? ''),
                 $reporter,
                 'ui',
-                [
-                    'contact_date' => $date,
-                    'contact_time' => $time
-                ]
+                $logExtra
             );
         }
         return $saved;
     }
 
+    /**
+     * Synchronizes metadata with all logged call instances for the record.
+     * Ensures every metadata entry has an 'instances' array and 'status' string,
+     * merges instance numbers from saved call logs, and marks complete if call_outcome was 1.
+     */
+    public function syncMetadataWithCallInstances(int $projectId, string $record, ?array &$metadata = null): bool
+    {
+        $metadataRepo = $this->getMetadataRepo();
+        $passedRef = ($metadata !== null);
+        if ($metadata === null) {
+            $metadata = $metadataRepo->getMetadata($projectId, $record);
+        }
 
+        $allCallData = $this->getAllCallData($projectId, $record);
+        $changed = false;
+
+        $rawSettings = $this->getConfigService()->getRawProjectSettings($projectId);
+        $callNames = [];
+        $callTemplates = [];
+        foreach ($rawSettings['call_id'] ?? [] as $i => $cid) {
+            if (!empty($cid)) {
+                $callNames[$cid] = $rawSettings['call_name'][$i] ?? $cid;
+                $callTemplates[$cid] = $rawSettings['call_template'][$i] ?? 'new';
+            }
+        }
+
+        // Map existing call instances by call_id
+        $instancesByCallId = [];
+        $completeByCallId = [];
+        foreach ($allCallData as $instId => $instData) {
+            $callId = trim((string)($instData['call_id'] ?? ''));
+            if ($callId === '') continue;
+            $instNum = (int)$instId;
+            if ($instNum > 0) {
+                $instancesByCallId[$callId][] = $instNum;
+            }
+
+            $outcome = (string)($instData['call_outcome'] ?? '');
+            if ($outcome === '1') {
+                $completeByCallId[$callId] = true;
+            }
+        }
+
+        // 1. Ensure all existing metadata entries have required fields and sync instances/status
+        foreach ($metadata as $callId => &$item) {
+            if (!is_array($item)) continue;
+
+            if (empty($item['id'])) {
+                $item['id'] = (string)$callId;
+                $changed = true;
+            }
+
+            if (!isset($item['instances']) || !is_array($item['instances'])) {
+                $item['instances'] = [];
+                $changed = true;
+            }
+
+            if (empty($item['status'])) {
+                $item['status'] = 'incomplete';
+                $changed = true;
+            }
+
+            // Sync instances from logged calls
+            if (isset($instancesByCallId[$callId])) {
+                $merged = array_values(array_unique(array_merge($item['instances'], $instancesByCallId[$callId])));
+                sort($merged, SORT_NUMERIC);
+                if ($merged !== $item['instances']) {
+                    $item['instances'] = $merged;
+                    $changed = true;
+                }
+            }
+
+            // Sync complete status if logged call outcome was completed
+            if (!empty($completeByCallId[$callId]) && $item['status'] !== 'complete') {
+                $item['status'] = 'complete';
+                $changed = true;
+            }
+        }
+        unset($item);
+
+        // 2. Add any calls that have logged instances but were missing from metadata
+        foreach ($instancesByCallId as $callId => $instList) {
+            if (!isset($metadata[$callId])) {
+                $baseId = explode('|', explode('||', $callId)[0])[0];
+                $merged = array_values(array_unique($instList));
+                sort($merged, SORT_NUMERIC);
+                $metadata[$callId] = [
+                    'id' => $callId,
+                    'name' => $callNames[$baseId] ?? ($callNames[$callId] ?? (strpos($callId, '||') !== false ? 'Adhoc Call' : $callId)),
+                    'template' => $callTemplates[$baseId] ?? ($callTemplates[$callId] ?? (strpos($callId, '||') !== false ? 'adhoc' : 'new')),
+                    'event_id' => strpos($callId, '|') !== false && strpos($callId, '||') === false ? (explode('|', $callId)[1] ?? '') : '',
+                    'instances' => $merged,
+                    'voiceMails' => 0,
+                    'hideAfterAttempt' => 9999,
+                    'status' => !empty($completeByCallId[$callId]) ? 'complete' : 'incomplete',
+                    'load' => date('Y-m-d H:i')
+                ];
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            $metadataRepo->saveMetadata($projectId, $record, $metadata);
+        }
+
+        return $changed;
+    }
 
     private function getAllCallData(int $projectId, string $record): array
     {
@@ -744,7 +941,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         }
         foreach ($meta as $call) {
             if (
-                empty($call['complete']) &&
+                (($call['status'] ?? '') !== 'complete') &&
                 (($call['callStartedBy'] ?? '') !== $user) &&
                 !empty($call['callStarted']) &&
                 ((time() - strtotime($call['callStarted'])) / 60 < $this->startedCallGrace)

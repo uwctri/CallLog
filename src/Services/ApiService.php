@@ -161,6 +161,47 @@ class ApiService
         ];
     }
 
+    public function parseTimeTo24(?string $time): string
+    {
+        if (empty($time)) return '00:00';
+        $t = trim(strtolower($time));
+        $isPm = false;
+        $isAm = false;
+        if (preg_match('/p\.?m?\.?$/i', $t)) {
+            $isPm = true;
+            $t = trim(preg_replace('/p\.?m?\.?$/i', '', $t));
+        } elseif (preg_match('/a\.?m?\.?$/i', $t)) {
+            $isAm = true;
+            $t = trim(preg_replace('/a\.?m?\.?$/i', '', $t));
+        }
+        if (strpos($t, ':') !== false || strpos($t, '.') !== false) {
+            $parts = preg_split('/[:.]/', $t);
+            $hours = (int)$parts[0];
+            $minutes = isset($parts[1]) ? (int)$parts[1] : 0;
+        } elseif (ctype_digit($t)) {
+            $len = strlen($t);
+            if ($len === 1 || $len === 2) {
+                $hours = (int)$t;
+                $minutes = 0;
+            } elseif ($len === 3) {
+                $hours = (int)substr($t, 0, 1);
+                $minutes = (int)substr($t, 1);
+            } elseif ($len === 4) {
+                $hours = (int)substr($t, 0, 2);
+                $minutes = (int)substr($t, 2);
+            } else {
+                return '00:00';
+            }
+        } else {
+            return '00:00';
+        }
+        if ($minutes < 0 || $minutes > 59) return '00:00';
+        if ($isPm && $hours < 12) $hours += 12;
+        if ($isAm && $hours === 12) $hours = 0;
+        if ($hours < 0 || $hours > 23) return '00:00';
+        return sprintf('%02d:%02d', $hours, $minutes);
+    }
+
     private function createAdhocCall(int $projectId, string $record, array $adhocConfigList, string $callTypeId, string $reasonId, array $payload): bool
     {
         $targetConfig = null;
@@ -173,18 +214,32 @@ class ApiService
         if (!$targetConfig) return false;
 
         $metadata = $this->metadataRepo->getMetadata($projectId, $record);
-        $date = !empty($payload['date']) ? $payload['date'] : date('Y-m-d');
-        $time = !empty($payload['time']) ? $payload['time'] : '00:00';
-        $reported = date('Y-m-d H:i:s');
+        $genDate = !empty($payload['generationDate']) ? $payload['generationDate'] : (!empty($payload['date']) ? $payload['date'] : date('Y-m-d'));
+        $rawGenTime = !empty($payload['generationTime']) ? $payload['generationTime'] : (!empty($payload['time']) ? $payload['time'] : date('H:i'));
+        $genTime = $this->parseTimeTo24($rawGenTime);
+        $reportedTs = strtotime("{$genDate} {$genTime}");
+        $reported = ($reportedTs !== false) ? date('Y-m-d H:i:s', $reportedTs) : date('Y-m-d H:i:s');
         $reporter = $payload['reporter'] ?? 'API User';
+
+        $hasCallback = !empty($payload['schedule_callback']) || !empty($payload['scheduleCallback']) || !empty($payload['callback_date']) || !empty($payload['callbackDate']);
+        $cbDate = $payload['callback_date'] ?? $payload['callbackDate'] ?? null;
+        if (!empty($cbDate) && strpos($cbDate, '/') !== false) {
+            $ts = strtotime($cbDate);
+            if ($ts !== false) $cbDate = date('Y-m-d', $ts);
+        }
+        $cbTime = ($hasCallback && !empty($payload['callback_time'] ?? $payload['callbackTime'])) ? $this->parseTimeTo24($payload['callback_time'] ?? $payload['callbackTime']) : '09:00';
+        $cbRequestor = $payload['callback_requestor'] ?? $payload['callbackRequestor'] ?? '1';
+
+        $startDate = ($hasCallback && $cbDate) ? $cbDate : $genDate;
+        $contactOn = ($hasCallback && $cbDate) ? trim("{$cbDate} {$cbTime}") : trim("{$genDate} {$genTime}");
 
         $key = $targetConfig['id'] . '||' . $reported;
         $reasonText = $targetConfig['reasons'][$reasonId] ?? $reasonId;
 
         $metadata[$key] = [
             "id" => $targetConfig['id'],
-            "start" => $date,
-            "contactOn" => trim("{$date} {$time}"),
+            "start" => $startDate,
+            "contactOn" => $contactOn,
             "reported" => $reported,
             "reporter" => $reporter,
             "reason" => (string)$reasonId,
@@ -196,11 +251,28 @@ class ApiService
             "instances" => [],
             "voiceMails" => 0,
             "hideAfterAttempt" => $targetConfig['hideAfterAttempt'] ?? 9999,
-            "complete" => false
+            "status" => "incomplete",
+            "complete" => false,
+            "requestedCallback" => ($hasCallback && $cbDate) ? '1' : '0',
+            "callbackDate" => $cbDate,
+            "callbackTime" => $cbTime,
+            "callbackRequestor" => $cbRequestor,
         ];
 
         $saved = $this->metadataRepo->saveMetadata($projectId, $record, $metadata);
         if ($saved && $this->loggingService) {
+            $logExtra = [
+                'generation_date' => $genDate,
+                'generation_time' => $genTime,
+                'contact_date' => $startDate,
+                'contact_time' => ($hasCallback && $cbDate) ? ($cbTime ?? '00:00') : $genTime
+            ];
+            if ($hasCallback && $cbDate) {
+                $logExtra['callback_scheduled'] = true;
+                $logExtra['callback_date'] = $cbDate;
+                $logExtra['callback_time'] = $cbTime;
+                $logExtra['callback_requestor'] = $cbRequestor;
+            }
             $this->loggingService->logAdhocCreated(
                 $projectId,
                 $record,
@@ -209,10 +281,7 @@ class ApiService
                 (string)$reasonId,
                 $reporter,
                 'api',
-                [
-                    'contact_date' => $date,
-                    'contact_time' => $time
-                ]
+                $logExtra
             );
         }
 

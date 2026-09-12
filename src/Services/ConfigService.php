@@ -81,9 +81,9 @@ class ConfigService
             'tab_field_default' => [[]],
             'tab_field_link' => [[]],
             'tab_field_link_instrument' => [[]],
-            'tab_expands_field' => [[]],
-            'tab_expands_field_name' => [[]],
-            'tab_expands_field_default' => [[]]
+            'tab_expands_field' => [],
+            'tab_expands_field_name' => [],
+            'tab_expands_field_default' => []
         ];
     }
 
@@ -493,19 +493,31 @@ class ConfigService
         $dd = REDCap::getDataDictionary('array');
 
         $expands = [];
-        $expandsFieldList = $settings["tab_expands_field"][0] ?? $settings["tab_expands_field"];
+        $rawExpFields = $settings["tab_expands_field"] ?? [];
+        $expandsFieldList = (isset($rawExpFields[0]) && is_array($rawExpFields[0]))
+            ? $rawExpFields[0]
+            : (is_array($rawExpFields) ? $rawExpFields : []);
+
+        $rawExpNames = $settings["tab_expands_field_name"] ?? [];
+        $namesList = (isset($rawExpNames[0]) && is_array($rawExpNames[0]))
+            ? $rawExpNames[0]
+            : (is_array($rawExpNames) ? $rawExpNames : []);
+
+        $rawExpDefaults = $settings["tab_expands_field_default"] ?? [];
+        $defaultList = (isset($rawExpDefaults[0]) && is_array($rawExpDefaults[0]))
+            ? $rawExpDefaults[0]
+            : (is_array($rawExpDefaults) ? $rawExpDefaults : []);
+
         if (!empty($expandsFieldList)) {
             foreach ($expandsFieldList as $i => $field) {
                 if (empty($field)) continue;
-                $namesList = $settings["tab_expands_field_name"][0] ?? $settings["tab_expands_field_name"] ?? [];
-                $defaultList = $settings["tab_expands_field_default"][0] ?? $settings["tab_expands_field_default"] ?? [];
                 $name = $namesList[$i] ?? trim($this->getFieldLabel($field), ":?");
                 $validation = $Proj->metadata[$field]["element_validation_type"] ?? "";
                 $default = $defaultList[$i] ?? "";
                 $expands[] = [
                     "field" => $field,
                     "map" => $this->getDictionaryValuesFor($field, $dd),
-                    "displayName" => trim($name) . ": ",
+                    "displayName" => trim(rtrim($name, ':? ')),
                     "validation" => $validation,
                     "isDate" => strpos($validation, 'date') !== false,
                     "hasTime" => strpos($validation, 'datetime') !== false,
@@ -554,6 +566,15 @@ class ConfigService
             $tabNameMap[$tabId] = $tabName;
             $callsList = is_array($calls) ? $calls : explode(',', (string)$calls);
             $callsArray = array_filter(array_map('trim', $callsList));
+
+            // Backward compatibility alias: if 'call_new' is included, also include 'call_1' (and vice versa)
+            if (in_array('call_new', $callsArray, true) && !in_array('call_1', $callsArray, true) && isset($callIdToTemplate['call_1'])) {
+                $callsArray[] = 'call_1';
+            }
+            if (in_array('call_1', $callsArray, true) && !in_array('call_new', $callsArray, true)) {
+                $callsArray[] = 'call_new';
+            }
+
             $tabTemplates = [];
             foreach ($callsArray as $call) {
                 if (!empty($call)) {
@@ -568,7 +589,29 @@ class ConfigService
                     }
                 }
             }
+            if ($tabId === 'adhoc' || stripos($tabName, 'adhoc') !== false || (($settings["tab_includes_adhoc"][$i] ?? '') === '1')) {
+                $tabTemplates[] = 'adhoc';
+            }
             $tabTemplates = array_unique($tabTemplates);
+
+            if (in_array('adhoc', $tabTemplates, true)) {
+                if (!isset($call2TabMap['adhoc'])) {
+                    $call2TabMap['adhoc'] = [];
+                }
+                if (!in_array($tabId, $call2TabMap['adhoc'], true)) {
+                    $call2TabMap['adhoc'][] = $tabId;
+                }
+                foreach ($callIdToTemplate as $cid => $tpl) {
+                    if ($tpl === 'adhoc') {
+                        if (!isset($call2TabMap[$cid])) {
+                            $call2TabMap[$cid] = [];
+                        }
+                        if (!in_array($tabId, $call2TabMap[$cid], true)) {
+                            $call2TabMap[$cid][] = $tabId;
+                        }
+                    }
+                }
+            }
 
             $showVisit = in_array('nts', $tabTemplates, true)
                 || in_array('mcv', $tabTemplates, true)
@@ -585,7 +628,9 @@ class ConfigService
                 || (($settings["tab_includes_mcv"][$i] ?? '') === '1');
 
             $showAdhoc = in_array('adhoc', $tabTemplates, true)
-                || (($settings["tab_includes_adhoc"][$i] ?? '') === '1');
+                || (($settings["tab_includes_adhoc"][$i] ?? '') === '1')
+                || ($tabId === 'adhoc')
+                || (stripos($tabName, 'adhoc') !== false);
 
             $showNew = in_array('new', $tabTemplates, true);
 

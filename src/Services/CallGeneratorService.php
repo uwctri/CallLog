@@ -106,7 +106,7 @@ class CallGeneratorService
                 "voiceMails" => 0,
                 "expire" => $callConfig['expire'] ?? 0,
                 "hideAfterAttempt" => $callConfig['hideAfterAttempt'] ?? 9999,
-                "complete" => false
+                "status" => "incomplete"
             ]);
             $metadata[$callConfig['id']] = $dto->toArray();
             $changeOccurred = true;
@@ -162,7 +162,7 @@ class CallGeneratorService
                         "instances" => [],
                         "voiceMails" => 0,
                         "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                        "complete" => false
+                        "status" => "incomplete"
                     ];
                     $changeOccurred = true;
 
@@ -250,8 +250,8 @@ class CallGeneratorService
                     'reason' => 'Appointment date cleared'
                 ];
             } elseif (!empty($metadata[$callConfig['id']]) && empty($fieldVal)) {
-                if (empty($metadata[$callConfig['id']]['complete'])) {
-                    $metadata[$callConfig['id']]["complete"] = true;
+                if (($metadata[$callConfig['id']]['status'] ?? '') !== 'complete') {
+                    $metadata[$callConfig['id']]["status"] = "complete";
                     $metadata[$callConfig['id']]["completedBy"] = "REDCap";
                     $changeOccurred = true;
                     $pendingLogs[] = [
@@ -262,8 +262,8 @@ class CallGeneratorService
                     ];
                 }
             } elseif (!empty($metadata[$callConfig['id']]) && !empty($fieldVal) && ($fieldVal <= $today)) {
-                if (empty($metadata[$callConfig['id']]['complete'])) {
-                    $metadata[$callConfig['id']]['complete'] = true;
+                if (($metadata[$callConfig['id']]['status'] ?? '') !== 'complete') {
+                    $metadata[$callConfig['id']]['status'] = 'complete';
                     $metadata[$callConfig['id']]["completedBy"] = "REDCap";
                     $changeOccurred = true;
                     $pendingLogs[] = [
@@ -276,7 +276,7 @@ class CallGeneratorService
             } elseif (!empty($metadata[$callConfig['id']]) && !empty($fieldVal) && (($metadata[$callConfig['id']]['start'] ?? '') !== $newStart || ($metadata[$callConfig['id']]['end'] ?? '') !== $newEnd)) {
                 $oldStart = $metadata[$callConfig['id']]['start'] ?? '';
                 $oldEnd = $metadata[$callConfig['id']]['end'] ?? '';
-                $metadata[$callConfig['id']]['complete'] = false;
+                $metadata[$callConfig['id']]['status'] = 'incomplete';
                 $metadata[$callConfig['id']]['start'] = $newStart;
                 $metadata[$callConfig['id']]['end'] = $newEnd;
                 $metadata[$callConfig['id']]['appt'] = $fieldVal;
@@ -307,7 +307,7 @@ class CallGeneratorService
                     "instances" => [],
                     "voiceMails" => 0,
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                    "complete" => false
+                    "status" => "incomplete"
                 ];
                 $changeOccurred = true;
 
@@ -349,7 +349,7 @@ class CallGeneratorService
                     "instances" => [],
                     "voiceMails" => 0,
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                    "complete" => false
+                    "status" => "incomplete"
                 ];
                 $changeOccurred = true;
 
@@ -366,8 +366,8 @@ class CallGeneratorService
                     ]
                 ];
             } elseif (!empty($metadata[$idExact]) && !empty($apptDate) && empty($indicator)) {
-                if (empty($metadata[$idExact]['complete'])) {
-                    $metadata[$idExact]['complete'] = true;
+                if (($metadata[$idExact]['status'] ?? '') !== 'complete') {
+                    $metadata[$idExact]['status'] = 'complete';
                     $metadata[$idExact]["completedBy"] = "REDCap";
                     $changeOccurred = true;
 
@@ -415,7 +415,7 @@ class CallGeneratorService
                     "instances" => [],
                     "voiceMails" => 0,
                     "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                    "complete" => false
+                    "status" => "incomplete"
                 ];
                 $changeOccurred = true;
 
@@ -431,8 +431,8 @@ class CallGeneratorService
                     ]
                 ];
             } elseif (!empty($metadata[$callConfig['id']]) && !empty($data[$callConfig['event']][$callConfig['apptDate']])) {
-                if (empty($metadata[$callConfig['id']]['complete'])) {
-                    $metadata[$callConfig['id']]['complete'] = true;
+                if (($metadata[$callConfig['id']]['status'] ?? '') !== 'complete') {
+                    $metadata[$callConfig['id']]['status'] = 'complete';
                     $metadata[$callConfig['id']]['completedBy'] = "REDCap";
                     $changeOccurred = true;
 
@@ -465,7 +465,7 @@ class CallGeneratorService
                 "instances" => [],
                 "voiceMails" => 0,
                 "hideAfterAttempt" => $callConfig['hideAfterAttempt'],
-                "complete" => false
+                "status" => "incomplete"
             ];
             $changeOccurred = true;
 

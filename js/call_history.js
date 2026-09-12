@@ -31,7 +31,8 @@
         let callHistoryRows = "";
         $.each(module.metadata, (k, v) => {
             if (module.renderers && module.renderers.renderCallHistoryRow) {
-                callHistoryRows += module.renderers.renderCallHistoryRow(v.name || '', k, !!v.complete);
+                const statusVal = v.status || 'incomplete';
+                callHistoryRows += module.renderers.renderCallHistoryRow(v.name || '', k, statusVal);
             }
         });
         settingsHtml += callHistoryRows + '</div>';
@@ -55,13 +56,11 @@
             cancelButtonText: 'Cancel',
             focusCancel: true,
             didOpen: () => {
-                $('.callMetadataEdit').off('change').on('change', function () {
-                    const $status = $(this).closest('.call-metadata-item').find('.call-metadata-status');
-                    const complete = $(this).is(':checked');
-                    $status
-                        .text(complete ? 'Complete' : 'Incomplete')
-                        .toggleClass('is-complete', complete)
-                        .toggleClass('is-incomplete', !complete);
+                $('.callMetadataStatusSelect').off('change').on('change', function () {
+                    const newStatus = $(this).val();
+                    $(this)
+                        .removeClass('is-complete is-incomplete is-expired')
+                        .addClass(`is-${newStatus}`);
                 });
                 $('#enableRawMetadataEdit').off('change').on('change', function () {
                     $('.callHistoryRawMetadata')
@@ -92,10 +91,10 @@
                 }
             }
 
-            $(".callMetadataEdit").each(function () {
+            $(".callMetadataStatusSelect").each(function () {
                 const callId = $(this).data('call');
                 if (metadataToSave && metadataToSave[callId]) {
-                    metadataToSave[callId].complete = $(this).is(':checked');
+                    metadataToSave[callId].status = $(this).val() || 'incomplete';
                 }
             });
 
