@@ -264,10 +264,7 @@ class CallQueryService
                     }
                 }
 
-                $instanceData['_callbackRequestor'] = $cbWho;
-                $instanceData['_callbackDate'] = $cbDate;
-                $instanceData['_callbackTime'] = $cbTime;
-                $instanceData['_call_date'] = ($cbReq === '1' && !empty($cbDate))
+                $instanceData['_call_date'] = (!$isCompleted && $cbReq === '1' && !empty($cbDate))
                     ? (!empty($cbTime) ? trim("{$cbDate} {$cbTime}") : $cbDate)
                     : ($call['start'] ?? $call['appt'] ?? $call['load'] ?? $call['created'] ?? '');
 
@@ -282,8 +279,19 @@ class CallQueryService
                     }
                 }
 
-                $instanceData['_callbackNotToday'] = ($cbReq === '1' && $isCbFuture);
-                $instanceData['_callbackToday'] = ($cbReq === '1' && !$isCbFuture);
+                if ($isCompleted) {
+                    $instanceData['_callbackRequestor'] = '';
+                    $instanceData['_callbackDate'] = '';
+                    $instanceData['_callbackTime'] = '';
+                    $instanceData['_callbackNotToday'] = false;
+                    $instanceData['_callbackToday'] = false;
+                } else {
+                    $instanceData['_callbackRequestor'] = $cbWho;
+                    $instanceData['_callbackDate'] = $cbDate;
+                    $instanceData['_callbackTime'] = $cbTime;
+                    $instanceData['_callbackNotToday'] = ($cbReq === '1' && $isCbFuture);
+                    $instanceData['_callbackToday'] = ($cbReq === '1' && !$isCbFuture);
+                }
 
                 if (!$instanceData['_callbackToday']) {
                     $autoField = $autoRemoveConfig[$baseCallID] ?? null;
@@ -316,7 +324,7 @@ class CallQueryService
                     }
                 }
 
-                $alwaysShowCallbackCol = $alwaysShowCallbackCol || ($cbReq === '1' && $cbDate <= $today);
+                $alwaysShowCallbackCol = $alwaysShowCallbackCol || (!$isCompleted && $cbReq === '1' && $cbDate <= $today);
 
                 $instanceData['_status'] = $isCompleted ? 'complete' : ($isExpired ? 'expired' : (($call['status'] ?? '') ?: 'incomplete'));
                 $instanceData['_isCompleted'] = $isCompleted;
