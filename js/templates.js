@@ -81,11 +81,76 @@
                 </button>
             </li>`;
         },
-        renderNoCallsDisplay: function () {
-            return `<tr>
-                <td colspan="2" class="p-4 text-center text-muted">
-                    <i class="fas fa-check-circle text-success fs-3 mb-2"></i>
-                    <p class="mb-0 fw-semibold">No calls are currently scheduled or due for this participant.</p>
+        renderNoCallsDisplay: function (options) {
+            options = options || {};
+            const hasAdhoc = Boolean(options.hasAdhoc);
+            const participantName = options.participantName || '';
+            const recordId = options.recordId || '';
+            const callListUrl = options.callListUrl || '';
+            const allCompleted = Boolean(options.allCompleted);
+
+            let title = allCompleted ? 'All Scheduled Calls Completed' : 'No Calls Currently Due';
+            let iconClass = allCompleted ? 'fa-check-circle text-success' : 'fa-phone-slash text-secondary';
+            let iconBg = allCompleted ? 'bg-success-subtle text-success' : 'bg-light text-secondary';
+
+            let subtitle = '';
+            if (allCompleted) {
+                subtitle = participantName
+                    ? `All scheduled calls for <strong>${participantName}</strong> (Record #${recordId}) have been completed.`
+                    : (recordId ? `All scheduled calls for Record #${recordId} have been completed.` : 'All scheduled calls for this participant have been completed.');
+            } else {
+                subtitle = participantName
+                    ? `There are currently no scheduled calls due for <strong>${participantName}</strong> (Record #${recordId}).`
+                    : (recordId ? `There are currently no scheduled calls due for Record #${recordId}.` : 'There are currently no calls scheduled or due for this participant.');
+            }
+
+            let adhocHtml = '';
+            if (hasAdhoc) {
+                adhocHtml = `
+                    <div class="no-calls-adhoc-section mt-4 pt-3 border-top w-100 text-center">
+                        <div class="d-flex align-items-center justify-content-center text-center gap-2 mb-2 text-dark fw-semibold">
+                            <i class="fas fa-plus-circle text-primary me-2 mr-2"></i>
+                            <span>Need to make an unscheduled call?</span>
+                        </div>
+                        <p class="mb-3 small text-muted text-center mx-auto" style="max-width: 440px;">
+                            You can create an Adhoc Call to document an unscheduled participant contact, inquiry, or follow-up.
+                        </p>
+                        <div class="d-flex flex-wrap justify-content-center align-items-center text-center mx-auto">
+                            <button type="button" class="btn btn-primary px-3 py-2 fw-semibold adhocButton shadow-xs m-1 d-inline-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#adhocModal" data-toggle="modal" data-target="#adhocModal">
+                                <i class="fas fa-plus me-1.5 mr-2"></i> <span>New Adhoc Call</span>
+                            </button>
+                            ${callListUrl ? `
+                                <button type="button" class="btn btn-outline-secondary px-3 py-2 fw-semibold goToCallListBtn m-1 d-inline-flex align-items-center justify-content-center">
+                                    <i class="fas fa-arrow-left me-1.5 mr-2"></i> <span>Return to Call List</span>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            } else if (callListUrl) {
+                adhocHtml = `
+                    <div class="mt-4 pt-3 border-top d-flex justify-content-center align-items-center text-center w-100 mx-auto">
+                        <button type="button" class="btn btn-outline-secondary px-3 py-2 fw-semibold goToCallListBtn m-1 d-inline-flex align-items-center justify-content-center">
+                            <i class="fas fa-arrow-left me-1.5 mr-2"></i> <span>Return to Call List</span>
+                        </button>
+                    </div>
+                `;
+            }
+
+            return `<tr id="no-calls-display-tr">
+                <td colspan="2" class="no-calls-cell p-4 p-md-5 text-center">
+                    <div class="no-calls-card text-center p-4 p-md-5 mx-auto">
+                        <div class="no-calls-icon-wrapper d-flex align-items-center justify-content-center mx-auto mb-3 text-center">
+                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle ${iconBg}" style="width: 64px; height: 64px;">
+                                <i class="fas ${iconClass} fa-2x"></i>
+                            </span>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2 text-center w-100">${title}</h5>
+                        <p class="no-calls-subtitle mb-0 text-center mx-auto w-100" style="max-width: 520px;">
+                            ${subtitle}
+                        </p>
+                        ${adhocHtml}
+                    </div>
                 </td>
             </tr>`;
         },
@@ -115,14 +180,43 @@
                                 <label class="form-label small fw-bold text-dark">Reason</label>
                                 <select class="form-select form-select-sm" name="reason"></select>
                             </div>
-                            <div class="row g-2 mb-3">
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold text-dark">Date</label>
-                                    <input type="text" class="form-control form-control-sm" name="callDate" placeholder="YYYY-MM-DD">
+                            <input type="hidden" name="callDate">
+                            <input type="hidden" name="callTime">
+                            <div class="generation-note text-muted small mb-3 d-flex align-items-center">
+                                <i class="far fa-clock text-secondary me-2"></i>
+                                <span>Generated: <strong class="text-dark fw-semibold" id="adhocGenerationText"></strong></span>
+                            </div>
+                            <div class="card border rounded p-3 mb-3 bg-light schedule-callback-card">
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input cursor-pointer" type="checkbox" id="adhocScheduleCallback" name="scheduleCallback">
+                                    <label class="form-check-label small fw-bold text-dark cursor-pointer mb-0" for="adhocScheduleCallback">
+                                        <i class="fas fa-calendar-alt text-primary me-1"></i> Schedule Call Back
+                                    </label>
                                 </div>
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold text-dark">Time</label>
-                                    <input type="text" class="form-control form-control-sm" name="callTime" placeholder="HH:MM">
+                                <div id="adhocCallbackContainer" class="mt-3 pt-3 border-top" style="display: none;">
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-bold text-dark mb-1">Call Back Date</label>
+                                            <input type="text" class="form-control form-control-sm" name="callbackDate" placeholder="YYYY-MM-DD">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-bold text-dark mb-1">Call Back Time</label>
+                                            <input type="text" class="form-control form-control-sm" name="callbackTime" placeholder="HH:MM">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="form-label small fw-bold text-dark mb-2 d-block">Callback Requested By</label>
+                                        <div class="d-flex align-items-center gap-4">
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input cursor-pointer" type="radio" name="callbackRequestor" id="adhocCbReqParticipant" value="1" checked>
+                                                <label class="form-check-label small cursor-pointer" for="adhocCbReqParticipant">Participant</label>
+                                            </div>
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input cursor-pointer" type="radio" name="callbackRequestor" id="adhocCbReqStaff" value="2">
+                                                <label class="form-check-label small cursor-pointer" for="adhocCbReqStaff">Staff</label>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="mb-2">
@@ -151,8 +245,11 @@
         renderCallHistoryTable: function () {
             return `<div class="callHistoryContainer card border shadow-xs mb-4">
                 <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark small"><i class="fas fa-history me-1.5 text-primary"></i> Participant Call History</span>
-                    <button type="button" class="btn btn-sm btn-link text-muted p-0 callHistorySettings" title="Call Metadata Settings"><i class="fas fa-cog"></i></button>
+                    <span class="fw-bold text-dark small d-inline-flex align-items-center">
+                        <i class="fas fa-history me-2 mr-2 text-primary d-inline-flex align-items-center justify-content-center"></i>
+                        <span>Participant Call History</span>
+                    </span>
+                    <button type="button" class="btn btn-sm btn-link text-muted p-0 callHistorySettings d-inline-flex align-items-center justify-content-center" title="Call Metadata Settings"><i class="fas fa-cog"></i></button>
                 </div>
                 <div class="card-body p-2 callHistoryBody">
                     <table class="table table-sm table-hover callHistoryTable w-100 mb-0"></table>
@@ -162,12 +259,17 @@
         renderCallHistoryEmpty: function () {
             return `<div class="callHistoryContainer card border shadow-xs mb-4">
                 <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark small"><i class="fas fa-history me-1.5 text-primary"></i> Participant Call History</span>
-                    <button type="button" class="btn btn-sm btn-link text-muted p-0 callHistorySettings" title="Call Metadata Settings"><i class="fas fa-cog"></i></button>
+                    <span class="fw-bold text-dark small d-inline-flex align-items-center">
+                        <i class="fas fa-history me-2 mr-2 text-primary d-inline-flex align-items-center justify-content-center"></i>
+                        <span>Participant Call History</span>
+                    </span>
+                    <button type="button" class="btn btn-sm btn-link text-muted p-0 callHistorySettings d-inline-flex align-items-center justify-content-center" title="Call Metadata Settings"><i class="fas fa-cog"></i></button>
                 </div>
-                <div class="card-body p-3 text-center text-muted small">
-                    <i class="fas fa-phone-slash text-secondary opacity-50 fs-4 mb-2 d-block"></i>
-                    No call history recorded for this participant yet.
+                <div class="card-body p-4 text-center text-muted small d-flex flex-column align-items-center justify-content-center">
+                    <div class="d-flex align-items-center justify-content-center mx-auto mb-2 text-secondary opacity-50" style="width: 40px; height: 40px;">
+                        <i class="fas fa-phone-slash fa-2x"></i>
+                    </div>
+                    <span class="text-center">No call history recorded for this participant yet.</span>
                 </div>
             </div>`;
         },
@@ -177,7 +279,7 @@
             <div class="call-history-settings-section">
                 <div class="call-history-settings-section-title"><i class="fas fa-tasks me-2"></i>Call Status</div>
                 <div class="call-history-settings-section-copy">
-                    <p class="small text-muted mb-1">Use the checkboxes below to mark each scheduled call as complete or incomplete.</p>
+                    <p class="small text-muted mb-1">Use the dropdowns below to set the status of each scheduled call.</p>
                     <p class="small text-muted mb-2">Changes are saved when you select <strong>Save Settings</strong>.</p>
                 </div>
                 <div class="call-metadata-card">`;
@@ -206,18 +308,26 @@
                 </button>
             </div>`;
         },
-        renderCallHistoryRow: function (name, callId, isComplete) {
-            return `<label class="call-metadata-item" for="meta_${callId}">
+        renderCallHistoryRow: function (name, callId, status) {
+            const displayName = name || callId;
+            const currentStatus = ['incomplete', 'complete', 'expired'].includes(status) ? status : 'incomplete';
+            return `<div class="call-metadata-item" data-call="${callId}">
                 <div class="call-metadata-main">
-                    <input class="form-check-input callMetadataEdit" type="checkbox" data-call="${callId}" id="meta_${callId}" ${isComplete ? 'checked' : ''}>
-                    <span class="call-name-label">${name}</span>
-                    <span class="call-metadata-action">Mark complete</span>
+                    <div class="call-metadata-header">
+                        <span class="call-name-label">${displayName}</span>
+                    </div>
+                    <div class="call-metadata-meta">
+                        <select class="form-select form-select-sm callMetadataStatusSelect call-metadata-status is-${currentStatus}" data-call="${callId}">
+                            <option value="incomplete" ${currentStatus === 'incomplete' ? 'selected' : ''}>Incomplete</option>
+                            <option value="complete" ${currentStatus === 'complete' ? 'selected' : ''}>Complete</option>
+                            <option value="expired" ${currentStatus === 'expired' ? 'selected' : ''}>Expired</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="call-metadata-meta">
-                    <span class="call-metadata-status ${isComplete ? 'is-complete' : 'is-incomplete'}">${isComplete ? 'Complete' : 'Incomplete'}</span>
-                    <span class="call-id-tag">${callId}</span>
+                <div class="call-metadata-sub">
+                    <span class="call-id-tag"><i class="fas fa-hashtag me-1"></i>${callId}</span>
                 </div>
-            </label>`;
+            </div>`;
         },
         renderCallClosed: function () {
             return `<span class="badge bg-success ms-2"><i class="fas fa-check me-1"></i> Log Closed</span>`;

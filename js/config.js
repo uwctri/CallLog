@@ -306,7 +306,23 @@
                 const tFInsts = r.tab_field_link_instrument || [];
 
                 this.callTabs = tNames.map((name, i) => {
-                    const incList = toArray(tCalls[i]);
+                    const rawInc = tCalls[i];
+                    let incList = [];
+                    if (Array.isArray(rawInc)) {
+                        rawInc.forEach(item => {
+                            if (typeof item === 'string') {
+                                item.split(',').forEach(part => {
+                                    const trimmed = part.trim();
+                                    if (trimmed && !incList.includes(trimmed)) incList.push(trimmed);
+                                });
+                            } else if (item) {
+                                const s = String(item).trim();
+                                if (s && !incList.includes(s)) incList.push(s);
+                            }
+                        });
+                    } else if (typeof rawInc === 'string') {
+                        incList = rawInc.split(',').map(s => s.trim()).filter(Boolean);
+                    }
                     const fieldsList = (tFields[i] && Array.isArray(tFields[i])) ? tFields[i] : [];
                     const namesList = (tFNames[i] && Array.isArray(tFNames[i])) ? tFNames[i] : [];
                     const defsList = (tFDefs[i] && Array.isArray(tFDefs[i])) ? tFDefs[i] : [];
@@ -328,15 +344,28 @@
                     };
                 });
 
-                const eFields = (r.tab_expands_field && r.tab_expands_field[0]) ? r.tab_expands_field[0] : (r.tab_expands_field || []);
-                const eNames = (r.tab_expands_field_name && r.tab_expands_field_name[0]) ? r.tab_expands_field_name[0] : (r.tab_expands_field_name || []);
-                const eDefs = (r.tab_expands_field_default && r.tab_expands_field_default[0]) ? r.tab_expands_field_default[0] : (r.tab_expands_field_default || []);
+                const unwrapExpands = (val) => {
+                    if (!val) return [];
+                    if (Array.isArray(val)) {
+                        if (val.length >= 1 && Array.isArray(val[0])) {
+                            return val[0];
+                        }
+                        return val;
+                    }
+                    if (typeof val === 'string') {
+                        return val.split(',').map(s => s.trim());
+                    }
+                    return [val];
+                };
 
-                const eFieldsArr = toArray(eFields);
+                const eFieldsArr = unwrapExpands(r.tab_expands_field).map(f => String(f ?? '').trim());
+                const eNamesArr = unwrapExpands(r.tab_expands_field_name).map(n => String(n ?? '').trim());
+                const eDefsArr = unwrapExpands(r.tab_expands_field_default).map(d => String(d ?? '').trim());
+
                 this.expandsFields = eFieldsArr.map((f, i) => ({
                     field: f || '',
-                    name: getVal(eNames, i, ''),
-                    default: getVal(eDefs, i, '')
+                    name: (eNamesArr[i] !== undefined && eNamesArr[i] !== null) ? eNamesArr[i] : '',
+                    default: (eDefsArr[i] !== undefined && eDefsArr[i] !== null) ? eDefsArr[i] : ''
                 })).filter(e => e.field);
 
                 const wEvents = r.withdraw_event || [];
@@ -841,10 +870,14 @@
                     tab_field_name: this.callTabs.map(t => (t.fields || []).map(f => f.name.trim())),
                     tab_field_default: this.callTabs.map(t => (t.fields || []).map(f => f.default.trim())),
                     tab_field_link: this.callTabs.map(t => (t.fields || []).map(f => f.link)),
-                    tab_field_link_instrument: this.callTabs.map(t => (t.fields || []).map(f => f.linkedInstrument)),
-                    tab_expands_field: this.expandsFields.map(e => e.field).filter(Boolean),
-                    tab_expands_field_name: this.expandsFields.map(e => e.name.trim()),
-                    tab_expands_field_default: this.expandsFields.map(e => e.default.trim())
+                    ...(() => {
+                        const validExpands = (this.expandsFields || []).filter(e => e && e.field && String(e.field).trim());
+                        return {
+                            tab_expands_field: validExpands.map(e => String(e.field).trim()),
+                            tab_expands_field_name: validExpands.map(e => String(e.name || '').trim()),
+                            tab_expands_field_default: validExpands.map(e => String(e.default || '').trim())
+                        };
+                    })()
                 };
 
                 module.ajax("saveConfig", { settings: payload }).then((res) => {

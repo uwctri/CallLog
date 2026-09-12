@@ -31,7 +31,26 @@ class CallMetadataRepository
         $this->existingRecordCache["{$projectId}_{$record}"] = true;
 
         $decoded = json_decode($raw, true);
-        return is_array($decoded) ? $decoded : [];
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        foreach ($decoded as $k => &$item) {
+            if (is_array($item)) {
+                if (empty($item['id'])) {
+                    $item['id'] = (string)$k;
+                }
+                if (!isset($item['instances']) || !is_array($item['instances'])) {
+                    $item['instances'] = [];
+                }
+                if (empty($item['status'])) {
+                    $item['status'] = 'incomplete';
+                }
+            }
+        }
+        unset($item);
+
+        return $decoded;
     }
 
     /**
@@ -66,6 +85,21 @@ class CallMetadataRepository
             }
             $this->existingRecordCache["{$projectId}_{$record}"] = true;
         }
+
+        foreach ($data as $k => &$item) {
+            if (is_array($item)) {
+                if (empty($item['id'])) {
+                    $item['id'] = (string)$k;
+                }
+                if (!isset($item['instances']) || !is_array($item['instances'])) {
+                    $item['instances'] = [];
+                }
+                if (empty($item['status'])) {
+                    $item['status'] = 'incomplete';
+                }
+            }
+        }
+        unset($item);
 
         $saveData = [
             $record => [
@@ -108,7 +142,7 @@ class CallMetadataRepository
             $tmp = $call['instances'] ?? [];
             $metadata[$index]['instances'] = array_values(array_diff($tmp, [(string)$instance, $instance]));
             if (!empty($tmp) && count($tmp) !== count($metadata[$index]['instances'])) {
-                $metadata[$index]['complete'] = false;
+                $metadata[$index]['status'] = 'incomplete';
             }
         }
 
@@ -186,7 +220,7 @@ class CallMetadataRepository
                     if (is_array($decoded)) {
                         foreach ($decoded as $call) {
                             $stats['totalCalls']++;
-                            if (!empty($call['complete'])) {
+                            if (($call['status'] ?? '') === 'complete') {
                                 $stats['completedCalls']++;
                             }
                             if (!empty($call['completedBy'])) {

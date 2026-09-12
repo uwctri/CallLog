@@ -10,6 +10,70 @@
         return val !== undefined && val !== null ? String(val) : '';
     };
 
+    const isRowHidden = (row) => {
+        if (!row) return false;
+        let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
+        if (isCompleted) return false;
+        let isExpired = Boolean(row['_isExpired'] || row['_status'] === 'expired');
+        if (isExpired) return false;
+
+        let cbDate = row['_callbackDate'] || row['call_callback_date'];
+        let cbTime = row['_callbackTime'] || row['call_callback_time'];
+        let hasCallback = Boolean(
+            row['_callbackRequestor'] ||
+            (row['call_requested_callback'] && (row['call_requested_callback'][1] === '1' || row['call_requested_callback'] === '1')) ||
+            row['_callbackNotToday'] ||
+            row['_callbackToday']
+        );
+
+        let isCbFuture = Boolean(row['_callbackNotToday']);
+        let isCbToday = Boolean(row['_callbackToday']);
+
+        if (hasCallback && cbDate) {
+            let now = new Date();
+            let yyyy = now.getFullYear();
+            let mm = String(now.getMonth() + 1).padStart(2, '0');
+            let dd = String(now.getDate()).padStart(2, '0');
+            let hh = String(now.getHours()).padStart(2, '0');
+            let min = String(now.getMinutes()).padStart(2, '0');
+            let nowDateTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+            let todayDate = `${yyyy}-${mm}-${dd}`;
+
+            let cleanDate = cbDate;
+            if (cleanDate.includes('/')) {
+                let parts = cleanDate.split('/');
+                if (parts.length === 3) {
+                    cleanDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+                }
+            }
+
+            if (cbTime) {
+                let cleanTime = cbTime.length > 5 ? cbTime.substring(0, 5) : cbTime;
+                isCbFuture = (`${cleanDate} ${cleanTime}` > nowDateTime);
+                isCbToday = !isCbFuture;
+            } else {
+                isCbFuture = (cleanDate > todayDate);
+                isCbToday = !isCbFuture;
+            }
+        }
+
+        let isFutureAdhoc = Boolean(row['_futureAdhoc']);
+        if (row['_adhocContactOn'] && row['_adhocContactOn'].length > 10) {
+            let now = new Date();
+            let yyyy = now.getFullYear();
+            let mm = String(now.getMonth() + 1).padStart(2, '0');
+            let dd = String(now.getDate()).padStart(2, '0');
+            let hh = String(now.getHours()).padStart(2, '0');
+            let min = String(now.getMinutes()).padStart(2, '0');
+            let nowDateTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+            let cleanContact = row['_adhocContactOn'].length > 16 ? row['_adhocContactOn'].substring(0, 16) : row['_adhocContactOn'];
+            isFutureAdhoc = (cleanContact > nowDateTime);
+        }
+
+        return Boolean((row['_atMaxAttempts'] && !isCbToday) || isCbFuture || row['_noCallsToday'] || isFutureAdhoc);
+    };
+    module.isRowHidden = isRowHidden;
+
     let childRows = {};
     let colConfig = {};
 
@@ -44,8 +108,13 @@
         
         Alpine.data('callListDashboard', () => ({
             activeTab: '',
-            hideCalls: true,
             activeCallerFilter: '',
+            showTypes: {
+                active: true,
+                hidden: false,
+                expired: false,
+                completed: false
+            },
             availableCallers: [],
             displayedData: {},
             dataLoaded: false,
@@ -84,11 +153,17 @@
                     this.activeTab = firstTabId;
                 }
 
-                if (savedState.hideCalls !== undefined) {
-                    this.hideCalls = Boolean(savedState.hideCalls);
-                }
                 if (savedState.callerFilter !== undefined) {
                     this.activeCallerFilter = savedState.callerFilter;
+                }
+
+                if (savedState.showTypes && typeof savedState.showTypes === 'object') {
+                    this.showTypes.active = savedState.showTypes.active !== undefined ? Boolean(savedState.showTypes.active) : true;
+                    this.showTypes.hidden = Boolean(savedState.showTypes.hidden);
+                    this.showTypes.expired = Boolean(savedState.showTypes.expired);
+                    this.showTypes.completed = Boolean(savedState.showTypes.completed);
+                } else if (savedState.hideCalls !== undefined) {
+                    this.showTypes.hidden = !savedState.hideCalls;
                 }
 
                 this.setupDataTables();
@@ -105,6 +180,29 @@
                     });
                     this.debouncePersist();
                 });
+
+                this.$watch('showTypes', () => {
+                    this.updateStatusBadgeColVisibility();
+                    $('.callTable').each((_, el) => {
+                        if ($.fn.DataTable.isDataTable(el)) {
+                            $(el).DataTable().draw(false);
+                        }
+                    });
+                    this.debouncePersist();
+                }, { deep: true });
+            },
+
+            updateStatusBadgeColVisibility() {
+                const shouldShow = Boolean(this.showTypes && (this.showTypes.hidden || this.showTypes.expired || this.showTypes.completed));
+                $('.callTable').each((_, el) => {
+                    if ($.fn.DataTable.isDataTable(el)) {
+                        const dt = $(el).DataTable();
+                        const col = dt.column('_status_badge:name');
+                        if (col && col.length && col.visible() !== shouldShow) {
+                            col.visible(shouldShow, false);
+                        }
+                    }
+                });
             },
 
             selectTab(tabId) {
@@ -120,25 +218,19 @@
                         }
                     }
                     this.toggleCallBackCol();
+                    this.updateStatusBadgeColVisibility();
                 });
             },
 
             toggleHiddenCalls() {
-                this.hideCalls = !this.hideCalls;
-                this.toggleCallBackCol();
-                $('.callTable').each((_, el) => {
-                    if ($.fn.DataTable.isDataTable(el)) {
-                        $(el).DataTable().draw(false);
-                    }
-                });
-                this.persistState();
+                this.showTypes.hidden = !this.showTypes.hidden;
             },
 
             persistState() {
                 let state = getDashboardCookie() || {};
                 state.tab = this.activeTab;
-                state.hideCalls = this.hideCalls;
                 state.callerFilter = this.activeCallerFilter;
+                state.showTypes = { ...this.showTypes };
                 if (!state.tabs) state.tabs = {};
 
                 $('.callTable').each((_idx, el) => {
@@ -482,9 +574,15 @@
                         title: 'Call on',
                         data: '_adhocContactOn',
                         defaultContent: '',
-                        render: (val, type) => {
+                        render: (val, type, row) => {
                             if (type !== 'display') return val || '';
-                            return val ? formatDateTime(val) : '';
+                            let formattedDate = val ? formatDateTime(val) : '';
+                            let html = formattedDate || '';
+                            if (row['_callbackRequestor']) {
+                                let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : row['_callbackRequestor']);
+                                html += ` <span class="badge bg-danger-subtle text-danger border ms-1" title="Requested by ${cbWho}"><i class="fas fa-bell me-1"></i>Callback (${cbWho})</span>`;
+                            }
+                            return html;
                         }
                     });
                 }
@@ -509,6 +607,34 @@
                     });
                 }
 
+                const showBadgeColInitial = Boolean(this.showTypes && (this.showTypes.hidden || this.showTypes.expired || this.showTypes.completed));
+                config.push({
+                    name: '_status_badge',
+                    title: 'Status',
+                    data: '_status',
+                    className: 'text-center statusBadgeCol',
+                    defaultContent: '',
+                    orderable: false,
+                    searchable: true,
+                    visible: showBadgeColInitial,
+                    render: (val, type, row) => {
+                        if (type !== 'display') return val || '';
+                        let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
+                        if (isCompleted) {
+                            return `<span class="badge bg-success-subtle text-success border px-2 py-1" title="Call completed"><i class="fas fa-check-circle me-1"></i>Completed</span>`;
+                        }
+                        let isExpired = Boolean(row['_isExpired'] || row['_status'] === 'expired');
+                        if (isExpired) {
+                            return `<span class="badge bg-danger-subtle text-danger border px-2 py-1" title="Call window has expired"><i class="fas fa-exclamation-triangle me-1"></i>Expired</span>`;
+                        }
+                        let isHidden = isRowHidden(row);
+                        if (isHidden) {
+                            return `<span class="badge bg-secondary-subtle text-secondary border px-2 py-1" title="Hidden call"><i class="fas fa-eye-slash me-1"></i>Hidden</span>`;
+                        }
+                        return '';
+                    }
+                });
+
                 config.push({
                     name: '_callNotes',
                     title: 'Call Notes',
@@ -529,7 +655,7 @@
 
                         if (savedHidden.length) {
                             config.forEach(col => {
-                                if (col.name && col.name !== '_badges' && col.name !== '_callNotes') {
+                                if (col.name && col.name !== '_badges' && col.name !== '_status_badge' && col.name !== '_callNotes') {
                                     if (savedHidden.includes(col.name)) {
                                         col.visible = false;
                                     }
@@ -539,8 +665,9 @@
 
                         if (savedOrder.length) {
                             let badgeCol = config.find(c => c.name === '_badges');
+                            let statusBadgeCol = config.find(c => c.name === '_status_badge');
                             let notesCol = config.find(c => c.name === '_callNotes');
-                            let reorderableCols = config.filter(c => c.name !== '_badges' && c.name !== '_callNotes');
+                            let reorderableCols = config.filter(c => c.name !== '_badges' && c.name !== '_status_badge' && c.name !== '_callNotes');
 
                             let orderedCols = [];
                             savedOrder.forEach(colName => {
@@ -558,6 +685,7 @@
                             config = [];
                             if (badgeCol) config.push(badgeCol);
                             config.push(...orderedCols);
+                            if (statusBadgeCol) config.push(statusBadgeCol);
                             if (notesCol) config.push(notesCol);
                         }
                     }
@@ -568,19 +696,30 @@
 
             buildChildRowHtml(rowData, tab_id) {
                 let tabConfig = (module.tabs && module.tabs.config) ? module.tabs.config.find(t => t.tab_id === tab_id) : null;
-                let expands = tabConfig ? (tabConfig.expands || (tabConfig.fields || []).filter(f => f.expanded)) : [];
+                if (!tabConfig && module.tabs && module.tabs.config && module.tabs.config.length) {
+                    tabConfig = module.tabs.config[0];
+                }
+                let expands = (tabConfig && tabConfig.expands && tabConfig.expands.length)
+                    ? tabConfig.expands
+                    : ((tabConfig && tabConfig.fields) ? (tabConfig.fields || []).filter(f => f.expanded) : []);
+
+                if ((!expands || !expands.length) && module.tabs && module.tabs.config) {
+                    const fallbackTab = module.tabs.config.find(t => t.expands && t.expands.length);
+                    if (fallbackTab) expands = fallbackTab.expands;
+                }
 
                 let expandsHtml = '';
                 if (expands && expands.length) {
                     expandsHtml = expands.map(f => {
-                        let val = rowData[f.field] || f.default || '';
+                        let val = (rowData[f.field] !== undefined && rowData[f.field] !== null && rowData[f.field] !== '') ? rowData[f.field] : (f.default || '');
                         if (f.map && typeof f.map === 'object' && f.map[val] !== undefined) {
                             val = f.map[val];
                         }
                         if (f.isDate || (val && typeof val === 'string' && /^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(val.trim()))) {
                             val = formatDateTime(val, f.hasTime);
                         }
-                        return `<div class="mb-1"><span class="fw-semibold text-secondary small">${f.displayName}:</span> <span class="small text-dark">${val || '<span class="text-muted fst-italic">None</span>'}</span></div>`;
+                        let dName = (f.displayName || f.field).replace(/[:\s]+$/, '');
+                        return `<div class="mb-1"><span class="fw-semibold text-secondary small">${dName}:</span> <span class="small text-dark">${val || '<span class="text-muted fst-italic">None</span>'}</span></div>`;
                     }).join('');
                 }
 
@@ -607,6 +746,10 @@
 
                 let actionButtonsHtml = '';
                 let ongoingCallInfoHtml = '';
+
+                let isCompleted = Boolean(rowData['_isCompleted'] || rowData['_status'] === 'complete');
+                let isExpired = !isCompleted && Boolean(rowData['_isExpired'] || rowData['_status'] === 'expired');
+                let isHidden = isRowHidden(rowData);
 
                 if (rowData['_isCallStarted']) {
                     actionButtonsHtml += `<button type="button" class="btn btn-sm btn-danger endCallButton drawer-action-btn" data-record="${record}" data-callid="${callId}" title="End ongoing call"><i class="fas fa-phone-slash"></i> End Call</button>`;
@@ -639,12 +782,21 @@
                             </span>
                         </div>
                     `;
-                } else {
+                } else if (!isCompleted) {
                     actionButtonsHtml += `<button type="button" class="btn btn-sm btn-success startCallButton drawer-action-btn" data-record="${record}" data-callid="${callId}" title="Flag call as started"><i class="fas fa-phone-alt"></i> Start Call</button>`;
                 }
 
-                if (rowData['_call_outcome'] !== '1') {
+                if (!isCompleted && rowData['_call_outcome'] !== '1') {
                     actionButtonsHtml += `<button type="button" class="btn btn-sm btn-outline-secondary noCallsButton drawer-action-btn ms-1" data-record="${record}" data-callid="${callId}" title="Mark no calls today"><i class="fas fa-calendar-times"></i> No Calls Today</button>`;
+                }
+
+                let statusBadgeHtml = '';
+                if (isCompleted) {
+                    statusBadgeHtml = `<span class="badge bg-success-subtle text-success border px-2 py-1 ms-1" title="Call completed"><i class="fas fa-check-circle me-1"></i>Completed Call</span>`;
+                } else if (isExpired) {
+                    statusBadgeHtml = `<span class="badge bg-danger-subtle text-danger border px-2 py-1 ms-1" title="Call window has expired"><i class="fas fa-exclamation-triangle me-1"></i>Expired Call</span>`;
+                } else if (isHidden) {
+                    statusBadgeHtml = `<span class="badge bg-secondary-subtle text-secondary border px-2 py-1 ms-1" title="Call hidden from default view"><i class="fas fa-eye-slash me-1"></i>Hidden Call</span>`;
                 }
 
                 let callGenHtml = '';
@@ -657,6 +809,7 @@
                         <div class="d-flex align-items-center flex-wrap gap-2">
                             ${actionButtonsHtml}
                             ${ongoingCallInfoHtml}
+                            ${statusBadgeHtml}
                         </div>
                         ${callGenHtml}
                     </div>
@@ -776,11 +929,25 @@
 
                 $.fn.dataTable.ext.search.push(
                     (_settings, _searchData, _index, rowData) => {
-                        if (self.hideCalls && (
-                            (rowData['_atMaxAttempts'] && !rowData['_callbackToday']) || rowData['_callbackNotToday'] || rowData['_noCallsToday'] || rowData['_futureAdhoc']
-                        )) {
+                        const showTypes = self.showTypes || { active: true, hidden: false, expired: false, completed: false };
+                        const isCompleted = Boolean(rowData['_isCompleted'] || rowData['_status'] === 'complete');
+                        const isExpired = !isCompleted && Boolean(rowData['_isExpired'] || rowData['_status'] === 'expired');
+                        const isHidden = isRowHidden(rowData);
+                        const isActive = !isCompleted && !isExpired && !isHidden;
+
+                        if (isCompleted && !showTypes.completed) {
                             return false;
                         }
+                        if (isExpired && !showTypes.expired) {
+                            return false;
+                        }
+                        if (isHidden && !showTypes.hidden) {
+                            return false;
+                        }
+                        if (isActive && !showTypes.active) {
+                            return false;
+                        }
+
                         if (self.activeCallerFilter) {
                             let caller = rowData['call_open_user_full_name'] || rowData['_callStartedBy'] || rowData['call_open_user'] || '';
                             if (caller.trim() !== self.activeCallerFilter) {
@@ -1192,10 +1359,10 @@
 
                 let order = aoColumns
                     .map(c => c.sName)
-                    .filter(name => name && name !== '_badges' && name !== '_callNotes');
+                    .filter(name => name && name !== '_badges' && name !== '_status_badge' && name !== '_callNotes');
 
                 let hidden = aoColumns
-                    .filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_callNotes')
+                    .filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_status_badge' && c.sName !== '_callNotes')
                     .map(c => c.sName);
 
                 if (!module.userSettings) module.userSettings = {};
@@ -1216,7 +1383,7 @@
             },
 
             hideColumn(tab_id, colName) {
-                if (!colName || colName === '_badges' || colName === '_callNotes') return;
+                if (!colName || colName === '_badges' || colName === '_status_badge' || colName === '_callNotes') return;
                 let $pane = $(`#${tab_id}`);
                 let $table = $pane.find('.callTable');
                 if (!$table.length || !$.fn.DataTable.isDataTable($table[0])) return;
@@ -1249,7 +1416,7 @@
                 let dt = $table.DataTable();
                 let aoColumns = dt.settings()[0].aoColumns;
                 aoColumns.forEach(c => {
-                    if (c.sName && c.sName !== '_callNotes') {
+                    if (c.sName && c.sName !== '_status_badge' && c.sName !== '_callNotes') {
                         dt.column(c.sName + ':name').visible(true);
                     }
                 });
@@ -1325,7 +1492,7 @@
                     let aoColumns = dt.settings()[0].aoColumns;
                     let clickedCol = aoColumns[colIdx];
                     let colName = clickedCol ? clickedCol.sName : null;
-                    let isCol0 = !colName || colName === '_badges';
+                    let isCol0 = !colName || colName === '_badges' || colName === '_status_badge';
 
                     let colTitle = '';
                     if (!isCol0) {
@@ -1335,8 +1502,8 @@
 
                     let isUnlocked = Boolean(self.unlockedTabs[tab_id]);
 
-                    let visibleDataCols = aoColumns.filter(c => c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_callNotes');
-                    let hiddenCols = aoColumns.filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_callNotes');
+                    let visibleDataCols = aoColumns.filter(c => c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_status_badge' && c.sName !== '_callNotes');
+                    let hiddenCols = aoColumns.filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_status_badge' && c.sName !== '_callNotes');
 
                     let menuHtml = '';
 
@@ -1351,7 +1518,7 @@
 
                     // 2. Hide column
                     if (isCol0) {
-                        menuHtml += `<span class="dropdown-item disabled text-muted py-1.5"><i class="fas fa-eye-slash me-2"></i> Cannot Hide Status Column</span>`;
+                        menuHtml += `<span class="dropdown-item disabled text-muted py-1.5"><i class="fas fa-eye-slash me-2"></i> Cannot Hide System Column</span>`;
                     } else if (visibleDataCols.length <= 1) {
                         menuHtml += `<span class="dropdown-item disabled text-muted py-1.5" title="At least one column must remain visible"><i class="fas fa-eye-slash me-2"></i> Cannot Hide Only Visible Column</span>`;
                     } else {

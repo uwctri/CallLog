@@ -29,8 +29,8 @@
 .call-log-swal-popup.call-history-settings-popup,
 .swal2-popup.call-history-settings-popup {
     width: 92vw !important;
-    max-width: 980px !important;
-    padding: 1.25rem !important;
+    max-width: 1020px !important;
+    padding: 1.35rem !important;
 }
 
 .call-history-settings-popup .call-log-swal-custom-icon {
