@@ -127,6 +127,7 @@ class CallLog extends AbstractExternalModule
 
         if ($instrument === $this->instrumentCall) {
             $this->syncMetadataWithCallInstances($project_id, $record);
+            $this->markCallEndedOnSave($project_id, $record, $event_id, $repeat_instance);
         }
 
         $this->getGeneratorService()->evaluateAndGenerateForRecord($project_id, $record, $instrument, 'save_record');
@@ -918,6 +919,89 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         }
 
         return $changed;
+    }
+
+    public function markCallEndedOnSave(int $projectId, string $record, $eventId = null, $repeatInstance = 1): void
+    {
+        $metaRepo = $this->getMetadataRepo();
+        $metadata = $metaRepo->getMetadata($projectId, $record);
+        if (empty($metadata)) {
+            return;
+        }
+
+        $user = defined('USERID') ? USERID : '';
+        $callId = '';
+        if (!empty($_POST['call_id'])) {
+            $callId = trim((string)$_POST['call_id']);
+        } elseif (!empty($_GET['call_id'])) {
+            $callId = trim((string)$_GET['call_id']);
+        }
+
+        if (empty($callId)) {
+            $callEvent = $eventId ?: $metaRepo->getEventOfInstrument($projectId, $this->instrumentCall);
+            $data = REDCap::getData($projectId, 'array', $record, ['call_id'], $callEvent);
+            $callId = trim((string)($data[$record]['repeat_instances'][$callEvent][$this->instrumentCall][$repeatInstance]['call_id']
+                ?? ($data[$record][$callEvent]['call_id'] ?? '')));
+        }
+
+        $changed = false;
+        $endedCallId = '';
+
+        if (!empty($callId)) {
+            $targetKey = isset($metadata[$callId]) ? $callId : null;
+            if (!$targetKey) {
+                foreach ($metadata as $k => $v) {
+                    if ($k === $callId || ($v['id'] ?? '') === $callId || strpos($k, $callId . '|') === 0 || strpos($callId, $k . '|') === 0) {
+                        $targetKey = $k;
+                        break;
+                    }
+                }
+            }
+            if ($targetKey && isset($metadata[$targetKey])) {
+                if (!empty($metadata[$targetKey]['callStarted']) || !empty($metadata[$targetKey]['callStartedBy'])) {
+                    $metadata[$targetKey]['callStarted'] = '';
+                    $metadata[$targetKey]['callStartedBy'] = '';
+                    $changed = true;
+                    $endedCallId = (string)$targetKey;
+                }
+            }
+        }
+
+        if (!empty($user)) {
+            foreach ($metadata as $k => &$item) {
+                if (is_array($item) && ($item['callStartedBy'] ?? '') === $user && !empty($item['callStarted'])) {
+                    $item['callStarted'] = '';
+                    $item['callStartedBy'] = '';
+                    $changed = true;
+                    if (empty($endedCallId)) {
+                        $endedCallId = (string)$k;
+                    }
+                }
+            }
+            unset($item);
+        }
+
+        // Safety fallback: if user or specific call was not matched, clear any active ongoing call on this record
+        if (!$changed) {
+            foreach ($metadata as $k => &$item) {
+                if (is_array($item) && !empty($item['callStarted'])) {
+                    $item['callStarted'] = '';
+                    $item['callStartedBy'] = '';
+                    $changed = true;
+                    if (empty($endedCallId)) {
+                        $endedCallId = (string)$k;
+                    }
+                }
+            }
+            unset($item);
+        }
+
+        if ($changed) {
+            $metaRepo->saveMetadata($projectId, $record, $metadata);
+            if (!empty($endedCallId)) {
+                $this->getLoggingService()->logCallEnded($projectId, $record, $endedCallId, $user);
+            }
+        }
     }
 
     private function getAllCallData(int $projectId, string $record): array

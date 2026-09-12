@@ -289,8 +289,9 @@
                         render: (val, type, row) => {
                             if (type !== "display") return val;
 
-                            let hasCallStarted = Boolean(row['_isCallStarted']);
-                            let hasCallback = Boolean(row['_callbackRequestor']);
+                            let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
+                            let hasCallStarted = !isCompleted && Boolean(row['_isCallStarted']);
+                            let hasCallback = !isCompleted && Boolean(row['_callbackRequestor']);
                             let hasMultiTabs = Boolean(row['_onMultipleTabs']);
 
                             let otherTabsStr = (Array.isArray(row['_otherTabs']) && row['_otherTabs'].length)
@@ -482,7 +483,8 @@
                             let dateVal = val || row['_callGenerated'];
                             let formattedDate = formatDateTime(dateVal);
                             let html = formattedDate || '';
-                            if (row['_callbackRequestor']) {
+                            let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
+                            if (!isCompleted && row['_callbackRequestor']) {
                                 let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : row['_callbackRequestor']);
                                 html += ` <span class="badge bg-danger-subtle text-danger border ms-1" title="Requested by ${cbWho}"><i class="fas fa-bell me-1"></i>Callback (${cbWho})</span>`;
                             }
@@ -503,7 +505,7 @@
                             let formattedDate = formatDateTime(val, false, true);
                             let days = row['_daysRemaining'];
                             if (days !== null && days !== undefined) {
-                                if (days < 0) return `${formattedDate} <span class="badge bg-danger-subtle text-danger border ms-1">Expired</span>`;
+                                if (days < 0) return formattedDate;
                                 if (days === 0) return `${formattedDate} <span class="badge bg-warning-subtle text-warning-emphasis border ms-1">Expires today</span>`;
                                 if (days === 1) return `${formattedDate} <span class="badge bg-info-subtle text-info-emphasis border ms-1">1 day remaining</span>`;
                                 return `${formattedDate} <span class="badge bg-secondary-subtle text-secondary border ms-1">${days} days remaining</span>`;
@@ -578,7 +580,8 @@
                             if (type !== 'display') return val || '';
                             let formattedDate = val ? formatDateTime(val) : '';
                             let html = formattedDate || '';
-                            if (row['_callbackRequestor']) {
+                            let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
+                            if (!isCompleted && row['_callbackRequestor']) {
                                 let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : row['_callbackRequestor']);
                                 html += ` <span class="badge bg-danger-subtle text-danger border ms-1" title="Requested by ${cbWho}"><i class="fas fa-bell me-1"></i>Callback (${cbWho})</span>`;
                             }
@@ -598,7 +601,8 @@
                             if (type !== "display") return val || '';
                             let formattedDate = formatDateTime(val);
                             let html = formattedDate || '';
-                            if (row['_callbackRequestor']) {
+                            let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
+                            if (!isCompleted && row['_callbackRequestor']) {
                                 let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : row['_callbackRequestor']);
                                 html += ` <span class="badge bg-danger-subtle text-danger border ms-1" title="Requested by ${cbWho}"><i class="fas fa-bell me-1"></i>Callback (${cbWho})</span>`;
                             }
