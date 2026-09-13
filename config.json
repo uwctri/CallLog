@@ -63,18 +63,18 @@
     "framework-version": 17,
     "crons": [
         {
-            "cron_name": "call_log_generate_all",
-            "cron_description": "Periodically generates and updates active call logs across enabled projects",
-            "method": "cronGenerateAllCalls",
-            "cron_frequency": "86400",
-            "cron_max_run_time": "3600"
-        },
-        {
-            "cron_name": "call_log_new_entry",
-            "cron_description": "Runs hourly to generate New Entry calls for imported or newly created records across enabled projects",
-            "method": "cronNewEntry",
+            "cron_name": "TemporalLifecycle",
+            "cron_description": "Hourly check for time-sensitive call lifecycles (open reminder expirations, missed appointment calls, and new record intake)",
+            "method": "cronTemporalLifecycle",
             "cron_frequency": "3600",
             "cron_max_run_time": "1800"
+        },
+        {
+            "cron_name": "DailySync",
+            "cron_description": "Comprehensive daily synchronization and audit of all call templates across all enabled project records",
+            "method": "cronDailySync",
+            "cron_frequency": "86400",
+            "cron_max_run_time": "3600"
         }
     ],
     "project-settings": [

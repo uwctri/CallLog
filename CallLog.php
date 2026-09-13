@@ -658,7 +658,19 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         return $this->getApiService()->handleApiRequest($projectId, $payload);
     }
 
-    public function cronGenerateAllCalls($cronInfo): string
+    public function cronTemporalLifecycle($cronInfo): string
+    {
+        $projects = $this->getProjectsWithModuleEnabled();
+        $totalChanged = 0;
+
+        foreach ($projects as $projectId) {
+            $totalChanged += $this->getGeneratorService()->evaluateTemporalLifecyclesForProject((int)$projectId);
+        }
+
+        return "Temporal lifecycle cron completed successfully. Processed updates for " . count($projects) . " projects.";
+    }
+
+    public function cronDailySync($cronInfo): string
     {
         $projects = $this->getProjectsWithModuleEnabled();
         $totalGenerated = 0;
@@ -667,19 +679,18 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             $totalGenerated += $this->getGeneratorService()->evaluateAndGenerateForProject((int)$projectId, 'cron_daily');
         }
 
-        return "Cron completed successfully. Processed calls for " . count($projects) . " projects.";
+        return "Daily sync cron completed successfully. Processed calls for " . count($projects) . " projects.";
+    }
+
+    // Backward-compatibility aliases for REDCap scheduled cron registry
+    public function cronGenerateAllCalls($cronInfo): string
+    {
+        return $this->cronDailySync($cronInfo);
     }
 
     public function cronNewEntry($cronInfo): string
     {
-        $projects = $this->getProjectsWithModuleEnabled();
-        $totalGenerated = 0;
-
-        foreach ($projects as $projectId) {
-            $totalGenerated += $this->getGeneratorService()->evaluateAndGenerateForProject((int)$projectId, 'cron_hourly');
-        }
-
-        return "Hourly new entry cron completed successfully. Processed calls for " . count($projects) . " projects.";
+        return $this->cronTemporalLifecycle($cronInfo);
     }
 
     private function initGlobal(int $projectId): void

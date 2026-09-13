@@ -63,7 +63,7 @@ class CallGeneratorService
             ? (REDCap::getData($projectId, 'array', $record, $neededFields)[$record] ?? [])
             : [];
 
-        if (empty($triggerForms) || ($savedInstrument && in_array($savedInstrument, $triggerForms, true))) {
+        if (empty($triggerForms) || empty($savedInstrument) || in_array($savedInstrument, $triggerForms, true)) {
             $changes[] = $this->metadataFollowup($projectId, $record, $metadata, $config['followup'] ?? [], $trigger, $savedInstrument, $pendingLogs, $recordData);
             $changes[] = $this->metadataReminder($projectId, $record, $metadata, $config['reminder'] ?? [], $trigger, $savedInstrument, $pendingLogs, $recordData);
             $changes[] = $this->metadataMissedCancelled($projectId, $record, $metadata, $config['mcv'] ?? [], $trigger, $savedInstrument, $pendingLogs, $recordData);
@@ -89,7 +89,11 @@ class CallGeneratorService
     public function evaluateAndGenerateForProject(int $projectId, string $trigger = 'batch'): int
     {
         $startTime = microtime(true);
-        $recordIdField = REDCap::getRecordIdField();
+        global $Proj;
+        if (!isset($Proj) || (int)$Proj->project_id !== $projectId) {
+            $Proj = new Project($projectId);
+        }
+        $recordIdField = !empty($Proj->table_pk) ? $Proj->table_pk : 'record_id';
         $records = REDCap::getData($projectId, 'json', null, [$recordIdField]);
         $recordsArray = json_decode($records, true);
         if (empty($recordsArray)) return 0;
@@ -115,6 +119,71 @@ class CallGeneratorService
         }
 
         return $generatedCount;
+    }
+
+    /**
+     * Fast temporal lifecycle evaluator (hourly cron).
+     * Focuses on time-sensitive transitions:
+     * 1. Evaluates all records that currently have active/open call metadata (e.g. expiring reminders, MCV attendance completions).
+     * 2. Evaluates records without metadata to pick up newly added/imported records for New Entry call generation.
+     */
+    public function evaluateTemporalLifecyclesForProject(int $projectId): int
+    {
+        $startTime = microtime(true);
+        global $Proj;
+        if (!isset($Proj) || (int)$Proj->project_id !== $projectId) {
+            $Proj = new Project($projectId);
+        }
+        $recordIdField = !empty($Proj->table_pk) ? $Proj->table_pk : 'record_id';
+
+        $table = REDCap::getDataTable($projectId);
+
+        // 1. Records with existing metadata
+        $sqlMeta = "SELECT DISTINCT record FROM {$table} WHERE project_id = ? AND field_name = 'call_metadata' AND value IS NOT NULL AND value != ''";
+        $resMeta = $this->module->query($sqlMeta, [$projectId]);
+        $targetRecords = [];
+        while ($row = $resMeta->fetch_assoc()) {
+            $targetRecords[] = (string)$row['record'];
+        }
+
+        // 2. Records without metadata (to generate New Entry calls quickly for new records)
+        $config = $this->configService->getCallTemplateConfig($projectId);
+        if (!empty($config['new'])) {
+            $recordsJson = REDCap::getData($projectId, 'json', null, [$recordIdField]);
+            $allRecords = json_decode($recordsJson, true);
+            if (!empty($allRecords)) {
+                $existingLookup = array_flip($targetRecords);
+                foreach ($allRecords as $r) {
+                    $rid = (string)($r[$recordIdField] ?? '');
+                    if ($rid !== '' && !isset($existingLookup[$rid])) {
+                        $targetRecords[] = $rid;
+                    }
+                }
+            }
+        }
+
+        $targetRecords = array_values(array_unique($targetRecords));
+        if (empty($targetRecords)) return 0;
+
+        $updatedCount = 0;
+        foreach ($targetRecords as $record) {
+            if ($this->evaluateAndGenerateForRecord($projectId, $record, null, 'cron_temporal')) {
+                $updatedCount++;
+            }
+        }
+
+        $duration = microtime(true) - $startTime;
+        if ($this->loggingService) {
+            $this->loggingService->logBatchGenerationSummary(
+                $projectId,
+                'cron_temporal',
+                count($targetRecords),
+                $updatedCount,
+                $duration
+            );
+        }
+
+        return $updatedCount;
     }
 
     private function metadataNewEntry(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs): bool
