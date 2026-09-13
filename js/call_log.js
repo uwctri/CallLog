@@ -22,8 +22,6 @@
         module.ajax("metadataSave", {
             record: getParam('id'),
             metadata: JSON.stringify(module.metadata)
-        }).then(function (response) {
-            console.log(response);
         }).catch(function (err) {
             console.error(err);
         });
@@ -697,8 +695,7 @@
         };
 
         updateCurrentCallTime();
-        setTimeout(updateCurrentCallTime, 200);
-        setTimeout(updateCurrentCallTime, 500);
+        setTimeout(updateCurrentCallTime, 150);
         $("input[name=call_open_date], input[name=call_open_time], input[name=call_open_datetime]").on('input change', updateCurrentCallTime);
 
         $(".callTab").off('click').on('click', (event) => {

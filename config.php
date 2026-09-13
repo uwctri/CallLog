@@ -123,6 +123,75 @@ if (typeof tinymce === 'undefined') {
                 </div>
             </div>
 
+            <!-- General Design Philosophy Card -->
+            <div class="card border shadow-sm mb-4 rounded-3">
+                <div class="card-header bg-light border-bottom fw-bold py-3 px-4 text-dark">
+                    <i class="fas fa-lightbulb text-warning me-2"></i> General Design Philosophy
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-secondary mb-3 w-100" style="font-size: 0.875rem; line-height: 1.6; max-width: 100%;">
+                        The Call Log module is designed around the principles of native REDCap compatibility, automated lifecycle management, and transparent data persistence. Rather than acting as a black box or introducing custom external tables, the module operates directly within your project's existing structure so study teams maintain complete control, visibility, and native reporting access across every call:
+                    </p>
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded-3 p-3 h-100 bg-light bg-opacity-50">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-file-alt"></i>
+                                    </div>
+                                    <h6 class="fw-bold mb-0 text-dark">Standard Instruments</h6>
+                                </div>
+                                <div class="text-muted small" style="line-height: 1.5;">
+                                    Call Logs operate as standard REDCap instruments. The repeating <code>call_log</code> form captures individual call attempts and notes, making data exportable and reportable via normal REDCap tools.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded-3 p-3 h-100 bg-light bg-opacity-50">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="rounded-circle bg-success bg-opacity-10 text-success d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-magic"></i>
+                                    </div>
+                                    <h6 class="fw-bold mb-0 text-dark">Automated Generation</h6>
+                                </div>
+                                <div class="text-muted small" style="line-height: 1.5;">
+                                    Calls are generated automatically whenever possible: upon saving designated project forms or during the nightly cron evaluation based on study visit schedules and window rules.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded-3 p-3 h-100 bg-light bg-opacity-50">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="rounded-circle bg-info bg-opacity-10 text-info d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-database"></i>
+                                    </div>
+                                    <h6 class="fw-bold mb-0 text-dark">Native Persistence</h6>
+                                </div>
+                                <div class="text-muted small" style="line-height: 1.5;">
+                                    All tracking data is saved within REDCap itself—either in the repeating <code>call_log</code> attempts or in <code>call_log_metadata</code> as a structured metadata JSON object. No custom tables are used.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-3">
+                            <div class="border rounded-3 p-3 h-100 bg-light bg-opacity-50">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="rounded-circle bg-warning bg-opacity-10 text-warning d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-sliders-h"></i>
+                                    </div>
+                                    <h6 class="fw-bold mb-0 text-dark">Call Type Assumptions</h6>
+                                </div>
+                                <div class="text-muted small" style="line-height: 1.5;">
+                                    Each call type operates on built-in lifecycle assumptions—evaluating milestone dates, visit sequences, indicator fields, or completion criteria to determine exactly when calls become active, expire, or complete.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Setup Progress Checklist Card -->
             <div class="card border shadow-sm mb-4 rounded-3">
                 <div class="card-header bg-light border-bottom fw-bold py-3 px-4 text-dark">
@@ -221,19 +290,6 @@ if (typeof tinymce === 'undefined') {
                                 </div>
                             </div>
                             <span class="badge checklist-badge py-2 fw-semibold flex-shrink-0 ms-3 mt-1" style="width: 130px;" :class="setupChecklist.tabs ? 'bg-success text-white' : 'bg-secondary text-white'" x-text="setupChecklist.tabs ? 'Configured' : 'Pending'">Pending</span>
-                        </li>
-
-                        <li class="list-group-item d-flex justify-content-between align-items-start py-3 px-4">
-                            <div class="d-flex align-items-start me-3">
-                                <i class="fas fa-check-circle me-3 fs-5 mt-1" :class="setupChecklist.withdraw ? 'text-info' : 'text-muted'"></i>
-                                <div>
-                                    <h6 class="fw-bold mb-1 text-dark">6. Subject Withdrawal Rules (Optional)</h6>
-                                    <div class="text-muted small" style="line-height: 1.5;">
-                                        Prevent calling participants who have withdrawn from the study. Select your project's withdrawal field and event, and the module will automatically stop generating calls and remove those participants from the Call List once marked as withdrawn.
-                                    </div>
-                                </div>
-                            </div>
-                            <span class="badge checklist-badge py-2 fw-semibold flex-shrink-0 ms-3 mt-1" style="width: 130px;" :class="setupChecklist.withdraw ? 'bg-info text-white' : 'bg-secondary text-white'" x-text="setupChecklist.withdraw ? 'Active' : 'Optional'">Optional</span>
                         </li>
                     </ul>
                 </div>
@@ -557,8 +613,12 @@ if (typeof tinymce === 'undefined') {
 
         <!-- Tab 3: Call Types -->
         <div class="tab-pane fade show active" x-show="activeTab === 'calls'">
-            <div class="setting-blurb mb-3">
-                Define unique call rules to power participant call queues. Assign unique call IDs, friendly display names, template types, and max attempt limits before calls auto-retire.
+            <div class="setting-blurb mb-3 w-100" style="max-width: 100%;">
+                Define the unique call rules that govern your study outreach queues. Each call type represents a distinct contact protocol—such as welcoming new participants, sending appointment reminders, conducting windowed follow-ups, re-engaging missed visits, scheduling milestone encounters, or handling adhoc calls.
+                <div class="mt-2 text-muted small">
+                    <i class="fas fa-info-circle text-primary me-1"></i>
+                    <strong>Multi-Event Architecture:</strong> For longitudinal projects, call types configured across multiple events are automatically scoped by event (e.g. <code>call_id|event_name</code>), allowing each study visit to maintain its own independent schedule, calling window, attempt history, and completion status.
+                </div>
             </div>
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold mb-0 text-dark">Unique Call Types</h5>
@@ -614,7 +674,12 @@ if (typeof tinymce === 'undefined') {
                             <div class="mt-3 border-top pt-3">
                                 <!-- New Entry -->
                                 <div x-show="callType.template === 'new'">
-                                    <div class="setting-blurb mb-3">New Entry calls trigger automatically when a participant record is created or imported. Any tab with a New Entry call in it will show the Expiration Date and days remaining as a column.</div>
+                                    <div class="setting-blurb mb-3 w-100" style="max-width: 100%;">
+                                        <strong>Purpose:</strong> Designed for initial participant outreach, screening welcomes, or intake onboarding calls upon study registration.
+                                        <div class="mt-1 text-muted small">
+                                            <strong>How it works:</strong> Triggers automatically when a new participant record is created or imported (while call metadata is empty). The call remains active on dashboard queues until completed by a caller, or until the configured number of expiration days elapses. Call List tabs containing New Entry calls automatically display an <em>Expiration Date</em> column showing the exact date and days remaining.
+                                        </div>
+                                    </div>
                                     <div class="row g-3 align-items-center mb-2">
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-dark mb-1">Days Until Expire</label>
@@ -625,7 +690,12 @@ if (typeof tinymce === 'undefined') {
 
                                 <!-- Reminder -->
                                 <div x-show="callType.template === 'reminder'">
-                                    <div class="setting-blurb mb-3">Reminder calls appear on the call log a configured number of days before a target date and are automatically removed on the target date.</div>
+                                    <div class="setting-blurb mb-3 w-100" style="max-width: 100%;">
+                                        <strong>Purpose:</strong> Pre-visit appointment reminders to ensure participant attendance and preparation.
+                                        <div class="mt-1 text-muted small">
+                                            <strong>How it works:</strong> Monitors the configured appointment date field across selected events. Using study holiday and weekend rules, it calculates the call window start date (<code>Appointment Date - Days Before</code>). The call stays hidden until that window opens. If the reminder is open (not completed) and the appointment date arrives or passes, the call is marked <strong>expired</strong>. If the appointment date is cleared before any calls are logged, the reminder is removed; if calls were already logged, it completes to preserve history.
+                                        </div>
+                                    </div>
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-5">
                                             <label class="form-label small fw-bold text-dark mb-1">Target Date Field</label>
@@ -692,10 +762,15 @@ if (typeof tinymce === 'undefined') {
 
                                 <!-- Follow Up -->
                                 <div x-show="callType.template === 'followup'">
-                                    <div class="setting-blurb mb-3">Any tab with a follow up call in it will show the Lower and Upper windows of the call as the last two columns titled 'Start Calling' and 'Complete by'.</div>
+                                    <div class="setting-blurb mb-3 w-100" style="max-width: 100%;">
+                                        <strong>Purpose:</strong> Post-encounter check-ins, adverse event tracking, or survey administration that must occur within an eligibility window relative to an anchor date.
+                                        <div class="mt-1 text-muted small">
+                                            <strong>How it works:</strong> Watches the configured <em>Anchor Date Field</em> on each selected event. It calculates a calling window starting <code>Anchor Date + Days After Date</code> and ending after the configured window length. Tabs containing Follow Up calls automatically display <em>Start Calling</em> and <em>Complete By</em> columns. If auto-remove is enabled, calls automatically expire once the window closes.
+                                        </div>
+                                    </div>
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-5">
-                                            <label class="form-label small fw-bold text-dark mb-1">Baseline Date Field</label>
+                                            <label class="form-label small fw-bold text-dark mb-1">Anchor Date Field</label>
                                             <div class="searchable-field-select position-relative" :class="{ 'is-open': open }" x-data="fieldSelect(callType, 'followupDate', '-- Select Date Field --', true)" @click.outside="open = false">
                                                 <div class="form-select form-select-sm d-flex align-items-center justify-content-between cursor-pointer bg-white" @click="open = !open">
                                                     <span class="small text-truncate" :class="val ? 'text-dark fw-semibold' : 'text-muted'" x-text="getFieldLabel(val) || placeholder"></span>
@@ -759,7 +834,12 @@ if (typeof tinymce === 'undefined') {
 
                                 <!-- MCV -->
                                 <div x-show="callType.template === 'mcv'">
-                                    <div class="setting-blurb mb-3">Any tab with a Missed/Cancelled visit call will show the Missed Appt Date/Time as the last column.</div>
+                                    <div class="setting-blurb mb-3 w-100" style="max-width: 100%;">
+                                        <strong>Purpose:</strong> Rapid outreach for participants who missed, cancelled, or no-showed an appointment.
+                                        <div class="mt-1 text-muted small">
+                                            <strong>How it works:</strong> Monitors the appointment date field and designated indicator field. A call generates if the missed/cancelled indicator is flagged, or automatically if the appointment date has passed without the indicator being set (where the indicator flags attendance). By default, calls appear starting the day after the missed visit (giving clinics time to reschedule), unless same-day display is enabled. When attendance is confirmed or the missed flag is cleared, the call automatically completes.
+                                        </div>
+                                    </div>
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-dark mb-1">Indicator Field</label>
@@ -841,7 +921,12 @@ if (typeof tinymce === 'undefined') {
 
                                 <!-- NTS -->
                                 <div x-show="callType.template === 'nts'">
-                                    <div class="setting-blurb mb-3">Need to Schedule calls are generated for an event when the previous event has a truthy indicator, but the current event has no scheduled date.</div>
+                                    <div class="setting-blurb mb-3 w-100" style="max-width: 100%;">
+                                        <strong>Purpose:</strong> Scheduling milestone study encounters as participants progress sequentially through protocol events.
+                                        <div class="mt-1 text-muted small">
+                                            <strong>How it works:</strong> Evaluates the chronological event sequence in your project. When a prior milestone event has its attendance indicator flagged truthy, but the subsequent target event does not yet have an appointment scheduled, an NTS call is automatically generated for that target event. It appears next day (or same day if enabled), and auto-completes immediately once staff enter a date into the target appointment date field.
+                                        </div>
+                                    </div>
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-4">
                                             <label class="form-label small fw-bold text-dark mb-1">Indicator Field</label>
@@ -923,7 +1008,12 @@ if (typeof tinymce === 'undefined') {
 
                                 <!-- Adhoc -->
                                 <div x-show="callType.template === 'adhoc'">
-                                    <div class="setting-blurb mb-3">Adhoc calls are added by an end user on the call log screen. Any tab with an adhoc call in it will show the Reason and Preferred call back date as the last two columns.</div>
+                                    <div class="setting-blurb mb-3 w-100" style="max-width: 100%;">
+                                        <strong>Purpose:</strong> Unplanned, participant-initiated, or ad-hoc outreach (e.g. medication questions, coordinator callbacks, lost-to-followup re-engagement).
+                                        <div class="mt-1 text-muted small">
+                                            <strong>How it works:</strong> Created manually by study team members via the <em>New Adhoc Call</em> button or programmatically via the external API (<code>action: newAdhoc</code>). Callers can schedule a future callback date/time, which keeps the call hidden until that time arrives. Tabs with adhoc calls show dedicated <em>Reason</em> and <em>Preferred Callback</em> columns.
+                                        </div>
+                                    </div>
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-8">
                                             <label class="form-label small fw-bold text-dark mb-1">Adhoc Reason Code Map</label>
@@ -935,7 +1025,12 @@ if (typeof tinymce === 'undefined') {
 
                                 <!-- Visit -->
                                 <div x-show="callType.template === 'visit'">
-                                    <div class="setting-blurb mb-3">Scheduled Phone Visits are for phone-based encounters that just need a way to record a call log at checkout time. They are not typically used on the call log.</div>
+                                    <div class="setting-blurb mb-3 w-100" style="max-width: 100%;">
+                                        <strong>Purpose:</strong> Protocol-mandated remote phone encounters (e.g. 6-month phone check-ins) where call notes are logged directly during encounter checkout.
+                                        <div class="mt-1 text-muted small">
+                                            <strong>How it works:</strong> Generates when a designated visit indicator field is marked truthy. The visit indicator is typically a "Digital check-in" field or form completion used to generate the log. If an optional auto-remove date field is configured, the call will automatically expire when that date passes; otherwise it completes when logged by staff.
+                                        </div>
+                                    </div>
                                     <div class="row g-3 align-items-start mb-2">
                                         <div class="col-md-6">
                                             <label class="form-label small fw-bold text-dark mb-1">Visit Indicator Field</label>

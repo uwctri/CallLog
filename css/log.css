@@ -339,26 +339,21 @@ form#form tr[id*="_hdr_"] td {
     padding: 7px 12px !important;
     font-size: 0.875rem !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-    font-weight: 600 !important;
+    font-weight: 500 !important;
     vertical-align: middle !important;
     line-height: 1.4 !important;
-    color: #475569 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.03em !important;
+    color: #0f172a !important;
     background-color: #f8fafc !important;
-    width: 18% !important;
-    white-space: nowrap !important;
 }
 
 .CallLogDetailTable td:nth-child(1),
 .CallLogDetailTable td:nth-child(3) {
-
-}
-
-.CallLogDetailTable td{
-    color: #0f172a !important;
-    font-weight: 500 !important;
-    background-color: #f8fafc  !important;
+    color: #475569 !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    width: 18% !important;
+    white-space: nowrap !important;
 }
 
 #CallLogCurrentCall {

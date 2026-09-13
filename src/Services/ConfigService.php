@@ -3,6 +3,8 @@
 namespace UWMadison\CallLog\Services;
 
 use REDCap;
+use Project;
+use Throwable;
 use UWMadison\CallLog\CallMetadataRepository;
 use UWMadison\CallLog\CallTemplateType;
 
@@ -138,7 +140,10 @@ class ConfigService
 
     public function getProjectMetadataInfo(int $projectId): array
     {
-        $Proj = new \Project($projectId);
+        global $Proj;
+        if (!isset($Proj) || $Proj->project_id != $projectId) {
+            $Proj = new Project($projectId);
+        }
 
         $events = [];
         if (is_array($Proj->events)) {
@@ -175,13 +180,11 @@ class ConfigService
 
         $dd = [];
         try {
-            if (class_exists('\REDCap') && method_exists('\REDCap', 'getDataDictionary')) {
-                $dd = \REDCap::getDataDictionary('array', false, [], [], $projectId);
-                if (empty($dd)) {
-                    $dd = \REDCap::getDataDictionary('array');
-                }
+            $dd = REDCap::getDataDictionary('array', false, [], [], $projectId);
+            if (empty($dd)) {
+                $dd = REDCap::getDataDictionary('array');
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $dd = [];
         }
 
@@ -303,7 +306,7 @@ class ConfigService
 
     public function getCallTemplateConfig(int $projectId): array
     {
-        $eventNameMap = $this->getEventNameMap();
+        $eventNameMap = $this->getEventNameMap($projectId);
         $newEntryConfig = [];
         $reminderConfig = [];
         $followupConfig = [];
@@ -481,6 +484,9 @@ class ConfigService
     public function getTabConfig(int $projectId): array
     {
         global $Proj;
+        if (!isset($Proj) || $Proj->project_id != $projectId) {
+            $Proj = new Project($projectId);
+        }
         $allFields = [];
         $call2TabMap = [];
         $tabNameMap = [];
@@ -488,9 +494,9 @@ class ConfigService
 
         $settings = $this->getRawProjectSettings($projectId);
         $orderMapping = $settings["tab_order"];
-        $recordIdField = REDCap::getRecordIdField();
+        $recordIdField = !empty($Proj->table_pk) ? $Proj->table_pk : 'record_id';
         $recordIdLabel = $this->getFieldLabel($recordIdField);
-        $dd = REDCap::getDataDictionary('array');
+        $dd = REDCap::getDataDictionary($projectId, 'array');
 
         $expands = [];
         $rawExpFields = $settings["tab_expands_field"] ?? [];
@@ -745,10 +751,28 @@ class ConfigService
 
 
 
-    public function getEventNameMap(): array
+    public function getEventNameMap(?int $projectId = null): array
     {
-        $events = REDCap::getEventNames(false, true);
-        return is_array($events) ? array_flip($events) : [];
+        global $Proj;
+        if ($projectId !== null && (!isset($Proj) || $Proj->project_id != $projectId)) {
+            try {
+                $p = new Project($projectId);
+                $uniqueNames = $p->getUniqueEventNames();
+                return is_array($uniqueNames) ? array_flip($uniqueNames) : [];
+            } catch (Throwable $e) {
+                // fallback
+            }
+        } elseif (isset($Proj) && is_object($Proj)) {
+            $uniqueNames = $Proj->getUniqueEventNames();
+            return is_array($uniqueNames) ? array_flip($uniqueNames) : [];
+        }
+
+        try {
+            $events = REDCap::getEventNames(false, true);
+            return is_array($events) ? array_flip($events) : [];
+        } catch (Throwable $e) {
+            return [];
+        }
     }
 
     private function getFieldLabel(string $fieldName): string

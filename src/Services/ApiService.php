@@ -5,7 +5,7 @@ namespace UWMadison\CallLog\Services;
 use REDCap;
 use RestUtility;
 use UWMadison\CallLog\CallMetadataRepository;
-use UWMadison\CallTemplateType;
+use UWMadison\CallLog\CallTemplateType;
 use UWMadison\CallLog\CallItemDTO;
 
 class ApiService
@@ -161,45 +161,16 @@ class ApiService
         ];
     }
 
+    private ?DateMathService $dateMathService = null;
+
+    private function getDateMathService(): DateMathService
+    {
+        return $this->dateMathService ??= new DateMathService();
+    }
+
     public function parseTimeTo24(?string $time): string
     {
-        if (empty($time)) return '00:00';
-        $t = trim(strtolower($time));
-        $isPm = false;
-        $isAm = false;
-        if (preg_match('/p\.?m?\.?$/i', $t)) {
-            $isPm = true;
-            $t = trim(preg_replace('/p\.?m?\.?$/i', '', $t));
-        } elseif (preg_match('/a\.?m?\.?$/i', $t)) {
-            $isAm = true;
-            $t = trim(preg_replace('/a\.?m?\.?$/i', '', $t));
-        }
-        if (strpos($t, ':') !== false || strpos($t, '.') !== false) {
-            $parts = preg_split('/[:.]/', $t);
-            $hours = (int)$parts[0];
-            $minutes = isset($parts[1]) ? (int)$parts[1] : 0;
-        } elseif (ctype_digit($t)) {
-            $len = strlen($t);
-            if ($len === 1 || $len === 2) {
-                $hours = (int)$t;
-                $minutes = 0;
-            } elseif ($len === 3) {
-                $hours = (int)substr($t, 0, 1);
-                $minutes = (int)substr($t, 1);
-            } elseif ($len === 4) {
-                $hours = (int)substr($t, 0, 2);
-                $minutes = (int)substr($t, 2);
-            } else {
-                return '00:00';
-            }
-        } else {
-            return '00:00';
-        }
-        if ($minutes < 0 || $minutes > 59) return '00:00';
-        if ($isPm && $hours < 12) $hours += 12;
-        if ($isAm && $hours === 12) $hours = 0;
-        if ($hours < 0 || $hours > 23) return '00:00';
-        return sprintf('%02d:%02d', $hours, $minutes);
+        return $this->getDateMathService()->parseTimeTo24($time);
     }
 
     private function createAdhocCall(int $projectId, string $record, array $adhocConfigList, string $callTypeId, string $reasonId, array $payload): bool

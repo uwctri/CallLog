@@ -3,6 +3,7 @@
 namespace UWMadison\CallLog\Services;
 
 use REDCap;
+use Project;
 use UWMadison\CallLog\CallMetadataRepository;
 use UWMadison\CallLog\CallTemplateType;
 use UWMadison\CallLog\CallItemDTO;
@@ -20,8 +21,15 @@ class CallQueryService
         $this->metadataRepo = $metadataRepo;
     }
 
-    public function getCallListData(int $projectId): array
+    public function getCallListData(int $projectId, array $options = []): array
     {
+        $includeCompleted = !empty($options['includeCompleted']);
+        $includeExpired = !empty($options['includeExpired']);
+        global $Proj;
+        if (!isset($Proj) || $Proj->project_id != $projectId) {
+            $Proj = new Project($projectId);
+        }
+
         $callEvent = $this->metadataRepo->getEventOfInstrument($projectId, "call_log");
         $metaEvent = $this->metadataRepo->getEventOfInstrument($projectId, "call_log_metadata");
         $withdrawRules = $this->configService->getWithdrawConfig($projectId);
@@ -31,15 +39,10 @@ class CallQueryService
         $tabs = $this->configService->getTabConfig($projectId);
         $call2TabMap = $tabs['call2TabMap'] ?? $tabs['call2tabMap'] ?? [];
         $adhocConfig = $this->configService->getAdhocTemplateConfig($projectId);
-        $recordIdField = REDCap::getRecordIdField();
-        $rawEventNames = REDCap::getEventNames();
+        $recordIdField = !empty($Proj->table_pk) ? $Proj->table_pk : 'record_id';
+        $rawEventNames = $Proj->getUniqueEventNames();
         $eventNameToId = is_array($rawEventNames) ? array_flip($rawEventNames) : [];
         $displayNameField = $tabs['displayNameField'] ?? '';
-
-        global $Proj;
-        if (!isset($Proj) || $Proj->project_id != $projectId) {
-            $Proj = new \Project($projectId);
-        }
         $eventDisplayNames = [];
         if (isset($Proj->eventInfo) && is_array($Proj->eventInfo)) {
             foreach ($Proj->eventInfo as $eid => $info) {
@@ -86,6 +89,7 @@ class CallQueryService
                 'call_callback_requested_by',
                 'call_notes',
                 'call_open_datetime',
+                'call_open_user',
                 'call_open_user_full_name',
                 'call_attempt',
                 'call_template',
@@ -104,11 +108,26 @@ class CallQueryService
 
         $fields = array_values(array_filter($fields, fn($f) => is_string($f) && !empty($f)));
 
+        $table = REDCap::getDataTable($projectId);
+        $sql = "SELECT DISTINCT record FROM {$table} WHERE project_id = ? AND field_name = 'call_metadata' AND value IS NOT NULL AND value != ''";
+        $qRes = $this->module->query($sql, [$projectId]);
+        $recordsWithCalls = [];
+        while ($row = $qRes->fetch_assoc()) {
+            $recordsWithCalls[] = $row['record'];
+        }
+
+        if (empty($recordsWithCalls)) {
+            return [
+                "data" => $packagedCallData,
+                "showCallback" => false
+            ];
+        }
+
         $userId = defined('USERID') ? USERID : null;
         $userRights = $userId ? REDCap::getUserRights($userId) : [];
         $groupId = $userRights[$userId]['group_id'] ?? null;
 
-        $dataLoad = REDCap::getData($projectId, 'array', null, $fields, null, $groupId);
+        $dataLoad = REDCap::getData($projectId, 'array', $recordsWithCalls, $fields, null, $groupId);
         if (empty($dataLoad)) {
             return [
                 "data" => $packagedCallData,
@@ -173,6 +192,9 @@ class CallQueryService
                 }
 
                 $isCompleted = (($call['status'] ?? '') === 'complete');
+                if (!$includeCompleted && $isCompleted) {
+                    continue;
+                }
                 $templateVal = $call['template'] ?? ($callIdToTemplate[$baseCallID] ?? (strpos($callID, '||') !== false ? 'adhoc' : 'new'));
                 if (empty($call['template'])) {
                     $call['template'] = $templateVal;
@@ -201,6 +223,10 @@ class CallQueryService
                     } elseif ($templateVal === CallTemplateType::NEW->value && !empty($call['expire']) && (date('Y-m-d', strtotime("{$call['load']} +{$call['expire']} days")) < $today)) {
                         $isExpired = true;
                     }
+                }
+
+                if (!$includeExpired && $isExpired) {
+                    continue;
                 }
 
                 $instances = $call['instances'] ?? [];
@@ -299,6 +325,10 @@ class CallQueryService
                         $isExpired = true;
                     }
 
+                    if (!$includeExpired && $isExpired) {
+                        continue;
+                    }
+
                     $isWithdrawn = false;
                     foreach ($withdrawRules as $wRule) {
                         $wEvent = $wRule['event'];
@@ -353,6 +383,18 @@ class CallQueryService
 
                 $attempts = ($recordData[$callEvent]['call_open_date'] ?? '') === $today ? 1 : 0;
                 $instanceData['_callNotes'] = "";
+                $attemptedUsers = [];
+                $attemptedUserNames = [];
+
+                if (!empty($recordData[$callEvent]['call_open_user'])) {
+                    $attemptedUsers[] = $recordData[$callEvent]['call_open_user'];
+                }
+                if (!empty($recordData[$callEvent]['call_open_user_full_name'])) {
+                    $attemptedUserNames[] = $recordData[$callEvent]['call_open_user_full_name'];
+                }
+                if (!empty($call['callStartedBy'])) {
+                    $attemptedUsers[] = $call['callStartedBy'];
+                }
 
                 foreach (array_reverse($instances) as $inst) {
                     $itterData = $recordData['repeat_instances'][$callEvent]["call_log"][$inst] ?? [];
@@ -362,6 +404,13 @@ class CallQueryService
                     $notes = !empty($itterData['call_notes']) ? $itterData['call_notes'] : 'none';
                     $openDt = $itterData['call_open_datetime'] ?? '';
                     $openUser = $itterData['call_open_user_full_name'] ?? '';
+                    $openUsername = $itterData['call_open_user'] ?? '';
+                    if (!empty($openUsername)) {
+                        $attemptedUsers[] = $openUsername;
+                    }
+                    if (!empty($openUser)) {
+                        $attemptedUserNames[] = $openUser;
+                    }
                     $instanceData['_callNotes'] .= "{$openDt}||{$openUser}||{$text}||{$notes}|||";
 
                     if (($itterData['call_open_date'] ?? '') === $today) {
@@ -420,8 +469,13 @@ class CallQueryService
                     $notes = !empty($call['initNotes']) ? $call['initNotes'] : "No Notes Taken";
                     if (!empty($call['reporter'])) {
                         $instanceData['_callNotes'] .= "{$call['reported']}||{$call['reporter']}||&nbsp;||{$notes}|||";
+                        $attemptedUserNames[] = $call['reporter'];
+                        $attemptedUsers[] = $call['reporter'];
                     }
                 }
+
+                $instanceData['_attemptedUsers'] = array_values(array_unique(array_filter($attemptedUsers)));
+                $instanceData['_attemptedUserNames'] = array_values(array_unique(array_filter($attemptedUserNames)));
 
                 $instanceData['_call_id'] = $fullCallID;
 
@@ -464,5 +518,28 @@ class CallQueryService
             "data" => $packagedCallData,
             "showCallback" => $alwaysShowCallbackCol
         ];
+    }
+
+    public function getCallDataVersion(int $projectId, bool $includeCompleted = false, bool $includeExpired = false): string
+    {
+        global $Proj;
+        $logTable = '';
+        if (isset($Proj) && $Proj->project_id == $projectId && !empty($Proj->project['log_event_table'])) {
+            $logTable = $Proj->project['log_event_table'];
+        } else {
+            $logTable = REDCap::getLogEventTable($projectId);
+        }
+
+        if (!preg_match('/^redcap_log_event[0-9]*$/', (string)$logTable)) {
+            $logTable = 'redcap_log_event';
+        }
+
+        $sql = "SELECT MAX(log_event_id) as max_id FROM {$logTable} WHERE project_id = ?";
+        $q = $this->module->query($sql, [$projectId]);
+        $maxId = ($row = $q->fetch_assoc()) ? ($row['max_id'] ?? 0) : 0;
+        $today = date('Y-m-d');
+        $incComp = $includeCompleted ? '1' : '0';
+        $incExp = $includeExpired ? '1' : '0';
+        return "v{$maxId}_{$today}_{$incComp}_{$incExp}";
     }
 }

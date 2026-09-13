@@ -35,15 +35,43 @@ class CallGeneratorService
         $changes = [];
         $pendingLogs = [];
 
+        $neededFields = [];
+        foreach ($config['followup'] ?? [] as $cc) {
+            if (!empty($cc['field'])) $neededFields[] = $cc['field'];
+            if (!empty($cc['end'])) $neededFields[] = $cc['end'];
+        }
+        foreach ($config['reminder'] ?? [] as $cc) {
+            if (!empty($cc['field'])) $neededFields[] = $cc['field'];
+            if (!empty($cc['removeVar'])) $neededFields[] = $cc['removeVar'];
+        }
+        foreach ($config['mcv'] ?? [] as $cc) {
+            if (!empty($cc['apptDate'])) $neededFields[] = $cc['apptDate'];
+            if (!empty($cc['indicator'])) $neededFields[] = $cc['indicator'];
+        }
+        foreach ($config['nts'] ?? [] as $cc) {
+            if (!empty($cc['apptDate'])) $neededFields[] = $cc['apptDate'];
+            if (!empty($cc['indicator'])) $neededFields[] = $cc['indicator'];
+            if (!empty($cc['skip'])) $neededFields[] = $cc['skip'];
+        }
+        foreach ($config['visit'] ?? [] as $cc) {
+            if (!empty($cc['indicator'])) $neededFields[] = $cc['indicator'];
+            if (!empty($cc['autoRemove'])) $neededFields[] = $cc['autoRemove'];
+        }
+        $neededFields = array_values(array_unique(array_filter($neededFields)));
+
+        $recordData = !empty($neededFields)
+            ? (REDCap::getData($projectId, 'array', $record, $neededFields)[$record] ?? [])
+            : [];
+
         if (empty($triggerForms) || ($savedInstrument && in_array($savedInstrument, $triggerForms, true))) {
-            $changes[] = $this->metadataFollowup($projectId, $record, $metadata, $config['followup'] ?? [], $trigger, $savedInstrument, $pendingLogs);
-            $changes[] = $this->metadataReminder($projectId, $record, $metadata, $config['reminder'] ?? [], $trigger, $savedInstrument, $pendingLogs);
-            $changes[] = $this->metadataMissedCancelled($projectId, $record, $metadata, $config['mcv'] ?? [], $trigger, $savedInstrument, $pendingLogs);
-            $changes[] = $this->metadataNeedToSchedule($projectId, $record, $metadata, $config['nts'] ?? [], $trigger, $savedInstrument, $pendingLogs);
+            $changes[] = $this->metadataFollowup($projectId, $record, $metadata, $config['followup'] ?? [], $trigger, $savedInstrument, $pendingLogs, $recordData);
+            $changes[] = $this->metadataReminder($projectId, $record, $metadata, $config['reminder'] ?? [], $trigger, $savedInstrument, $pendingLogs, $recordData);
+            $changes[] = $this->metadataMissedCancelled($projectId, $record, $metadata, $config['mcv'] ?? [], $trigger, $savedInstrument, $pendingLogs, $recordData);
+            $changes[] = $this->metadataNeedToSchedule($projectId, $record, $metadata, $config['nts'] ?? [], $trigger, $savedInstrument, $pendingLogs, $recordData);
         }
 
         $changes[] = $this->metadataNewEntry($projectId, $record, $metadata, $config['new'] ?? [], $trigger, $savedInstrument, $pendingLogs);
-        $changes[] = $this->metadataPhoneVisit($projectId, $record, $metadata, $config['visit'] ?? [], $trigger, $savedInstrument, $pendingLogs);
+        $changes[] = $this->metadataPhoneVisit($projectId, $record, $metadata, $config['visit'] ?? [], $trigger, $savedInstrument, $pendingLogs, $recordData);
 
         if (in_array(true, $changes, true)) {
             $saved = $this->metadataRepo->saveMetadata($projectId, $record, $metadata);
@@ -127,11 +155,11 @@ class CallGeneratorService
         return $changeOccurred;
     }
 
-    private function metadataFollowup(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs): bool
+    private function metadataFollowup(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs, ?array $prefetchedData = null): bool
     {
         $changeOccurred = false;
         foreach ($config as $callConfig) {
-            $data = REDCap::getData($projectId, 'array', $record, [$callConfig['field'], $callConfig['end']])[$record] ?? [];
+            $data = $prefetchedData ?? (REDCap::getData($projectId, 'array', $record, [$callConfig['field'], $callConfig['end']])[$record] ?? []);
             $fieldVal = $data[$callConfig['event']][$callConfig['field']] ?? '';
 
             if (!empty($metadata[$callConfig['id']]) && empty($fieldVal)) {
@@ -208,13 +236,17 @@ class CallGeneratorService
         return $changeOccurred;
     }
 
-    private function metadataReminder(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs): bool
+    private function metadataReminder(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs, ?array $prefetchedData = null): bool
     {
         $changeOccurred = false;
         $today = date('Y-m-d');
+        $rawSettings = $this->configService->getRawProjectSettings($projectId);
+        $enabledHolidays = $rawSettings['enabled_holidays'] ?? null;
+        $customDates = $rawSettings['custom_holidays_date'] ?? null;
+        $customNames = $rawSettings['custom_holidays_name'] ?? null;
 
         foreach ($config as $callConfig) {
-            $data = REDCap::getData($projectId, 'array', $record, [$callConfig['field'], $callConfig['removeVar']])[$record] ?? [];
+            $data = $prefetchedData ?? (REDCap::getData($projectId, 'array', $record, [$callConfig['field'], $callConfig['removeVar']])[$record] ?? []);
             $removeFlag = $data[$callConfig['removeEvent']][$callConfig['removeVar']] ?? false;
 
             if (!empty($metadata[$callConfig['id']]) && empty($metadata[$callConfig['id']]['instances']) && $removeFlag) {
@@ -232,10 +264,6 @@ class CallGeneratorService
             if ($removeFlag) continue;
 
             $fieldVal = $data[$callConfig['event']][$callConfig['field']] ?? '';
-            $rawSettings = $this->configService->getRawProjectSettings($projectId);
-            $enabledHolidays = $rawSettings['enabled_holidays'] ?? null;
-            $customDates = $rawSettings['custom_holidays_date'] ?? null;
-            $customNames = $rawSettings['custom_holidays_name'] ?? null;
 
             $newStart = $this->dateMathService->dateMath($fieldVal, '-', $callConfig['days'], $enabledHolidays, $customDates, $customNames);
             $newEnd = $this->dateMathService->dateMath($fieldVal, '+', $callConfig['days'] == 0 ? 365 : 0, $enabledHolidays, $customDates, $customNames);
@@ -262,15 +290,15 @@ class CallGeneratorService
                     ];
                 }
             } elseif (!empty($metadata[$callConfig['id']]) && !empty($fieldVal) && ($fieldVal <= $today)) {
-                if (($metadata[$callConfig['id']]['status'] ?? '') !== 'complete') {
-                    $metadata[$callConfig['id']]['status'] = 'complete';
+                if (($metadata[$callConfig['id']]['status'] ?? '') !== 'complete' && ($metadata[$callConfig['id']]['status'] ?? '') !== 'expired') {
+                    $metadata[$callConfig['id']]['status'] = 'expired';
                     $metadata[$callConfig['id']]["completedBy"] = "REDCap";
                     $changeOccurred = true;
                     $pendingLogs[] = [
                         'type' => 'auto_completed',
                         'call_id' => $callConfig['id'],
                         'call_name' => $callConfig['name'],
-                        'reason' => 'Appointment date reached or passed (' . $fieldVal . ')'
+                        'reason' => 'Appointment date reached or passed without completion (' . $fieldVal . ')'
                     ];
                 }
             } elseif (!empty($metadata[$callConfig['id']]) && !empty($fieldVal) && (($metadata[$callConfig['id']]['start'] ?? '') !== $newStart || ($metadata[$callConfig['id']]['end'] ?? '') !== $newEnd)) {
@@ -330,16 +358,25 @@ class CallGeneratorService
         return $changeOccurred;
     }
 
-    private function metadataMissedCancelled(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs): bool
+    private function metadataMissedCancelled(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs, ?array $prefetchedData = null): bool
     {
         $changeOccurred = false;
+        $today = date('Y-m-d');
         foreach ($config as $callConfig) {
-            $data = REDCap::getData($projectId, 'array', $record, [$callConfig['apptDate'], $callConfig['indicator']])[$record][$callConfig['event']] ?? [];
+            $data = ($prefetchedData ?? (REDCap::getData($projectId, 'array', $record, [$callConfig['apptDate'], $callConfig['indicator']])[$record] ?? []))[$callConfig['event']] ?? [];
             $apptDate = $data[$callConfig['apptDate']] ?? '';
             $indicator = $data[$callConfig['indicator']] ?? '';
             $idExact = $callConfig['id'] . '||' . $apptDate;
 
-            if (empty($metadata[$idExact]) && !empty($apptDate) && !empty($indicator)) {
+            $apptDateOnly = !empty($apptDate) ? explode(' ', $apptDate)[0] : '';
+            $apptPassed = !empty($apptDateOnly) && ($apptDateOnly < $today);
+            $shouldGenerate = !empty($apptDate) && (!empty($indicator) || $apptPassed);
+
+            if (empty($metadata[$idExact]) && $shouldGenerate) {
+                $reason = !empty($indicator)
+                    ? 'Missed/cancelled indicator flagged'
+                    : 'Appointment date passed without attendance confirmation (' . $apptDate . ')';
+
                 $metadata[$idExact] = [
                     "appt" => $apptDate,
                     "created" => date('Y-m-d H:i:s'),
@@ -362,21 +399,34 @@ class CallGeneratorService
                     'details' => [
                         'appt_date' => $apptDate,
                         'indicator_val' => $indicator,
+                        'generation_reason' => $reason,
                         'trigger_instrument' => $savedInstrument ?? ''
                     ]
                 ];
-            } elseif (!empty($metadata[$idExact]) && !empty($apptDate) && empty($indicator)) {
-                if (($metadata[$idExact]['status'] ?? '') !== 'complete') {
-                    $metadata[$idExact]['status'] = 'complete';
-                    $metadata[$idExact]["completedBy"] = "REDCap";
-                    $changeOccurred = true;
+            } elseif (!empty($metadata[$idExact])) {
+                // Determine auto-completion:
+                // 1. If indicator was flagged as missed and is now cleared while appt is not in the past
+                // 2. If indicator represents attendance confirmation and is now set (attended)
+                $isAttendedConfirmation = $apptPassed && !empty($indicator);
+                $isClearedMissedFlag = !$apptPassed && empty($indicator);
 
-                    $pendingLogs[] = [
-                        'type' => 'auto_completed',
-                        'call_id' => $idExact,
-                        'call_name' => $callConfig['name'],
-                        'reason' => 'Missed/cancelled indicator cleared'
-                    ];
+                if ($isAttendedConfirmation || $isClearedMissedFlag) {
+                    if (($metadata[$idExact]['status'] ?? '') !== 'complete') {
+                        $metadata[$idExact]['status'] = 'complete';
+                        $metadata[$idExact]["completedBy"] = "REDCap";
+                        $changeOccurred = true;
+
+                        $autoReason = $isAttendedConfirmation
+                            ? 'Attendance indicator confirmed'
+                            : 'Missed/cancelled indicator cleared';
+
+                        $pendingLogs[] = [
+                            'type' => 'auto_completed',
+                            'call_id' => $idExact,
+                            'call_name' => $callConfig['name'],
+                            'reason' => $autoReason
+                        ];
+                    }
                 }
             }
         }
@@ -384,7 +434,7 @@ class CallGeneratorService
         return $changeOccurred;
     }
 
-    private function metadataNeedToSchedule(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs): bool
+    private function metadataNeedToSchedule(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs, ?array $prefetchedData = null): bool
     {
         if (empty($config)) return false;
 
@@ -402,7 +452,7 @@ class CallGeneratorService
         );
 
         foreach ($config as $callConfig) {
-            $data = REDCap::getData($projectId, 'array', $record, [$callConfig['apptDate'], $callConfig['indicator'], $callConfig['skip']])[$record] ?? [];
+            $data = $prefetchedData ?? (REDCap::getData($projectId, 'array', $record, [$callConfig['apptDate'], $callConfig['indicator'], $callConfig['skip']])[$record] ?? []);
             $searchKey = array_search($callConfig['event'], $orderedEvents, true);
             $prevEvent = $searchKey !== false && isset($orderedEvents[$searchKey - 1]) ? $orderedEvents[$searchKey - 1] : null;
 
@@ -449,11 +499,11 @@ class CallGeneratorService
         return $changeOccurred;
     }
 
-    private function metadataPhoneVisit(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs): bool
+    private function metadataPhoneVisit(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs, ?array $prefetchedData = null): bool
     {
         $changeOccurred = false;
         foreach ($config as $callConfig) {
-            $data = REDCap::getData($projectId, 'array', $record, $callConfig['indicator'])[$record] ?? [];
+            $data = $prefetchedData ?? (REDCap::getData($projectId, 'array', $record, $callConfig['indicator'])[$record] ?? []);
             if (!empty($metadata[$callConfig['id']]) || empty($data[$callConfig['event']][$callConfig['indicator']])) continue;
             $endDate = $data[$callConfig['event']][$callConfig['autoRemove']] ?? '';
             $metadata[$callConfig['id']] = [

@@ -11,6 +11,10 @@
     color: #1e293b;
 }
 
+.call-config-dashboard p {
+    max-width: 100% !important;
+}
+
 /* Eliminate default blue focus rings and set matching color glows */
 .call-config-dashboard button:focus,
 .call-config-dashboard .btn:focus,

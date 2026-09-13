@@ -4,12 +4,16 @@ namespace UWMadison\CallLog;
 
 use ExternalModules\AbstractExternalModule;
 use REDCap;
+use Project;
+use Throwable;
+use Piping;
 use UWMadison\CallLog\Services\ConfigService;
 use UWMadison\CallLog\Services\DateMathService;
 use UWMadison\CallLog\Services\CallGeneratorService;
 use UWMadison\CallLog\Services\CallQueryService;
 use UWMadison\CallLog\Services\InstrumentDeploymentService;
 use UWMadison\CallLog\Services\ApiService;
+use UWMadison\CallLog\Services\LoggingService;
 use UWMadison\CallLog\CallMetadataRepository;
 use UWMadison\CallLog\CallTemplateType;
 use UWMadison\CallLog\CallItemDTO;
@@ -57,16 +61,16 @@ class CallLog extends AbstractExternalModule
     private ?CallQueryService $queryService = null;
     private ?InstrumentDeploymentService $deploymentService = null;
     private ?ApiService $apiService = null;
-    private ?\UWMadison\CallLog\Services\LoggingService $loggingService = null;
+    private ?LoggingService $loggingService = null;
 
     public function getConfigService(): ConfigService
     {
         return $this->configService ??= new ConfigService($this);
     }
 
-    public function getLoggingService(): \UWMadison\CallLog\Services\LoggingService
+    public function getLoggingService(): LoggingService
     {
-        return $this->loggingService ??= new \UWMadison\CallLog\Services\LoggingService($this);
+        return $this->loggingService ??= new LoggingService($this);
     }
 
     public function getMetadataRepo(): CallMetadataRepository
@@ -137,12 +141,6 @@ class CallLog extends AbstractExternalModule
     {
         if (!defined("USERID") || empty($project_id)) return;
 
-        try {
-            $this->initGlobal((int)$project_id);
-        } catch (\Throwable $e) {
-            return;
-        }
-
         $cfg = $this->getConfigService();
         $showCallLogInstrument = $cfg->isSettingEnabled((int)$project_id, 'show_call_log_instrument', false);
         $showMetadataInstrument = $cfg->isSettingEnabled((int)$project_id, 'show_metadata_instrument', false);
@@ -174,8 +172,21 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             echo "<style id='callLogVisibilityHider'>" . implode("\n", $hidingCss) . "</style>";
         }
 
-        $this->includeJs('js/utils.js');
-        $this->includeJs('js/templates.js');
+        $isRelevantPage = $this->isPage('ExternalModules/')
+            || $this->isPage('DataEntry/record_home.php')
+            || $this->isPage('DataEntry/index.php')
+            || $this->isPage('ExternalModules/manager/project.php');
+
+        if ($isRelevantPage) {
+            try {
+                $this->initGlobal((int)$project_id);
+            } catch (Throwable $e) {
+                return;
+            }
+
+            $this->includeJs('js/utils.js');
+            $this->includeJs('js/templates.js');
+        }
 
         if ($this->isPage('ExternalModules/') && ($_GET['prefix'] ?? '') === 'call_log') {
             $page = $_GET['page'] ?? 'index';
@@ -240,7 +251,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
 
                 $pipedScript = (string)$script;
                 if (!empty($pipedScript) && class_exists('Piping')) {
-                    $pipedScript = \Piping::replaceVariablesInLabel($pipedScript, $record, null, null, [], false, $project_id);
+                    $pipedScript = Piping::replaceVariablesInLabel($pipedScript, $record, null, null, [], false, $project_id);
                 }
                 $callScripts[$cid] = $pipedScript;
             }
@@ -256,14 +267,14 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
 
         // Pass event context for client-side call_event_name / call_event population
         try {
-            $proj = new \Project($project_id);
+            $proj = new Project($project_id);
             $uniqueEventNames = $proj->getUniqueEventNames() ?: [];
             $currentEventId = (int)(
                 (isset($event_id) && $event_id > 0) ? $event_id :
                 (!empty($_GET['event_id']) ? $_GET['event_id'] : $proj->firstEventId)
             );
             $currentEventName = (string)($proj->getUniqueEventNames($currentEventId) ?: '');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $uniqueEventNames = [];
             $currentEventId = 0;
             $currentEventName = '';
@@ -368,9 +379,27 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
 
         switch ($action) {
             case "getData":
-                $callListRes = $this->getQueryService()->getCallListData($project_id);
-                $result['showCallback'] = $callListRes['showCallback'] ?? false;
-                $callListData = $callListRes['data'] ?? [];
+                $queryService = $this->getQueryService();
+                $includeCompleted = !empty($payload['includeCompleted']);
+                $includeExpired = !empty($payload['includeExpired']);
+                $clientVersion = $payload['clientVersion'] ?? null;
+                $force = !empty($payload['force']);
+
+                $serverVersion = $queryService->getCallDataVersion($project_id, $includeCompleted, $includeExpired);
+                $result['serverVersion'] = $serverVersion;
+
+                if (!$force && !empty($clientVersion) && $clientVersion === $serverVersion) {
+                    $result['changed'] = false;
+                    $callListData = null;
+                } else {
+                    $callListRes = $queryService->getCallListData($project_id, [
+                        'includeCompleted' => $includeCompleted,
+                        'includeExpired' => $includeExpired
+                    ]);
+                    $result['changed'] = true;
+                    $result['showCallback'] = $callListRes['showCallback'] ?? false;
+                    $callListData = $callListRes['data'] ?? [];
+                }
                 break;
             case "deployInstruments":
                 $eventId = isset($payload['event_id']) && $payload['event_id'] !== '' ? (int)$payload['event_id'] : null;
@@ -666,7 +695,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         $showMetadataInstrument = $cfg->isSettingEnabled($projectId, 'show_metadata_instrument', false);
 
         $data = json_encode([
-            "eventNameMap" => $this->getConfigService()->getEventNameMap(),
+            "eventNameMap" => $this->getConfigService()->getEventNameMap($projectId),
             "prefix" => $this->getPrefix(),
             "user" => $username,
             "userNameMap" => $this->getUserNameMap($projectId),
@@ -692,43 +721,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
 
     public function parseTimeTo24(?string $time): string
     {
-        if (empty($time)) return '00:00';
-        $t = trim(strtolower($time));
-        $isPm = false;
-        $isAm = false;
-        if (preg_match('/p\.?m?\.?$/i', $t)) {
-            $isPm = true;
-            $t = trim(preg_replace('/p\.?m?\.?$/i', '', $t));
-        } elseif (preg_match('/a\.?m?\.?$/i', $t)) {
-            $isAm = true;
-            $t = trim(preg_replace('/a\.?m?\.?$/i', '', $t));
-        }
-        if (strpos($t, ':') !== false || strpos($t, '.') !== false) {
-            $parts = preg_split('/[:.]/', $t);
-            $hours = (int)$parts[0];
-            $minutes = isset($parts[1]) ? (int)$parts[1] : 0;
-        } elseif (ctype_digit($t)) {
-            $len = strlen($t);
-            if ($len === 1 || $len === 2) {
-                $hours = (int)$t;
-                $minutes = 0;
-            } elseif ($len === 3) {
-                $hours = (int)substr($t, 0, 1);
-                $minutes = (int)substr($t, 1);
-            } elseif ($len === 4) {
-                $hours = (int)substr($t, 0, 2);
-                $minutes = (int)substr($t, 2);
-            } else {
-                return '00:00';
-            }
-        } else {
-            return '00:00';
-        }
-        if ($minutes < 0 || $minutes > 59) return '00:00';
-        if ($isPm && $hours < 12) $hours += 12;
-        if ($isAm && $hours === 12) $hours = 0;
-        if ($hours < 0 || $hours > 23) return '00:00';
-        return sprintf('%02d:%02d', $hours, $minutes);
+        return $this->getDateMathService()->parseTimeTo24($time);
     }
 
     private function metadataAdhoc(int $projectId, string $record, array $payload): bool
@@ -1020,7 +1013,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         try {
             $userObj = $this->getUser();
             $user = $userObj ? $userObj->getUsername() : (defined('USERID') ? USERID : '');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $user = defined('USERID') ? USERID : '';
         }
         foreach ($meta as $call) {

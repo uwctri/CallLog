@@ -7,6 +7,7 @@ use Project;
 use Design;
 use MetaData;
 use ExternalModules\ExternalModules;
+use UWMadison\CallLog\CallMetadataRepository;
 
 class InstrumentDeploymentService
 {
@@ -267,7 +268,7 @@ class InstrumentDeploymentService
         $targetEventId = $assignedEventId ?? (!empty($events) ? (int)array_key_first($events) : null);
 
         if ($targetEventId) {
-            if (isset($Proj) && method_exists($Proj, 'isRepeatingFormOrEvent')) {
+            if (isset($Proj)) {
                 $repeatableValid = (bool)$Proj->isRepeatingFormOrEvent($targetEventId, $this->instrumentCall);
             }
             if (!$repeatableValid) {
@@ -330,7 +331,7 @@ class InstrumentDeploymentService
 
         $events = $Proj->eventInfo ?? [];
         if (!$eventId) {
-            $repo = new \UWMadison\CallLog\CallMetadataRepository();
+            $repo = new CallMetadataRepository();
             $eventId = $repo->getEventOfInstrument($projectId, $this->instrumentCall);
             if (!$eventId && !empty($events)) {
                 $eventId = (int)array_key_first($events);

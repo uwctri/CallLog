@@ -1,6 +1,7 @@
 <?php
 // Full Call List Page
-/** @var \UWMadison\CallLog\CallLog $module */
+use UWMadison\CallLog\CallLog;
+/** @var CallLog $module */
 $projectId = (int)($_GET['pid'] ?? 0);
 if (empty($module->tabsConfig) && $projectId) {
     $module->tabsConfig = $module->getConfigService()->getTabConfig($projectId);
@@ -102,12 +103,74 @@ $activeTabId = (!empty($savedTab) && in_array($savedTab, $validTabIds, true))
                                         <input type="search" class="form-control form-control-sm customSearch" placeholder="Search calls..." :disabled="!dataLoaded || (!displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'] || displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'].length === 0)">
                                     </div>
 
-                                    <select class="form-select form-select-sm caller-filter-select" x-model="activeCallerFilter" :disabled="!dataLoaded || (!displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'] || displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'].length === 0)" style="width: auto; max-width: 220px;">
-                                        <option value="">-- All Callers / Users --</option>
-                                        <template x-for="caller in availableCallers" :key="caller">
-                                            <option :value="caller" x-text="caller"></option>
-                                        </template>
-                                    </select>
+                                    <div class="position-relative d-inline-block" x-data="{ openCallerFilter: false }" @click.outside="openCallerFilter = false">
+                                        <button type="button"
+                                                @click="openCallerFilter = !openCallerFilter"
+                                                class="btn btn-sm d-inline-flex align-items-center justify-content-center caller-filter-btn position-relative"
+                                                :class="{ 'active': openCallerFilter || selectedCallers.length > 0 }"
+                                                :disabled="!dataLoaded"
+                                                title="Filter by Caller / User">
+                                            <i class="fas fa-user-friends"></i>
+                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary" 
+                                                  x-show="selectedCallers.length > 0" 
+                                                  x-text="selectedCallers.length" 
+                                                  style="font-size: 0.62rem; padding: 0.22em 0.45em; display: none;"></span>
+                                        </button>
+                                        <div x-show="openCallerFilter"
+                                             x-transition
+                                             class="dropdown-menu show shadow-sm p-2 position-absolute end-0 mt-1 caller-filter-menu"
+                                             style="min-width: 250px; max-width: 320px; z-index: 1050; display: block;"
+                                             @click.stop>
+                                            <div class="px-2 pt-1 pb-2">
+                                                <div class="text-uppercase fw-bold text-muted mb-1" style="font-size: 0.68rem; letter-spacing: 0.5px;">Attempt Filter Mode</div>
+                                                <div class="btn-group btn-group-sm w-100 caller-mode-toggle" role="group">
+                                                    <button type="button" 
+                                                            class="btn btn-sm py-1 caller-mode-btn" 
+                                                            :class="callerFilterMode === 'attempted' ? 'btn-primary text-white active fw-medium' : 'btn-outline-secondary'" 
+                                                            @click="callerFilterMode = 'attempted'">
+                                                        Attempted
+                                                    </button>
+                                                    <button type="button" 
+                                                            class="btn btn-sm py-1 caller-mode-btn" 
+                                                            :class="callerFilterMode === 'never' ? 'btn-primary text-white active fw-medium' : 'btn-outline-secondary'" 
+                                                            @click="callerFilterMode = 'never'">
+                                                        Not Attempted
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <hr class="my-1 border-secondary-subtle">
+                                            <div class="d-flex align-items-center justify-content-between px-2 py-1">
+                                                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.68rem; letter-spacing: 0.5px;">Callers / Users</span>
+                                                <button type="button" 
+                                                        class="btn btn-link btn-xs p-0 text-decoration-none text-muted" 
+                                                        style="font-size: 0.72rem;"
+                                                        x-show="selectedCallers.length > 0" 
+                                                        @click="selectedCallers = []">
+                                                    Clear all
+                                                </button>
+                                            </div>
+                                            <div class="caller-checkbox-list" style="max-height: 200px; overflow-y: auto;">
+                                                <label class="dropdown-item d-flex align-items-center gap-2 py-1.5 px-2 rounded cursor-pointer mb-0">
+                                                    <input class="form-check-input mt-0" type="checkbox" value="__CURRENT_USER__" x-model="selectedCallers">
+                                                    <span class="small fw-semibold text-primary">★ Current User (Me)</span>
+                                                </label>
+                                                <template x-for="caller in availableCallers" :key="caller">
+                                                    <label class="dropdown-item d-flex align-items-center gap-2 py-1.5 px-2 rounded cursor-pointer mb-0">
+                                                        <input class="form-check-input mt-0" type="checkbox" :value="caller" x-model="selectedCallers">
+                                                        <span class="small fw-medium text-dark" x-text="caller"></span>
+                                                    </label>
+                                                </template>
+                                                <div x-show="availableCallers.length === 0" class="px-2 py-2 text-muted small text-center">
+                                                    No caller history found
+                                                </div>
+                                            </div>
+                                            <div class="px-2 pt-1 border-top mt-1" x-show="selectedCallers.length > 0">
+                                                <span class="text-muted" style="font-size: 0.72rem;">
+                                                    Showing calls <strong x-text="callerFilterMode === 'never' ? 'NOT attempted' : 'attempted'"></strong> by <span x-text="selectedCallers.length"></span> user(s)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     <div class="position-relative d-inline-block" x-data="{ openFilter: false }" @click.outside="openFilter = false">
                                         <button type="button"
@@ -169,7 +232,7 @@ $activeTabId = (!empty($savedTab) && in_array($savedTab, $validTabIds, true))
                                     There are currently no active calls queued for <strong><?php echo htmlspecialchars($tab["tab_name"]); ?></strong>. Any newly generated calls or scheduled appointments will appear here automatically.
                                 </p>
                                 <div>
-                                    <button type="button" @click="refreshTableData()" class="btn btn-sm px-3 shadow-xs empty-refresh-btn" :disabled="isRefreshing">
+                                    <button type="button" @click="refreshTableData(true)" class="btn btn-sm px-3 shadow-xs empty-refresh-btn" :disabled="isRefreshing">
                                         <i class="fas fa-sync-alt me-1" :class="{ 'fa-spin': isRefreshing }"></i> Refresh
                                     </button>
                                 </div>
@@ -204,7 +267,7 @@ $activeTabId = (!empty($savedTab) && in_array($savedTab, $validTabIds, true))
                     <span>Most recent data pull: <strong class="text-dark last-pull-time" x-text="lastDataPullText || 'Loading...'"></strong></span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" @click="refreshTableData()" class="btn btn-sm btn-link text-decoration-none text-secondary p-0 d-inline-flex align-items-center gap-1" :disabled="isRefreshing" title="Refresh call data now">
+                    <button type="button" @click="refreshTableData(true)" class="btn btn-sm btn-link text-decoration-none text-secondary p-0 d-inline-flex align-items-center gap-1" :disabled="isRefreshing" title="Refresh call data now">
                         <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
                         <span x-text="isRefreshing ? 'Refreshing...' : 'Refresh'"></span>
                     </button>

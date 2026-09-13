@@ -175,4 +175,51 @@ class DateMathService
 
         return $holidays;
     }
+
+    /**
+     * Parses a flexible time string (e.g. '345', '454pm', '14:30', '9.15am') into 24-hour 'HH:mm' format.
+     *
+     * @param string|null $time
+     * @return string
+     */
+    public function parseTimeTo24(?string $time): string
+    {
+        if (empty($time)) return '00:00';
+        $t = trim(strtolower($time));
+        $isPm = false;
+        $isAm = false;
+        if (preg_match('/p\.?m?\.?$/i', $t)) {
+            $isPm = true;
+            $t = trim(preg_replace('/p\.?m?\.?$/i', '', $t));
+        } elseif (preg_match('/a\.?m?\.?$/i', $t)) {
+            $isAm = true;
+            $t = trim(preg_replace('/a\.?m?\.?$/i', '', $t));
+        }
+        if (strpos($t, ':') !== false || strpos($t, '.') !== false) {
+            $parts = preg_split('/[:.]/', $t);
+            $hours = (int)$parts[0];
+            $minutes = isset($parts[1]) ? (int)$parts[1] : 0;
+        } elseif (ctype_digit($t)) {
+            $len = strlen($t);
+            if ($len === 1 || $len === 2) {
+                $hours = (int)$t;
+                $minutes = 0;
+            } elseif ($len === 3) {
+                $hours = (int)substr($t, 0, 1);
+                $minutes = (int)substr($t, 1);
+            } elseif ($len === 4) {
+                $hours = (int)substr($t, 0, 2);
+                $minutes = (int)substr($t, 2);
+            } else {
+                return '00:00';
+            }
+        } else {
+            return '00:00';
+        }
+        if ($minutes < 0 || $minutes > 59) return '00:00';
+        if ($isPm && $hours < 12) $hours += 12;
+        if ($isAm && $hours === 12) $hours = 0;
+        if ($hours < 0 || $hours > 23) return '00:00';
+        return sprintf('%02d:%02d', $hours, $minutes);
+    }
 }

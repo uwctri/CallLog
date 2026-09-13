@@ -2,6 +2,8 @@
 
 namespace UWMadison\CallLog\Services;
 
+use Throwable;
+
 class LoggingService
 {
     private $module;
@@ -34,10 +36,10 @@ class LoggingService
         }
 
         try {
-            if (is_object($this->module) && method_exists($this->module, 'log')) {
+            if (is_object($this->module)) {
                 return $this->module->log($message, $sanitized);
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Silently fall back to error_log to never interrupt critical workflow
             error_log("[CallLog] LoggingService failed: " . $e->getMessage());
         }

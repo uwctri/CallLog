@@ -5,6 +5,7 @@ namespace UWMadison\CallLog;
 use REDCap;
 use Project;
 use ExternalModules\ExternalModules;
+use Throwable;
 
 class CallMetadataRepository
 {
@@ -272,16 +273,10 @@ class CallMetadataRepository
             }
 
             $stats['uniqueCallers'] = count(array_unique(array_filter($callers)));
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Gracefully catch query failures
         }
 
         return $stats;
-    }
-
-    public function getTotalCallsCount(int $projectId): int
-    {
-        $stats = $this->getCallLogStats($projectId);
-        return $stats['totalCalls'] ?? 0;
     }
 }

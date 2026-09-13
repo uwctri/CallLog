@@ -108,16 +108,24 @@
         
         Alpine.data('callListDashboard', () => ({
             activeTab: '',
-            activeCallerFilter: '',
+            selectedCallers: [],
+            callerFilterMode: 'attempted',
+            currentCallerUsername: (typeof module !== 'undefined' && module.user ? String(module.user) : '').trim(),
+            currentCallerName: (typeof module !== 'undefined' && module.userNameMap && module.user && module.userNameMap[module.user]) 
+                ? String(module.userNameMap[module.user]).trim() 
+                : (typeof module !== 'undefined' && module.user ? String(module.user) : '').trim(),
             showTypes: {
                 active: true,
                 hidden: false,
                 expired: false,
                 completed: false
             },
+            hasLoadedCompleted: false,
+            hasLoadedExpired: false,
             availableCallers: [],
             displayedData: {},
             dataLoaded: false,
+            serverVersion: null,
             lastDataPullTime: null,
             lastDataPullText: '',
             isRefreshing: false,
@@ -129,6 +137,8 @@
             },
 
             init() {
+                this.hasLoadedCompleted = false;
+                this.hasLoadedExpired = false;
                 const tabs = (module.tabs && module.tabs.config) ? module.tabs.config : [];
                 let initialUnlocked = {};
                 tabs.forEach(t => {
@@ -153,17 +163,28 @@
                     this.activeTab = firstTabId;
                 }
 
-                if (savedState.callerFilter !== undefined) {
-                    this.activeCallerFilter = savedState.callerFilter;
+                if (Array.isArray(savedState.selectedCallers)) {
+                    this.selectedCallers = savedState.selectedCallers;
+                } else if (savedState.callerFilter) {
+                    this.selectedCallers = [savedState.callerFilter];
+                }
+                if (savedState.callerFilterMode && ['attempted', 'never'].includes(savedState.callerFilterMode)) {
+                    this.callerFilterMode = savedState.callerFilterMode;
                 }
 
                 if (savedState.showTypes && typeof savedState.showTypes === 'object') {
                     this.showTypes.active = savedState.showTypes.active !== undefined ? Boolean(savedState.showTypes.active) : true;
                     this.showTypes.hidden = Boolean(savedState.showTypes.hidden);
-                    this.showTypes.expired = Boolean(savedState.showTypes.expired);
-                    this.showTypes.completed = Boolean(savedState.showTypes.completed);
+                    // For large projects where Completed/Expired Exclusion is needed, completed and expired calls are ALWAYS disabled by default on page load, even if previously selected
+                    this.showTypes.expired = false;
+                    this.showTypes.completed = false;
                 } else if (savedState.hideCalls !== undefined) {
                     this.showTypes.hidden = !savedState.hideCalls;
+                    this.showTypes.expired = false;
+                    this.showTypes.completed = false;
+                } else {
+                    this.showTypes.expired = false;
+                    this.showTypes.completed = false;
                 }
 
                 this.setupDataTables();
@@ -172,7 +193,16 @@
 
                 setInterval(() => this.refreshTableData(), pageRefresh);
 
-                this.$watch('activeCallerFilter', () => {
+                this.$watch('selectedCallers', () => {
+                    $('.callTable').each((_, el) => {
+                        if ($.fn.DataTable.isDataTable(el)) {
+                            $(el).DataTable().draw(false);
+                        }
+                    });
+                    this.debouncePersist();
+                }, { deep: true });
+
+                this.$watch('callerFilterMode', () => {
                     $('.callTable').each((_, el) => {
                         if ($.fn.DataTable.isDataTable(el)) {
                             $(el).DataTable().draw(false);
@@ -181,14 +211,32 @@
                     this.debouncePersist();
                 });
 
+                let lastCompletedState = Boolean(this.showTypes && this.showTypes.completed);
+                let lastExpiredState = Boolean(this.showTypes && this.showTypes.expired);
                 this.$watch('showTypes', () => {
-                    this.updateStatusBadgeColVisibility();
-                    $('.callTable').each((_, el) => {
-                        if ($.fn.DataTable.isDataTable(el)) {
-                            $(el).DataTable().draw(false);
-                        }
-                    });
-                    this.debouncePersist();
+                    const currentCompletedState = Boolean(this.showTypes && this.showTypes.completed);
+                    const currentExpiredState = Boolean(this.showTypes && this.showTypes.expired);
+
+                    // Only trigger server fetch if turning ON completed or expired calls AND they haven't been loaded into memory yet.
+                    // If they are already in memory, or if turning them OFF, DataTables filters them client-side instantaneously.
+                    const needsCompletedFetch = currentCompletedState && !this.hasLoadedCompleted;
+                    const needsExpiredFetch = currentExpiredState && !this.hasLoadedExpired;
+                    const needsServerFetch = needsCompletedFetch || needsExpiredFetch;
+
+                    lastCompletedState = currentCompletedState;
+                    lastExpiredState = currentExpiredState;
+
+                    if (needsServerFetch) {
+                        this.refreshTableData(true);
+                    } else {
+                        this.updateStatusBadgeColVisibility();
+                        $('.callTable').each((_, el) => {
+                            if ($.fn.DataTable.isDataTable(el)) {
+                                $(el).DataTable().draw(false);
+                            }
+                        });
+                        this.debouncePersist();
+                    }
                 }, { deep: true });
             },
 
@@ -217,7 +265,6 @@
                             dt.columns.adjust().draw(false);
                         }
                     }
-                    this.toggleCallBackCol();
                     this.updateStatusBadgeColVisibility();
                 });
             },
@@ -229,8 +276,14 @@
             persistState() {
                 let state = getDashboardCookie() || {};
                 state.tab = this.activeTab;
-                state.callerFilter = this.activeCallerFilter;
-                state.showTypes = { ...this.showTypes };
+                state.selectedCallers = Array.isArray(this.selectedCallers) ? [...this.selectedCallers] : [];
+                state.callerFilterMode = this.callerFilterMode;
+                state.showTypes = {
+                    active: this.showTypes.active !== undefined ? Boolean(this.showTypes.active) : true,
+                    hidden: Boolean(this.showTypes.hidden),
+                    expired: false,
+                    completed: false
+                };
                 if (!state.tabs) state.tabs = {};
 
                 $('.callTable').each((_idx, el) => {
@@ -258,10 +311,6 @@
                 this.persistTimeout = setTimeout(() => {
                     this.persistState();
                 }, 200);
-            },
-
-            toggleCallBackCol() {
-                // Maintained for compatibility
             },
 
             createColConfig(tabIdOrIndex, ignoreUserSettings = false) {
@@ -884,6 +933,19 @@
                             rows.forEach(r => {
                                 if (r && String(r['_record_id']) === record && matchesCallId(r['_call_id'])) {
                                     Object.assign(r, changes);
+                                    if (changes._callStartedBy) {
+                                        if (!Array.isArray(r['_attemptedUsers'])) r['_attemptedUsers'] = [];
+                                        if (!r['_attemptedUsers'].includes(changes._callStartedBy)) {
+                                            r['_attemptedUsers'].push(changes._callStartedBy);
+                                        }
+                                        let cName = (typeof module !== 'undefined' && module.userNameMap && module.userNameMap[changes._callStartedBy]) 
+                                            ? module.userNameMap[changes._callStartedBy] 
+                                            : changes._callStartedBy;
+                                        if (!Array.isArray(r['_attemptedUserNames'])) r['_attemptedUserNames'] = [];
+                                        if (cName && !r['_attemptedUserNames'].includes(cName)) {
+                                            r['_attemptedUserNames'].push(cName);
+                                        }
+                                    }
                                 }
                             });
                         }
@@ -952,10 +1014,77 @@
                             return false;
                         }
 
-                        if (self.activeCallerFilter) {
-                            let caller = rowData['call_open_user_full_name'] || rowData['_callStartedBy'] || rowData['call_open_user'] || '';
-                            if (caller.trim() !== self.activeCallerFilter) {
-                                return false;
+                        if (Array.isArray(self.selectedCallers) && self.selectedCallers.length > 0) {
+                            let targetIdentifiers = new Set();
+
+                            self.selectedCallers.forEach(filterVal => {
+                                if (filterVal === '__CURRENT_USER__') {
+                                    if (self.currentCallerUsername) targetIdentifiers.add(self.currentCallerUsername.toLowerCase());
+                                    if (self.currentCallerName) targetIdentifiers.add(self.currentCallerName.toLowerCase());
+                                } else if (filterVal) {
+                                    targetIdentifiers.add(filterVal.toLowerCase());
+                                    if (typeof module !== 'undefined' && module.userNameMap) {
+                                        for (let [uname, fullname] of Object.entries(module.userNameMap)) {
+                                            if (fullname && fullname.toLowerCase() === filterVal.toLowerCase()) {
+                                                targetIdentifiers.add(uname.toLowerCase());
+                                            }
+                                            if (uname && uname.toLowerCase() === filterVal.toLowerCase()) {
+                                                if (fullname) targetIdentifiers.add(fullname.toLowerCase());
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+
+                            // Collect all users/names who have made an attempt on this call
+                            let rowAttempted = new Set();
+                            if (Array.isArray(rowData['_attemptedUsers'])) {
+                                rowData['_attemptedUsers'].forEach(u => {
+                                    if (u) {
+                                        let uStr = String(u).trim().toLowerCase();
+                                        rowAttempted.add(uStr);
+                                        if (typeof module !== 'undefined' && module.userNameMap && module.userNameMap[u]) {
+                                            rowAttempted.add(String(module.userNameMap[u]).trim().toLowerCase());
+                                        }
+                                    }
+                                });
+                            }
+                            if (Array.isArray(rowData['_attemptedUserNames'])) {
+                                rowData['_attemptedUserNames'].forEach(n => {
+                                    if (n) rowAttempted.add(String(n).trim().toLowerCase());
+                                });
+                            }
+
+                            // Also include current active caller if call is started/opened
+                            let currentStarter = rowData['_callStartedBy'] || rowData['call_open_user'] || '';
+                            if (currentStarter) {
+                                let cStr = String(currentStarter).trim().toLowerCase();
+                                rowAttempted.add(cStr);
+                                if (typeof module !== 'undefined' && module.userNameMap && module.userNameMap[currentStarter]) {
+                                    rowAttempted.add(String(module.userNameMap[currentStarter]).trim().toLowerCase());
+                                }
+                            }
+                            let currentName = rowData['call_open_user_full_name'] || '';
+                            if (currentName) {
+                                rowAttempted.add(String(currentName).trim().toLowerCase());
+                            }
+
+                            let hasAttempted = false;
+                            for (let target of targetIdentifiers) {
+                                if (rowAttempted.has(target)) {
+                                    hasAttempted = true;
+                                    break;
+                                }
+                            }
+
+                            if (self.callerFilterMode === 'never') {
+                                if (hasAttempted) {
+                                    return false;
+                                }
+                            } else {
+                                if (!hasAttempted) {
+                                    return false;
+                                }
                             }
                         }
                         return true;
@@ -1638,15 +1767,42 @@
                 });
             },
 
-            refreshTableData() {
+            refreshTableData(force = false) {
                 const self = this;
                 this.isRefreshing = true;
-                module.ajax("getData", {}).then((response) => {
+
+                const incCompleted = Boolean(this.hasLoadedCompleted || (this.showTypes && this.showTypes.completed));
+                const incExpired = Boolean(this.hasLoadedExpired || (this.showTypes && this.showTypes.expired));
+
+                const payload = {
+                    includeCompleted: incCompleted,
+                    includeExpired: incExpired,
+                    clientVersion: force ? null : this.serverVersion,
+                    force: Boolean(force)
+                };
+
+                module.ajax("getData", payload).then((response) => {
                     this.isRefreshing = false;
                     this.lastDataPullTime = new Date();
                     this.lastDataPullText = formatDateTime(this.lastDataPullTime, true);
 
                     if (!response) return;
+
+                    if (incCompleted) {
+                        this.hasLoadedCompleted = true;
+                    }
+                    if (incExpired) {
+                        this.hasLoadedExpired = true;
+                    }
+
+                    // If server reports no changes since clientVersion, keep existing data intact
+                    if (response.changed === false) {
+                        return;
+                    }
+
+                    if (response.serverVersion) {
+                        this.serverVersion = response.serverVersion;
+                    }
 
                     let rawData = response.data !== undefined ? response.data : response;
                     if (rawData && rawData.data && !Array.isArray(rawData.data)) {
@@ -1658,8 +1814,26 @@
                     Object.values(this.displayedData).forEach(tabRows => {
                         if (Array.isArray(tabRows)) {
                             tabRows.forEach(row => {
-                                let caller = row['call_open_user_full_name'] || row['_callStartedBy'] || row['call_open_user'] || '';
-                                if (caller && caller.trim()) callers.add(caller.trim());
+                                if (Array.isArray(row['_attemptedUserNames'])) {
+                                    row['_attemptedUserNames'].forEach(n => {
+                                        if (n && n.trim()) callers.add(n.trim());
+                                    });
+                                }
+                                if (Array.isArray(row['_attemptedUsers'])) {
+                                    row['_attemptedUsers'].forEach(u => {
+                                        let name = (typeof module !== 'undefined' && module.userNameMap && module.userNameMap[u]) 
+                                            ? module.userNameMap[u] 
+                                            : u;
+                                        if (name && name.trim()) callers.add(name.trim());
+                                    });
+                                }
+                                let current = row['call_open_user_full_name'] || row['_callStartedBy'] || row['call_open_user'] || '';
+                                if (current && current.trim()) {
+                                    let name = (typeof module !== 'undefined' && module.userNameMap && module.userNameMap[current])
+                                        ? module.userNameMap[current]
+                                        : current;
+                                    callers.add(name.trim());
+                                }
                             });
                         }
                     });
@@ -1739,8 +1913,6 @@
                             }
                         });
                     });
-
-                    this.toggleCallBackCol();
                 }).catch((err) => {
                     console.error("Error fetching call list data:", err);
                     this.isRefreshing = false;
