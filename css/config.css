@@ -53,6 +53,32 @@
     box-shadow: 0 0 0 0.2rem rgba(13, 202, 240, 0.25) !important;
 }
 
+/* Yellow Reset Button with Smooth Contrast Hover */
+.btn-warning-reset {
+    color: #78350f !important;
+    background-color: #fef3c7 !important;
+    border: 1px solid #f59e0b !important;
+    font-weight: 500;
+    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out !important;
+}
+
+.btn-warning-reset:hover,
+.btn-warning-reset:focus {
+    color: #ffffff !important;
+    background-color: #d97706 !important;
+    border-color: #b45309 !important;
+}
+
+.btn-warning-reset:hover i,
+.btn-warning-reset:focus i {
+    color: #ffffff !important;
+}
+
+.btn-warning-reset:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
 /* Custom Navigation Pills */
 .custom-nav-pills {
     display: flex;

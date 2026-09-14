@@ -57,6 +57,11 @@ if (typeof tinymce === 'undefined') {
                 <i class="fas fa-route me-2"></i> Workflow
             </button>
         </li>
+        <li>
+            <button type="button" class="custom-nav-pill" :class="{ 'active': activeTab === 'reports' }" @click="activeTab = 'reports'">
+                <i class="fas fa-chart-line me-2"></i> Reports & Analytics
+            </button>
+        </li>
     </ul>
 
     <!-- Tab Content -->
@@ -1512,164 +1517,645 @@ if (typeof tinymce === 'undefined') {
                 </div>
             </div>
 
-            <!-- Modify Call Log Form (Placeholder Area) -->
+            <!-- Call Log Features -->
             <div class="card border shadow-sm mb-4 rounded-3">
-                <div class="card-header bg-light border-bottom fw-bold py-3 px-4 text-dark d-flex align-items-center justify-content-between">
-                    <div>
-                        <i class="fas fa-edit text-secondary me-2"></i> Modify Call Log Form
-                    </div>
-                    <span class="badge bg-warning text-dark border small fw-semibold">Placeholder</span>
+                <div class="card-header bg-light border-bottom fw-bold py-3 px-4 text-dark">
+                    <i class="fas fa-sliders-h text-primary me-2"></i> Call Log Features
                 </div>
                 <div class="card-body p-4">
-                    <div class="d-flex align-items-start mb-4">
-                        <div class="rounded-circle bg-light border p-3 me-3 text-secondary">
-                            <i class="fas fa-sliders-h fa-2x"></i>
+                    <!-- Form Customization Guidance -->
+                    <div class="setting-blurb mb-3">
+                        You are free to customize and extend the <strong>Call Log</strong> instrument in REDCap's Online Designer by adding survey items, participant checklists, or custom notes fields.
+                        However, certain core variables (such as <code>call_id</code>, <code>call_template</code>, timestamps, <code>call_outcome</code>, and <code>call_notes</code>) are native to the Call Log module and required for attempt tracking and call history.
+                    </div>
+
+                    <!-- Call Duration Stopwatch Widget -->
+                    <div class="border-top pt-3 mb-3">
+                        <div class="form-check form-switch mb-1">
+                            <input class="form-check-input me-2 cursor-pointer" type="checkbox" id="cfg_enable_call_timer" x-model="enableCallTimer">
+                            <label class="form-check-label fw-bold text-dark cursor-pointer" for="cfg_enable_call_timer">
+                                Display Call Duration Stopwatch Widget During Calls
+                            </label>
                         </div>
-                        <div>
-                            <h6 class="fw-bold text-dark mb-1">Call Log Form Customization Preview</h6>
-                            <p class="text-muted small mb-0" style="line-height: 1.5;">
-                                This area is a visual preview of upcoming controls for tailoring the Call Log form fields, question order, and required rules directly from this settings page. The controls below are non-functional placeholders—all active form fields are currently configured in REDCap's Project Setup / Online Designer under the <code>call_log</code> instrument.
-                            </p>
+                        <div class="setting-blurb text-muted small ps-4" style="line-height: 1.5;">
+                            Renders an interactive stopwatch widget positioned directly below the participant call history table while on a call. Callers can start, pause, resume, and record call durations in real time, with automatic state preservation when switching between call tabs.
                         </div>
                     </div>
 
-                    <!-- Fake Config Subsection: General Form Behaviors -->
-                    <div class="bg-light border rounded-3 p-3 mb-4">
-                        <div class="fw-semibold text-dark small mb-2 d-flex align-items-center">
-                            <i class="fas fa-toggle-on text-primary me-2"></i> Form Behavior Options (Preview)
+                    <!-- Native Fields Reference Table & Reset Action -->
+                    <div class="border-top pt-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-end mb-2 gap-2">
+                            <div class="fw-bold text-dark small mb-1">
+                                <i class="fas fa-cubes text-primary me-1.5"></i> Native Call Log Fields Reference
+                                <span class="badge bg-light text-muted border ms-1 font-monospace" style="font-size: 0.75rem;">26 fields</span>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-sm btn-warning-reset" @click="resetCallLogInstrument()" :disabled="resettingInstrument">
+                                    <i class="fas fa-sync-alt me-1" :class="{ 'fa-spin': resettingInstrument }"></i>
+                                    <span x-text="resettingInstrument ? 'Resetting...' : 'Reset Fields'"></span>
+                                </button>
+                                <div class="text-muted mt-1" style="font-size: 0.75rem;">
+                                    <i class="fas fa-shield-alt text-success me-1"></i>Preserves custom fields
+                                </div>
+                            </div>
                         </div>
-                        <div class="row g-3 text-muted small">
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="ph_auto_timestamps" checked disabled>
-                                    <label class="form-check-label" for="ph_auto_timestamps">
-                                        Auto-capture call start and end timestamps
-                                    </label>
-                                </div>
+                        <div class="border rounded-2 bg-white">
+                            <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                                <table class="table table-sm table-hover align-middle mb-0 text-muted" style="font-size: 0.825rem;">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th style="width: 35px;" class="ps-3">#</th>
+                                            <th>Field Label</th>
+                                            <th>Variable Name</th>
+                                            <th>Type</th>
+                                            <th class="text-center" style="width: 130px;">Role</th>
+                                            <th class="text-center pe-3" style="width: 110px;">Visibility</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="ps-3">1</td>
+                                            <td class="fw-semibold text-dark">Call Template</td>
+                                            <td><code>call_template</code></td>
+                                            <td>Dropdown</td>
+                                            <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Native Required</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-secondary-subtle text-muted border">Hidden</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">2</td>
+                                            <td class="fw-semibold text-dark">Call ID</td>
+                                            <td><code>call_id</code></td>
+                                            <td>Text</td>
+                                            <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Native Required</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-secondary-subtle text-muted border">Hidden</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">3</td>
+                                            <td class="fw-semibold text-dark">Call Event</td>
+                                            <td><code>call_event_name</code></td>
+                                            <td>Text</td>
+                                            <td class="text-center"><span class="badge bg-info-subtle text-info border border-info-subtle">Core Native</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-secondary-subtle text-muted border">Hidden</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">4</td>
+                                            <td class="fw-semibold text-dark">Call Attempt</td>
+                                            <td><code>call_attempt</code></td>
+                                            <td>Text</td>
+                                            <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Native Required</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-secondary-subtle text-muted border">Hidden</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">5</td>
+                                            <td class="fw-semibold text-dark">Call Open Date</td>
+                                            <td><code>call_open_date</code></td>
+                                            <td>Date (@TODAY)</td>
+                                            <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Native Required</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-secondary-subtle text-muted border">Hidden</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">6</td>
+                                            <td class="fw-semibold text-dark">Call Open Time</td>
+                                            <td><code>call_open_time</code></td>
+                                            <td>Time (@NOW)</td>
+                                            <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Native Required</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-secondary-subtle text-muted border">Hidden</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">7</td>
+                                            <td class="fw-semibold text-dark">Call Open Datetime</td>
+                                            <td><code>call_open_datetime</code></td>
+                                            <td>Datetime (@NOW)</td>
+                                            <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Native Required</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-secondary-subtle text-muted border">Hidden</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">8</td>
+                                            <td class="fw-semibold text-dark">Call Open User</td>
+                                            <td><code>call_open_user</code></td>
+                                            <td>Text (@USERNAME)</td>
+                                            <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Native Required</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-secondary-subtle text-muted border">Hidden</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">9</td>
+                                            <td class="fw-semibold text-dark">Call Open User Full Name</td>
+                                            <td><code>call_open_user_full_name</code></td>
+                                            <td>Text</td>
+                                            <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Native Required</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-secondary-subtle text-muted border">Hidden</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">10</td>
+                                            <td class="fw-semibold text-dark">Call Log Title Header</td>
+                                            <td><code>call_hdr_title</code></td>
+                                            <td>Descriptive</td>
+                                            <td class="text-center"><span class="badge bg-secondary-subtle text-secondary border">Structure / UI</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">11</td>
+                                            <td class="fw-semibold text-dark">Call Details Header</td>
+                                            <td><code>call_hdr_details</code></td>
+                                            <td>Descriptive</td>
+                                            <td class="text-center"><span class="badge bg-secondary-subtle text-secondary border">Structure / UI</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">12</td>
+                                            <td class="fw-semibold text-dark">Call Info Summary Table</td>
+                                            <td><code>call_hdr_call_info_table</code></td>
+                                            <td>Descriptive</td>
+                                            <td class="text-center"><span class="badge bg-secondary-subtle text-secondary border">Structure / UI</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">13</td>
+                                            <td class="fw-semibold text-dark">Call Script Header</td>
+                                            <td><code>call_hdr_script</code></td>
+                                            <td>Descriptive</td>
+                                            <td class="text-center"><span class="badge bg-secondary-subtle text-secondary border">Structure / UI</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">14</td>
+                                            <td class="fw-semibold text-dark">Call Script Dynamic Display</td>
+                                            <td><code>call_script</code></td>
+                                            <td>Descriptive</td>
+                                            <td class="text-center"><span class="badge bg-info-subtle text-info border border-info-subtle">Dynamic Script</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">15</td>
+                                            <td class="fw-semibold text-dark">Subject Answered phone</td>
+                                            <td><code>call_answered</code></td>
+                                            <td>Checkbox</td>
+                                            <td class="text-center"><span class="badge bg-info-subtle text-info border border-info-subtle">Core Native</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">16</td>
+                                            <td class="fw-semibold text-dark">Phone Disconnected / Not in Service</td>
+                                            <td><code>call_disconnected</code></td>
+                                            <td>Checkbox</td>
+                                            <td class="text-center"><span class="badge bg-info-subtle text-info border border-info-subtle">Core Native</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">17</td>
+                                            <td class="fw-semibold text-dark">Disconnected Notice Alert</td>
+                                            <td><code>call_text_disconnect</code></td>
+                                            <td>Descriptive</td>
+                                            <td class="text-center"><span class="badge bg-warning-subtle text-dark border border-warning-subtle">Advisory Notice</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-info-subtle text-info border border-info-subtle">Conditional</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">18</td>
+                                            <td class="fw-semibold text-dark">Left a Message</td>
+                                            <td><code>call_left_message</code></td>
+                                            <td>Checkbox</td>
+                                            <td class="text-center"><span class="badge bg-info-subtle text-info border border-info-subtle">Core Native</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-info-subtle text-info border border-info-subtle">Conditional</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">19</td>
+                                            <td class="fw-semibold text-dark">Set Callback</td>
+                                            <td><code>call_requested_callback</code></td>
+                                            <td>Checkbox</td>
+                                            <td class="text-center"><span class="badge bg-info-subtle text-info border border-info-subtle">Core Native</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">20</td>
+                                            <td class="fw-semibold text-dark">Callback Requested by</td>
+                                            <td><code>call_callback_requested_by</code></td>
+                                            <td>Radio</td>
+                                            <td class="text-center"><span class="badge bg-info-subtle text-info border border-info-subtle">Core Native</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-info-subtle text-info border border-info-subtle">Conditional</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">21</td>
+                                            <td class="fw-semibold text-dark">Callback Date</td>
+                                            <td><code>call_callback_date</code></td>
+                                            <td>Date (@TOMORROWBUTTON)</td>
+                                            <td class="text-center"><span class="badge bg-info-subtle text-info border border-info-subtle">Core Native</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-info-subtle text-info border border-info-subtle">Conditional</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">22</td>
+                                            <td class="fw-semibold text-dark">Callback Time</td>
+                                            <td><code>call_callback_time</code></td>
+                                            <td>Time (@HIDEBUTTON)</td>
+                                            <td class="text-center"><span class="badge bg-info-subtle text-info border border-info-subtle">Core Native</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-info-subtle text-info border border-info-subtle">Conditional</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">23</td>
+                                            <td class="fw-semibold text-dark">Call Log Outcome</td>
+                                            <td><code>call_outcome</code></td>
+                                            <td>Radio</td>
+                                            <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Native Required</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">24</td>
+                                            <td class="fw-semibold text-dark">Task(s) Remaining</td>
+                                            <td><code>call_task_remaining</code></td>
+                                            <td>Checkbox</td>
+                                            <td class="text-center"><span class="badge bg-info-subtle text-info border border-info-subtle">Core Native</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-info-subtle text-info border border-info-subtle">Conditional</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">25</td>
+                                            <td class="fw-semibold text-dark">Call Notes</td>
+                                            <td><code>call_notes</code></td>
+                                            <td>Notes</td>
+                                            <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Native Required</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-3">26</td>
+                                            <td class="fw-semibold text-dark">End Of Call Log Footer</td>
+                                            <td><code>call_hdr_end</code></td>
+                                            <td>Descriptive</td>
+                                            <td class="text-center"><span class="badge bg-secondary-subtle text-secondary border">Structure / UI</span></td>
+                                            <td class="text-center pe-3"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="ph_require_outcome" checked disabled>
-                                    <label class="form-check-label" for="ph_require_outcome">
-                                        Require staff to select a contact outcome before saving
-                                    </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Tab 6: Reports & Analytics -->
+        <div class="tab-pane fade show active" x-show="activeTab === 'reports'" x-cloak>
+            
+            <!-- Controls Bar -->
+            <div class="card border shadow-sm mb-4 rounded-3 bg-white">
+                <div class="card-body py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fw-bold text-dark small"><i class="fas fa-filter text-primary me-1.5"></i> Timeframe:</span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn" :class="reportTimeframe === '7d' ? 'btn-primary fw-bold' : 'btn-outline-secondary'" @click="setReportTimeframe('7d')">Last 7 Days</button>
+                            <button type="button" class="btn" :class="reportTimeframe === '30d' ? 'btn-primary fw-bold' : 'btn-outline-secondary'" @click="setReportTimeframe('30d')">Last 30 Days</button>
+                            <button type="button" class="btn" :class="reportTimeframe === '90d' ? 'btn-primary fw-bold' : 'btn-outline-secondary'" @click="setReportTimeframe('90d')">Last 90 Days</button>
+                            <button type="button" class="btn" :class="reportTimeframe === 'all' ? 'btn-primary fw-bold' : 'btn-outline-secondary'" @click="setReportTimeframe('all')">All Time</button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" @click="loadReportsData()" class="btn btn-outline-primary btn-sm px-3 shadow-sm d-inline-flex align-items-center" :disabled="reportsLoading">
+                            <i class="fas fa-sync-alt me-1.5" :class="{ 'fa-spin': reportsLoading }"></i>
+                            <span>Refresh</span>
+                        </button>
+                        <button type="button" @click="exportReportsCsv()" class="btn btn-outline-success btn-sm px-3 shadow-sm d-inline-flex align-items-center" :disabled="reportsLoading || !reportsData">
+                            <i class="fas fa-file-csv me-1.5"></i>
+                            <span>Export CSV</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div x-show="reportsLoading && !reportsData" class="text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+                <div class="text-muted fw-semibold">Crunching report analytics & caller stats...</div>
+            </div>
+
+            <!-- Reports Content -->
+            <div x-show="reportsData" x-transition>
+                
+                <!-- KPI Overview Cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="card border shadow-sm h-100 bg-white rounded-3">
+                            <div class="card-body py-3 px-3">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <span class="text-muted small fw-semibold text-uppercase tracking-wider">Logged Attempts</span>
+                                    <div class="rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                                        <i class="fas fa-headset"></i>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="ph_phone_banner" checked disabled>
-                                    <label class="form-check-label" for="ph_phone_banner">
-                                        Show participant phone numbers in a sticky header
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="ph_timer_widget" disabled>
-                                    <label class="form-check-label" for="ph_timer_widget">
-                                        Display call duration stopwatch widget during call
-                                    </label>
-                                </div>
+                                <h3 class="fw-bold mb-1 text-dark" x-text="totalReportAttempts">0</h3>
+                                <span class="text-muted small">Call instances logged</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Fake Config Subsection: Field Order & Visibility Table -->
-                    <div class="border rounded-3 p-3 mb-3 bg-white">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div class="fw-semibold text-dark small">
-                                <i class="fas fa-list-ol text-primary me-2"></i> Form Fields & Ordering (Preview)
+                    <div class="col-6 col-md-3">
+                        <div class="card border shadow-sm h-100 bg-white rounded-3">
+                            <div class="card-body py-3 px-3">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <span class="text-muted small fw-semibold text-uppercase tracking-wider">Completed Calls</span>
+                                    <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                                        <i class="fas fa-check-double"></i>
+                                    </div>
+                                </div>
+                                <h3 class="fw-bold mb-1 text-success" x-text="reportsData?.queueSummary?.completedCalls || 0">0</h3>
+                                <span class="text-muted small" x-text="(reportsData?.queueSummary?.completionPercentage || 0) + '% overall completion rate'"></span>
                             </div>
-                            <span class="badge bg-light text-muted border small">7 Fields Configured</span>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover align-middle mb-0 small text-muted">
-                                <thead class="table-light">
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <div class="card border shadow-sm h-100 bg-white rounded-3">
+                            <div class="card-body py-3 px-3">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <span class="text-muted small fw-semibold text-uppercase tracking-wider">Expired Reminders</span>
+                                    <div class="rounded-circle bg-danger bg-opacity-10 text-danger d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                                        <i class="fas fa-calendar-times"></i>
+                                    </div>
+                                </div>
+                                <h3 class="fw-bold mb-1 text-danger" x-text="reportsData?.queueSummary?.expiredReminders || 0">0</h3>
+                                <span class="text-muted small">Passed without outreach</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <div class="card border shadow-sm h-100 bg-white rounded-3">
+                            <div class="card-body py-3 px-3">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <span class="text-muted small fw-semibold text-uppercase tracking-wider">Hourly Cron Health</span>
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                                         :class="reportsData?.cronDiagnostics?.temporalCron?.status === 'healthy' ? 'bg-success bg-opacity-10 text-success' : 'bg-warning bg-opacity-10 text-warning'"
+                                         style="width: 34px; height: 34px;">
+                                        <i class="fas" :class="reportsData?.cronDiagnostics?.temporalCron?.status === 'healthy' ? 'fa-check' : 'fa-exclamation-triangle'"></i>
+                                    </div>
+                                </div>
+                                <h5 class="fw-bold mb-1 text-dark" x-text="reportsData?.cronDiagnostics?.temporalCron?.status === 'healthy' ? 'Active & Healthy' : (reportsData?.cronDiagnostics?.temporalCron?.status === 'warning' ? 'Needs Attention' : 'Idle')">Active</h5>
+                                <span class="text-muted small" x-text="'Last run: ' + (reportsData?.cronDiagnostics?.temporalCron?.lastRunFormatted || 'Never')"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Layout: Left = Caller Productivity, Right = Queue Breakdown & Cron -->
+                <div class="row g-4 mb-4">
+                    
+                    <!-- Caller Productivity Table -->
+                    <div class="col-lg-8">
+                        <div class="card border shadow-sm rounded-3 h-100 bg-white">
+                            <div class="card-header bg-light border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                                <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                                    <i class="fas fa-users text-primary"></i>
+                                    <span>Caller Productivity & Effort</span>
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" x-text="(sortedCallers.length) + ' Team Members'"></span>
+                            </div>
+                            <div class="card-body p-0 table-responsive">
+                                <table class="table table-hover align-middle mb-0 small">
+                                    <thead class="table-light text-muted">
+                                        <tr>
+                                            <th class="ps-4" style="cursor: pointer;" @click="sortReportBy('displayName')">
+                                                Team Member <i class="fas fa-sort ms-1 opacity-50"></i>
+                                            </th>
+                                            <th class="text-center" style="cursor: pointer;" @click="sortReportBy('attempts')">
+                                                Attempts <i class="fas fa-sort ms-1 opacity-50"></i>
+                                            </th>
+                                            <th class="text-center" style="cursor: pointer;" @click="sortReportBy('completed')">
+                                                Completed <i class="fas fa-sort ms-1 opacity-50"></i>
+                                            </th>
+                                            <th class="text-center" style="cursor: pointer;" @click="sortReportBy('completionRate')">
+                                                Success Rate <i class="fas fa-sort ms-1 opacity-50"></i>
+                                            </th>
+                                            <th class="text-center" style="cursor: pointer;" @click="sortReportBy('voicemails')">
+                                                Voicemails <i class="fas fa-sort ms-1 opacity-50"></i>
+                                            </th>
+                                            <th class="text-center pe-4" style="cursor: pointer;" @click="sortReportBy('callbacksScheduled')">
+                                                Callbacks Set <i class="fas fa-sort ms-1 opacity-50"></i>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-if="sortedCallers.length === 0">
+                                            <tr>
+                                                <td colspan="6" class="text-center py-4 text-muted">
+                                                    <i class="fas fa-inbox fa-2x mb-2 opacity-50 d-block"></i>
+                                                    No call attempts or completions logged for this timeframe.
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <template x-for="user in sortedCallers" :key="user.username">
+                                            <tr>
+                                                <td class="ps-4">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                                             :class="user.isAutomation ? 'bg-secondary' : 'bg-primary'"
+                                                             style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                                            <span x-text="user.isAutomation ? 'R' : user.displayName.charAt(0).toUpperCase()"></span>
+                                                        </div>
+                                                        <div>
+                                                            <div class="fw-bold text-dark" x-text="user.displayName"></div>
+                                                            <span class="text-muted" style="font-size: 0.75rem;" x-text="user.isAutomation ? 'Automated Logic' : '@' + user.username"></span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center fw-semibold" x-text="user.attempts"></td>
+                                                <td class="text-center fw-semibold text-success" x-text="user.completed"></td>
+                                                <td class="text-center">
+                                                    <div class="d-flex align-items-center justify-content-center gap-1.5">
+                                                        <div class="progress flex-grow-1" style="height: 6px; max-width: 60px;">
+                                                            <div class="progress-bar bg-success" role="progressbar" :style="'width: ' + user.completionRate + '%'"></div>
+                                                        </div>
+                                                        <span class="fw-bold" x-text="user.completionRate + '%'"></span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center text-muted" x-text="user.voicemails"></td>
+                                                <td class="text-center pe-4 text-muted" x-text="user.callbacksScheduled"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Call Queue & Pipeline Distribution -->
+                    <div class="col-lg-4">
+                        <div class="card border shadow-sm rounded-3 mb-4 bg-white">
+                            <div class="card-header bg-light border-bottom py-3 px-4 fw-bold text-dark">
+                                <i class="fas fa-chart-pie text-primary me-2"></i> Queue Status Distribution
+                            </div>
+                            <div class="card-body p-4">
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between small fw-bold mb-1">
+                                        <span class="text-primary"><i class="fas fa-clock me-1"></i> Active / Open</span>
+                                        <span x-text="reportsData?.queueSummary?.activeCalls || 0"></span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-primary" :style="'width: ' + ((reportsData?.queueSummary?.activeCalls / (reportsData?.queueSummary?.totalCalls || 1)) * 100) + '%'"></div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between small fw-bold mb-1">
+                                        <span class="text-success"><i class="fas fa-check-circle me-1"></i> Completed</span>
+                                        <span x-text="reportsData?.queueSummary?.completedCalls || 0"></span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-success" :style="'width: ' + ((reportsData?.queueSummary?.completedCalls / (reportsData?.queueSummary?.totalCalls || 1)) * 100) + '%'"></div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between small fw-bold mb-1">
+                                        <span class="text-danger"><i class="fas fa-times-circle me-1"></i> Expired</span>
+                                        <span x-text="reportsData?.queueSummary?.expiredCalls || 0"></span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-danger" :style="'width: ' + ((reportsData?.queueSummary?.expiredCalls / (reportsData?.queueSummary?.totalCalls || 1)) * 100) + '%'"></div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-3 border-top d-flex justify-content-between text-muted small">
+                                    <span>Average Attempts per Call:</span>
+                                    <span class="fw-bold text-dark" x-text="reportsData?.queueSummary?.avgAttemptsPerCall || '0'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Template Breakdown Table -->
+                        <div class="card border shadow-sm rounded-3 bg-white">
+                            <div class="card-header bg-light border-bottom py-3 px-4 fw-bold text-dark">
+                                <i class="fas fa-layer-group text-primary me-2"></i> Breakdown by Call Template
+                            </div>
+                            <div class="card-body p-0 table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0 small">
+                                    <thead class="table-light text-muted">
+                                        <tr>
+                                            <th class="ps-3">Template</th>
+                                            <th class="text-center">Active</th>
+                                            <th class="text-center">Done</th>
+                                            <th class="text-center pe-3">Expired</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="(tplStats, tplKey) in (reportsData?.queueSummary?.byTemplate || {})" :key="tplKey">
+                                            <tr>
+                                                <td class="ps-3 fw-semibold text-capitalize text-dark" x-text="tplKey === 'mcv' ? 'Missed Visit' : (tplKey === 'nts' ? 'Need to Schedule' : tplKey)"></td>
+                                                <td class="text-center text-primary fw-bold" x-text="tplStats.active"></td>
+                                                <td class="text-center text-success" x-text="tplStats.complete"></td>
+                                                <td class="text-center pe-3 text-danger" x-text="tplStats.expired"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Automation & Cron Diagnostics Section -->
+                <div class="card border shadow-sm rounded-3 bg-white mb-4">
+                    <div class="card-header bg-light border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+                        <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                            <i class="fas fa-robot text-primary"></i>
+                            <span>Automation & Cron Diagnostics</span>
+                        </div>
+                        <span class="text-muted small"><i class="fas fa-info-circle me-1"></i> Background lifecycle health</span>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-4 mb-4">
+                            <!-- Hourly Temporal Cron Diagnostic -->
+                            <div class="col-md-6">
+                                <div class="border rounded-3 p-3 bg-light bg-opacity-50 h-100">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-history text-primary"></i>
+                                            <h6 class="fw-bold mb-0 text-dark">Hourly Temporal Lifecycle Cron</h6>
+                                        </div>
+                                        <span class="badge" :class="reportsData?.cronDiagnostics?.temporalCron?.status === 'healthy' ? 'bg-success text-white' : 'bg-warning text-dark'"
+                                              x-text="reportsData?.cronDiagnostics?.temporalCron?.status === 'healthy' ? 'Healthy' : 'Warning'"></span>
+                                    </div>
+                                    <div class="small text-muted mb-2">Expiring reminders, attendance-based MCV completions, and new record intake.</div>
+                                    <div class="d-flex justify-content-between small py-1 border-bottom">
+                                        <span class="text-muted">Last Execution:</span>
+                                        <span class="fw-bold text-dark" x-text="reportsData?.cronDiagnostics?.temporalCron?.lastRunFormatted || 'Never'"></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between small py-1 border-bottom">
+                                        <span class="text-muted">Execution Duration:</span>
+                                        <span class="fw-bold text-dark" x-text="(reportsData?.cronDiagnostics?.temporalCron?.duration || '0') + 's'"></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between small py-1">
+                                        <span class="text-muted">Records Evaluated / Updated:</span>
+                                        <span class="fw-bold text-dark" x-text="(reportsData?.cronDiagnostics?.temporalCron?.recordsEvaluated || 0) + ' eval / ' + (reportsData?.cronDiagnostics?.temporalCron?.callsUpdated || 0) + ' updated'"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Daily Sync Cron Diagnostic -->
+                            <div class="col-md-6">
+                                <div class="border rounded-3 p-3 bg-light bg-opacity-50 h-100">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-sync text-primary"></i>
+                                            <h6 class="fw-bold mb-0 text-dark">Daily Synchronization & Audit Cron</h6>
+                                        </div>
+                                        <span class="badge" :class="reportsData?.cronDiagnostics?.dailySync?.status === 'healthy' ? 'bg-success text-white' : 'bg-warning text-dark'"
+                                              x-text="reportsData?.cronDiagnostics?.dailySync?.status === 'healthy' ? 'Healthy' : 'Warning'"></span>
+                                    </div>
+                                    <div class="small text-muted mb-2">Comprehensive sweep of all templates across every project record.</div>
+                                    <div class="d-flex justify-content-between small py-1 border-bottom">
+                                        <span class="text-muted">Last Execution:</span>
+                                        <span class="fw-bold text-dark" x-text="reportsData?.cronDiagnostics?.dailySync?.lastRunFormatted || 'Never'"></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between small py-1 border-bottom">
+                                        <span class="text-muted">Execution Duration:</span>
+                                        <span class="fw-bold text-dark" x-text="(reportsData?.cronDiagnostics?.dailySync?.duration || '0') + 's'"></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between small py-1">
+                                        <span class="text-muted">Records Evaluated / Generated:</span>
+                                        <span class="fw-bold text-dark" x-text="(reportsData?.cronDiagnostics?.dailySync?.recordsEvaluated || 0) + ' eval / ' + (reportsData?.cronDiagnostics?.dailySync?.callsGenerated || 0) + ' generated'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Automated Logs -->
+                        <div class="fw-bold small text-dark mb-2"><i class="fas fa-list-alt text-secondary me-1.5"></i> Recent Automation Activity Log</div>
+                        <div class="table-responsive border rounded-3">
+                            <table class="table table-sm table-hover align-middle mb-0 small">
+                                <thead class="table-light text-muted">
                                     <tr>
-                                        <th style="width: 40px;">#</th>
-                                        <th>Field Label</th>
-                                        <th>Variable Name</th>
-                                        <th>Field Type</th>
-                                        <th class="text-center" style="width: 100px;">Required</th>
-                                        <th class="text-center" style="width: 100px;">Visibility</th>
+                                        <th class="ps-3" style="width: 140px;">Timestamp</th>
+                                        <th style="width: 90px;">Record</th>
+                                        <th style="width: 130px;">Action</th>
+                                        <th>Call / Description</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 1</td>
-                                        <td class="fw-semibold text-dark">Staff / Caller Name</td>
-                                        <td><code>caller_name</code></td>
-                                        <td>Text (User Dropdown)</td>
-                                        <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Required</span></td>
-                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 2</td>
-                                        <td class="fw-semibold text-dark">Attempt Date & Time</td>
-                                        <td><code>call_date</code></td>
-                                        <td>Datetime (Y-M-D H:M)</td>
-                                        <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Required</span></td>
-                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 3</td>
-                                        <td class="fw-semibold text-dark">Phone Number Used</td>
-                                        <td><code>phone_used</code></td>
-                                        <td>Radio (Home / Cell / Alt)</td>
-                                        <td class="text-center"><span class="badge bg-light text-muted border">Optional</span></td>
-                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 4</td>
-                                        <td class="fw-semibold text-dark">Call Contact Outcome</td>
-                                        <td><code>call_outcome</code></td>
-                                        <td>Radio / Select Box</td>
-                                        <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">Required</span></td>
-                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 5</td>
-                                        <td class="fw-semibold text-dark">Caller Notes & Summary</td>
-                                        <td><code>call_notes</code></td>
-                                        <td>Notes / Text Box</td>
-                                        <td class="text-center"><span class="badge bg-light text-muted border">Optional</span></td>
-                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 6</td>
-                                        <td class="fw-semibold text-dark">Follow-up Contact Required</td>
-                                        <td><code>followup_needed</code></td>
-                                        <td>Yes / No Checkbox</td>
-                                        <td class="text-center"><span class="badge bg-light text-muted border">Optional</span></td>
-                                        <td class="text-center"><span class="badge bg-success-subtle text-success border border-success-subtle">Visible</span></td>
-                                    </tr>
-                                    <tr class="table-light opacity-75">
-                                        <td><i class="fas fa-grip-vertical text-muted opacity-50"></i> 7</td>
-                                        <td class="fw-semibold text-muted">Supervisor Review Flag</td>
-                                        <td><code>supervisor_review</code></td>
-                                        <td>Yes / No Radio</td>
-                                        <td class="text-center"><span class="badge bg-light text-muted border">Optional</span></td>
-                                        <td class="text-center"><span class="badge bg-secondary-subtle text-muted border">Hidden</span></td>
-                                    </tr>
+                                    <template x-if="!reportsData?.cronDiagnostics?.recentSystemLogs || reportsData?.cronDiagnostics?.recentSystemLogs?.length === 0">
+                                        <tr>
+                                            <td colspan="4" class="text-center py-3 text-muted">No recent system automation logs recorded.</td>
+                                        </tr>
+                                    </template>
+                                    <template x-for="log in (reportsData?.cronDiagnostics?.recentSystemLogs || [])" :key="log.logId">
+                                        <tr>
+                                            <td class="ps-3 text-muted" x-text="log.timestamp"></td>
+                                            <td><span class="badge bg-light text-dark border" x-text="'#' + log.record"></span></td>
+                                            <td>
+                                                <span class="badge" 
+                                                      :class="log.action === 'call_generated' ? 'bg-primary-subtle text-primary border border-primary-subtle' : 
+                                                              (log.action === 'call_auto_completed' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border') "
+                                                      x-text="log.action || 'system_event'"></span>
+                                            </td>
+                                            <td>
+                                                <span class="fw-semibold text-dark" x-text="log.callName ? log.callName + ' — ' : ''"></span>
+                                                <span class="text-muted" x-text="log.reason || log.message"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-
-                    <div class="d-flex justify-content-between align-items-center text-muted small pt-1">
-                        <div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Placeholder only">
-                                <i class="fas fa-plus me-1"></i> Add Custom Form Field
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm ms-2" disabled title="Placeholder only">
-                                <i class="fas fa-sync-alt me-1"></i> Reset to Instrument Defaults
-                            </button>
-                        </div>
-                        <div class="text-muted fst-italic">
-                            <i class="fas fa-info-circle text-muted me-1"></i> Interactive form editing will be available in a future release.
-                        </div>
-                    </div>
                 </div>
+
             </div>
 
         </div>

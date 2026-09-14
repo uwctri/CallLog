@@ -14,6 +14,7 @@ use UWMadison\CallLog\Services\CallQueryService;
 use UWMadison\CallLog\Services\InstrumentDeploymentService;
 use UWMadison\CallLog\Services\ApiService;
 use UWMadison\CallLog\Services\LoggingService;
+use UWMadison\CallLog\Services\ReportService;
 use UWMadison\CallLog\CallMetadataRepository;
 use UWMadison\CallLog\CallTemplateType;
 use UWMadison\CallLog\CallItemDTO;
@@ -116,6 +117,17 @@ class CallLog extends AbstractExternalModule
             $this->getGeneratorService(),
             $this->getMetadataRepo(),
             $this->getLoggingService()
+        );
+    }
+
+    private ?ReportService $reportService = null;
+
+    public function getReportService(): ReportService
+    {
+        return $this->reportService ??= new ReportService(
+            $this,
+            $this->getConfigService(),
+            $this->getMetadataRepo()
         );
     }
 
@@ -325,6 +337,47 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             }
         }
 
+        $cfgService = $this->getConfigService();
+        $showPhoneBanner = $cfgService->isSettingEnabled($project_id, 'show_phone_banner', true);
+        $phoneBannerData = [];
+        if ($showPhoneBanner && !empty($record)) {
+            try {
+                $projObj = new Project($project_id);
+                $phoneFields = [];
+                foreach ($projObj->metadata as $fName => $fAttr) {
+                    if (strpos($fName, 'phone') !== false || strpos($fName, 'cell') !== false || strpos($fName, 'mobile') !== false) {
+                        $phoneFields[] = $fName;
+                    }
+                }
+                if (!empty($phoneFields)) {
+                    $phoneRec = REDCap::getData($project_id, 'array', $record, $phoneFields);
+                    if (is_array($phoneRec[$record] ?? null)) {
+                        foreach ($phoneRec[$record] as $evData) {
+                            if (is_array($evData)) {
+                                foreach ($phoneFields as $pf) {
+                                    $numVal = trim((string)($evData[$pf] ?? ''));
+                                    if (!empty($numVal) && !isset($phoneBannerData[$pf])) {
+                                        $label = $projObj->metadata[$pf]['element_label'] ?? $pf;
+                                        $phoneBannerData[$pf] = [
+                                            'field' => $pf,
+                                            'label' => strip_tags($label),
+                                            'number' => $numVal
+                                        ];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable $e) {}
+        }
+
+        $this->passArgument('autoCaptureTimestamps', $cfgService->isSettingEnabled($project_id, 'auto_capture_timestamps', true));
+        $this->passArgument('requireCallOutcome', $cfgService->isSettingEnabled($project_id, 'require_call_outcome', true));
+        $this->passArgument('showPhoneBanner', $showPhoneBanner);
+        $this->passArgument('phoneBannerData', array_values($phoneBannerData));
+        $this->passArgument('enableCallTimer', $cfgService->isSettingEnabled($project_id, 'enable_call_timer', false));
+
         if ($instrument === $this->instrumentCall) {
             $this->passArgument('adhoc', $this->getConfigService()->getAdhocTemplateConfig($project_id));
             $this->passArgument('callListUrl', $this->getUrl('index.php'));
@@ -406,6 +459,17 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 $deployRes = $this->getDeploymentService()->deploy($project_id, __DIR__ . '/call.csv', $eventId);
                 $success = $deployRes['success'];
                 $result = $deployRes;
+                break;
+            case "resetCallLogInstrument":
+                $resetRes = $this->getDeploymentService()->resetCallLogInstrument($project_id, __DIR__ . '/call.csv');
+                $success = $resetRes['success'];
+                $result = $resetRes;
+                if ($success) {
+                    $user = defined('USERID') ? USERID : '';
+                    $this->getLoggingService()->logMetadataAction($project_id, 'ALL', 'RESET_INSTRUMENT', $user, [
+                        'message' => 'Reset Call Log instrument fields to native call.csv defaults'
+                    ]);
+                }
                 break;
             case "enableRepeatable":
                 $eventId = isset($payload['event_id']) && $payload['event_id'] !== '' ? (int)$payload['event_id'] : null;
@@ -640,6 +704,11 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                     }
                     $result['saved'] = true;
                 }
+                break;
+            case "getReportsData":
+                $timeframe = $payload['timeframe'] ?? '30d';
+                $result['reports'] = $this->getReportService()->getReportsData($project_id, $timeframe);
+                $success = true;
                 break;
         }
 
@@ -1040,7 +1109,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         return '';
     }
 
-    private function getUserNameMap(int $projectId): array
+    public function getUserNameMap(int $projectId): array
     {
         $map = [];
         $sql = "

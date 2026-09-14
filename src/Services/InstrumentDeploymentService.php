@@ -367,4 +367,56 @@ class InstrumentDeploymentService
         }
         return isset($Proj->forms[$this->instrumentCall]) && isset($Proj->forms[$this->instrumentMeta]);
     }
+
+    /**
+     * Resets native call_log fields to match the default call.csv template,
+     * restoring any modified or missing core fields without removing custom user fields.
+     *
+     * @param int $projectId
+     * @param string $csvPath
+     * @return array
+     */
+    public function resetCallLogInstrument(int $projectId, string $csvPath): array
+    {
+        if (!file_exists($csvPath)) {
+            return [
+                'success' => false,
+                'message' => 'Data dictionary template file call.csv was not found.'
+            ];
+        }
+
+        $dd = Design::excel_to_array($csvPath, ",");
+        if (empty($dd)) {
+            return [
+                'success' => false,
+                'message' => 'Data dictionary template is empty or invalid.'
+            ];
+        }
+
+        db_query("SET AUTOCOMMIT=0");
+        db_query("BEGIN");
+
+        MetaData::createDataDictionarySnapshot();
+
+        // appendFields = true will update existing matching field names and add missing ones
+        // without wiping out other custom instruments or custom fields on the project
+        $sql_errors = MetaData::save_metadata($dd, true, false, $projectId);
+        $hasErrors = count($sql_errors) > 0;
+
+        db_query($hasErrors ? "ROLLBACK" : "COMMIT");
+        db_query("SET AUTOCOMMIT=1");
+
+        if ($hasErrors) {
+            return [
+                'success' => false,
+                'message' => 'Failed to reset Call Log instrument fields in the data dictionary.'
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Call Log native instrument fields have been reset to their default specifications.'
+        ];
+    }
 }
+

@@ -1025,3 +1025,48 @@ input:checked + .slider:before {
     background-color: #1d4ed8;
     border-color: #1d4ed8;
 }
+
+/* Call Stopwatch Widget Styles */
+.callStopwatchContainer {
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.callStopwatchContainer.stopwatch-running {
+    border-color: #2563eb;
+    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.15), 0 2px 4px -1px rgba(37, 99, 235, 0.06);
+}
+
+.call-stopwatch-display {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 1.85rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.callStopwatchContainer.stopwatch-running .call-stopwatch-display {
+    color: #1d4ed8;
+}
+
+.call-stopwatch-controls .btn {
+    font-weight: 600;
+    font-size: 0.82rem;
+    border-radius: 4px;
+}
+
+/* Sticky Participant Phone Banner */
+.call-phone-banner {
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.call-phone-badge {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}

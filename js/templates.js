@@ -331,6 +331,64 @@
         },
         renderCallClosed: function () {
             return `<span class="badge bg-success ms-2"><i class="fas fa-check me-1"></i> Log Closed</span>`;
+        },
+        renderCallStopwatchWidget: function () {
+            return `<div class="callStopwatchContainer card border shadow-xs mb-4">
+                <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-dark small d-inline-flex align-items-center">
+                        <i class="fas fa-stopwatch me-2 mr-2 text-primary d-inline-flex align-items-center justify-content-center"></i>
+                        <span>Call Duration</span>
+                    </span>
+                    <span class="badge bg-secondary-subtle text-secondary border small stopwatch-status-badge">Ready</span>
+                </div>
+                <div class="card-body p-3 text-center callStopwatchBody">
+                    <div class="call-stopwatch-display mb-2" id="stopwatchDisplay">00:00</div>
+                    <div class="d-flex justify-content-center align-items-center gap-2 call-stopwatch-controls">
+                        <button type="button" class="btn btn-sm btn-primary px-3 py-1 stopwatch-btn-toggle" id="stopwatchToggleBtn" title="Start / Pause Call Timer">
+                            <i class="fas fa-play me-1"></i> <span class="stopwatch-toggle-label">Start</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-1 stopwatch-btn-reset" id="stopwatchResetBtn" title="Reset Timer">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        },
+        renderStickyPhoneBanner: function (participantName, recordId, phoneNumbers) {
+            const numbers = Array.isArray(phoneNumbers) ? phoneNumbers : [];
+            let numbersHtml = '';
+            if (numbers.length > 0) {
+                numbersHtml = numbers.map(n => {
+                    const label = n.label || 'Phone';
+                    const num = n.number || '';
+                    const cleanTel = num.replace(/[^\d+]/g, '');
+                    return `<span class="call-phone-badge d-inline-flex align-items-center px-2 py-1 bg-white border rounded small">
+                        <strong class="text-secondary me-1.5">${label}:</strong>
+                        <a href="tel:${cleanTel}" class="text-primary fw-semibold text-decoration-none d-inline-flex align-items-center">
+                            <i class="fas fa-phone-alt me-1 small"></i>${num}
+                        </a>
+                    </span>`;
+                }).join(' ');
+            } else {
+                numbersHtml = `<span class="text-muted small fst-italic">No phone numbers on file</span>`;
+            }
+
+            return `<div class="call-phone-banner card border shadow-xs mb-3">
+                <div class="card-body py-2 px-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary" style="width: 28px; height: 28px;">
+                            <i class="fas fa-user small"></i>
+                        </span>
+                        <div>
+                            <span class="fw-bold text-dark">${participantName || 'Participant'}</span>
+                            ${recordId ? `<span class="badge bg-light text-secondary border ms-1.5">#${recordId}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        ${numbersHtml}
+                    </div>
+                </div>
+            </div>`;
         }
     };
 

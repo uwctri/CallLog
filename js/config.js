@@ -71,6 +71,11 @@
             showRecordHomeButton: true,
             showCallLogInstrument: false,
             showMetadataInstrument: false,
+            autoCaptureTimestamps: true,
+            requireCallOutcome: true,
+            showPhoneBanner: true,
+            enableCallTimer: false,
+            resettingInstrument: false,
             datetimeFormat: 'm/d/Y g:i A',
             displayNameField: '',
             triggerSave: [],
@@ -93,6 +98,13 @@
             enabledHolidays: [],
             customHolidays: [],
 
+            // Reports & Analytics State
+            reportTimeframe: '30d',
+            reportsLoading: false,
+            reportsData: null,
+            reportSortCol: 'attempts',
+            reportSortAsc: false,
+
             init() {
                 this.loadFromRaw();
                 this.$watch('activeTab', (tab) => {
@@ -100,12 +112,18 @@
                         this.$nextTick(() => {
                             this.initAllScriptEditors();
                         });
+                    } else if (tab === 'reports') {
+                        if (!this.reportsData) {
+                            this.loadReportsData();
+                        }
                     }
                 });
                 if (this.activeTab === 'calls') {
                     this.$nextTick(() => {
                         this.initAllScriptEditors();
                     });
+                } else if (this.activeTab === 'reports') {
+                    this.loadReportsData();
                 }
             },
 
@@ -221,6 +239,16 @@
                     : Boolean(r.show_record_home_button && (r.show_record_home_button[0] === '1' || r.show_record_home_button === '1' || r.show_record_home_button === true));
                 this.showCallLogInstrument = Boolean(r.show_call_log_instrument && (r.show_call_log_instrument[0] === '1' || r.show_call_log_instrument === '1' || r.show_call_log_instrument === true));
                 this.showMetadataInstrument = Boolean(r.show_metadata_instrument && (r.show_metadata_instrument[0] === '1' || r.show_metadata_instrument === '1' || r.show_metadata_instrument === true));
+                this.autoCaptureTimestamps = (r.auto_capture_timestamps === undefined || r.auto_capture_timestamps === null)
+                    ? true
+                    : Boolean(r.auto_capture_timestamps && (r.auto_capture_timestamps[0] === '1' || r.auto_capture_timestamps === '1' || r.auto_capture_timestamps === true));
+                this.requireCallOutcome = (r.require_call_outcome === undefined || r.require_call_outcome === null)
+                    ? true
+                    : Boolean(r.require_call_outcome && (r.require_call_outcome[0] === '1' || r.require_call_outcome === '1' || r.require_call_outcome === true));
+                this.showPhoneBanner = (r.show_phone_banner === undefined || r.show_phone_banner === null)
+                    ? true
+                    : Boolean(r.show_phone_banner && (r.show_phone_banner[0] === '1' || r.show_phone_banner === '1' || r.show_phone_banner === true));
+                this.enableCallTimer = Boolean(r.enable_call_timer && (r.enable_call_timer[0] === '1' || r.enable_call_timer === '1' || r.enable_call_timer === true));
                 this.datetimeFormat = (r.datetime_format && r.datetime_format[0]) ? r.datetime_format[0] : 'm/d/Y g:i A';
                 this.displayNameField = (r.display_name_field && r.display_name_field[0]) ? r.display_name_field[0] : (r.display_name_field || '');
                 this.triggerSave = toArray(r.trigger_save);
@@ -818,6 +846,72 @@
                 });
             },
 
+            resetCallLogInstrument() {
+                const title = 'Reset Native Call Log Fields?';
+                const text = 'This will restore all default Call Log fields (call_id, call_template, timestamps, outcome, notes, etc.) to match the native module specifications. Custom fields added to this project will NOT be deleted.';
+
+                const executeReset = () => {
+                    this.resettingInstrument = true;
+                    return module.ajax("resetCallLogInstrument", {}).then((res) => {
+                        this.resettingInstrument = false;
+                        if (res && res.success) {
+                            (module.swal ? module.swal.success : Swal.fire)({
+                                title: 'Call Log Form Reset',
+                                text: res.message || 'Call Log native instrument fields were reset successfully.',
+                                confirmButtonText: '<i class="fas fa-check me-1.5"></i> Continue'
+                            }).then(() => location.reload());
+                        } else {
+                            (module.swal ? module.swal.error : Swal.fire)({
+                                title: 'Reset Failed',
+                                text: res.message || 'Could not reset Call Log instrument fields.'
+                            });
+                        }
+                    }).catch(err => {
+                        this.resettingInstrument = false;
+                        (module.swal ? module.swal.error : Swal.fire)({
+                            title: 'Reset Error',
+                            text: err.message || String(err)
+                        });
+                    });
+                };
+
+                const swalFn = (module.swal && module.swal.fire) ? module.swal.fire : ((typeof Swal !== 'undefined') ? Swal.fire : null);
+                if (swalFn) {
+                    swalFn({
+                        title: title,
+                        text: text,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: '<i class="fas fa-sync-alt me-1"></i> Yes, Reset Native Fields',
+                        cancelButtonText: 'Cancel',
+                        showLoaderOnConfirm: true,
+                        preConfirm: () => {
+                            this.resettingInstrument = true;
+                            return module.ajax("resetCallLogInstrument", {}).then(res => {
+                                if (!res || !res.success) {
+                                    throw new Error(res?.message || 'Could not reset Call Log instrument fields.');
+                                }
+                                return res;
+                            }).catch(err => {
+                                Swal.showValidationMessage(err.message || String(err));
+                            });
+                        },
+                        allowOutsideClick: () => (typeof Swal !== 'undefined' && Swal.isLoading ? !Swal.isLoading() : true)
+                    }).then((result) => {
+                        this.resettingInstrument = false;
+                        if (result.isConfirmed && result.value) {
+                            (module.swal ? module.swal.success : Swal.fire)({
+                                title: 'Call Log Form Reset',
+                                text: result.value.message || 'Call Log native instrument fields were reset successfully.',
+                                confirmButtonText: '<i class="fas fa-check me-1.5"></i> Continue'
+                            }).then(() => location.reload());
+                        }
+                    });
+                } else if (confirm(text)) {
+                    executeReset();
+                }
+            },
+
             saveConfig() {
                 this.saving = true;
 
@@ -831,6 +925,10 @@
                     show_record_home_button: [this.showRecordHomeButton ? '1' : '0'],
                     show_call_log_instrument: [this.showCallLogInstrument ? '1' : '0'],
                     show_metadata_instrument: [this.showMetadataInstrument ? '1' : '0'],
+                    auto_capture_timestamps: [this.autoCaptureTimestamps ? '1' : '0'],
+                    require_call_outcome: [this.requireCallOutcome ? '1' : '0'],
+                    show_phone_banner: [this.showPhoneBanner ? '1' : '0'],
+                    enable_call_timer: [this.enableCallTimer ? '1' : '0'],
                     datetime_format: [this.datetimeFormat ? this.datetimeFormat.trim() : 'm/d/Y g:i A'],
                     display_name_field: [this.displayNameField ? this.displayNameField.trim() : ''],
                     trigger_save: this.triggerSave,
@@ -904,6 +1002,108 @@
                         text: err.message || String(err)
                     });
                 });
+            },
+
+            // Reports & Analytics Methods
+            setReportTimeframe(tf) {
+                if (this.reportTimeframe === tf) return;
+                this.reportTimeframe = tf;
+                this.loadReportsData();
+            },
+
+            loadReportsData() {
+                this.reportsLoading = true;
+                module.ajax("getReportsData", { timeframe: this.reportTimeframe }).then((res) => {
+                    this.reportsLoading = false;
+                    if (res && res.reports) {
+                        this.reportsData = res.reports;
+                    } else {
+                        (module.swal ? module.swal.error : Swal.fire)({
+                            title: 'Failed to Load Reports',
+                            text: res.error || 'Unable to retrieve report analytics data.'
+                        });
+                    }
+                }).catch((err) => {
+                    this.reportsLoading = false;
+                    (module.swal ? module.swal.error : Swal.fire)({
+                        title: 'Error Loading Reports',
+                        text: err.message || String(err)
+                    });
+                });
+            },
+
+            get totalReportAttempts() {
+                if (!this.reportsData || !Array.isArray(this.reportsData.callerProductivity)) return 0;
+                return this.reportsData.callerProductivity.reduce((sum, u) => sum + (parseInt(u.attempts) || 0), 0);
+            },
+
+            get sortedCallers() {
+                if (!this.reportsData || !Array.isArray(this.reportsData.callerProductivity)) return [];
+                const callers = [...this.reportsData.callerProductivity];
+                const col = this.reportSortCol;
+                const asc = this.reportSortAsc;
+
+                return callers.sort((a, b) => {
+                    // Always keep automation at the bottom unless specifically sorting by username
+                    if (a.isAutomation !== b.isAutomation) {
+                        return a.isAutomation ? 1 : -1;
+                    }
+                    let valA = a[col];
+                    let valB = b[col];
+
+                    if (typeof valA === 'string') {
+                        valA = valA.toLowerCase();
+                        valB = (valB || '').toLowerCase();
+                        return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    }
+
+                    valA = Number(valA) || 0;
+                    valB = Number(valB) || 0;
+                    return asc ? valA - valB : valB - valA;
+                });
+            },
+
+            sortReportBy(col) {
+                if (this.reportSortCol === col) {
+                    this.reportSortAsc = !this.reportSortAsc;
+                } else {
+                    this.reportSortCol = col;
+                    this.reportSortAsc = false;
+                }
+            },
+
+            exportReportsCsv() {
+                if (!this.reportsData || !Array.isArray(this.reportsData.callerProductivity)) return;
+
+                const headers = ['Team Member', 'Username', 'Role/Type', 'Attempts Logged', 'Completed Calls', 'Success Rate %', 'Voicemails Left', 'Callbacks Scheduled'];
+                const rows = this.sortedCallers.map(u => [
+                    `"${(u.displayName || '').replace(/"/g, '""')}"`,
+                    `"${(u.username || '').replace(/"/g, '""')}"`,
+                    `"${u.isAutomation ? 'Automated Logic' : 'Coordinator'}"`,
+                    u.attempts || 0,
+                    u.completed || 0,
+                    (u.completionRate || 0) + '%',
+                    u.voicemails || 0,
+                    u.callbacksScheduled || 0
+                ]);
+
+                // Append Queue Summary Section
+                rows.push([]);
+                rows.push(['--- Call Queue & Lifecycle Summary ---']);
+                rows.push(['Total Calls In Queue', this.reportsData?.queueSummary?.totalCalls || 0]);
+                rows.push(['Active / Open Calls', this.reportsData?.queueSummary?.activeCalls || 0]);
+                rows.push(['Completed Calls', this.reportsData?.queueSummary?.completedCalls || 0]);
+                rows.push(['Expired Calls', this.reportsData?.queueSummary?.expiredCalls || 0]);
+                rows.push(['Expired Reminders (Missed Outreach)', this.reportsData?.queueSummary?.expiredReminders || 0]);
+
+                const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `call_log_report_${this.reportTimeframe}_${new Date().toISOString().slice(0, 10)}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             }
         }));
     }

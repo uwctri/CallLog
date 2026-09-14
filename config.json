@@ -58,19 +58,21 @@
         "saveConfig",
         "generate",
         "saveUserColumns",
-        "resetUserColumns"
+        "resetUserColumns",
+        "getReportsData",
+        "resetCallLogInstrument"
     ],
     "framework-version": 17,
     "crons": [
         {
-            "cron_name": "TemporalLifecycle",
+            "cron_name": "temporal_lifecycle",
             "cron_description": "Hourly check for time-sensitive call lifecycles (open reminder expirations, missed appointment calls, and new record intake)",
             "method": "cronTemporalLifecycle",
             "cron_frequency": "3600",
             "cron_max_run_time": "1800"
         },
         {
-            "cron_name": "DailySync",
+            "cron_name": "daily_sync",
             "cron_description": "Comprehensive daily synchronization and audit of all call templates across all enabled project records",
             "method": "cronDailySync",
             "cron_frequency": "86400",

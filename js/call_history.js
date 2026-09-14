@@ -191,9 +191,122 @@
         });
     };
 
+    const formatStopwatchTime = (totalSeconds) => {
+        const s = Math.max(0, Math.floor(totalSeconds));
+        const hrs = Math.floor(s / 3600);
+        const mins = Math.floor((s % 3600) / 60);
+        const secs = s % 60;
+        const mm = String(mins).padStart(2, '0');
+        const ss = String(secs).padStart(2, '0');
+        if (hrs > 0) {
+            const hh = String(hrs).padStart(2, '0');
+            return `${hh}:${mm}:${ss}`;
+        }
+        return `${mm}:${ss}`;
+    };
+
+    const initCallStopwatch = () => {
+        if (!module.enableCallTimer) return;
+        const $stopwatch = $('.callStopwatchContainer');
+        if (!$stopwatch.length) return;
+
+        let elapsedSeconds = 0;
+        let isRunning = false;
+        let timerInterval = null;
+
+        const updateDisplay = () => {
+            $('#stopwatchDisplay').text(formatStopwatchTime(elapsedSeconds));
+        };
+
+        const setRunningState = (running) => {
+            isRunning = running;
+            const $toggleBtn = $('#stopwatchToggleBtn');
+            const $statusBadge = $('.stopwatch-status-badge');
+            if (isRunning) {
+                $toggleBtn
+                    .removeClass('btn-primary')
+                    .addClass('btn-warning')
+                    .html('<i class="fas fa-pause me-1"></i> <span class="stopwatch-toggle-label">Pause</span>');
+                $statusBadge
+                    .removeClass('bg-secondary-subtle text-secondary bg-warning-subtle text-warning')
+                    .addClass('bg-success-subtle text-success border-success-subtle')
+                    .text('Running');
+                $('.callStopwatchContainer').addClass('stopwatch-running');
+            } else {
+                $toggleBtn
+                    .removeClass('btn-warning')
+                    .addClass('btn-primary')
+                    .html('<i class="fas fa-play me-1"></i> <span class="stopwatch-toggle-label">Resume</span>');
+                $statusBadge
+                    .removeClass('bg-secondary-subtle text-secondary bg-success-subtle text-success')
+                    .addClass('bg-warning-subtle text-warning border-warning-subtle')
+                    .text('Paused');
+                $('.callStopwatchContainer').removeClass('stopwatch-running');
+            }
+        };
+
+        const startTimer = () => {
+            if (isRunning) return;
+            setRunningState(true);
+            timerInterval = setInterval(() => {
+                elapsedSeconds += 1;
+                updateDisplay();
+            }, 1000);
+        };
+
+        const pauseTimer = () => {
+            if (!isRunning) return;
+            clearInterval(timerInterval);
+            timerInterval = null;
+            setRunningState(false);
+        };
+
+        const resetTimer = () => {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            isRunning = false;
+            elapsedSeconds = 0;
+            updateDisplay();
+            $('#stopwatchToggleBtn')
+                .removeClass('btn-warning')
+                .addClass('btn-primary')
+                .html('<i class="fas fa-play me-1"></i> <span class="stopwatch-toggle-label">Start</span>');
+            $('.stopwatch-status-badge')
+                .removeClass('bg-success-subtle text-success bg-warning-subtle text-warning')
+                .addClass('bg-secondary-subtle text-secondary')
+                .text('Ready');
+            $('.callStopwatchContainer').removeClass('stopwatch-running');
+        };
+
+        $('#stopwatchToggleBtn').off('click').on('click', () => {
+            if (isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        });
+
+        $('#stopwatchResetBtn').off('click').on('click', resetTimer);
+
+        // Expose timer methods on module for tab integration
+        module.stopwatch = {
+            start: startTimer,
+            pause: pauseTimer,
+            reset: resetTimer,
+            getElapsed: () => elapsedSeconds,
+            isRunning: () => isRunning
+        };
+
+        // Auto-start when a call tab is active
+        if ($('.callTab.active').length || $('.callTab').length) {
+            startTimer();
+        }
+    };
+
     const positionHistoryContainer = () => {
         const $container = $('.callHistoryContainer');
-        if (!$container.length) return;
+        const $stopwatch = $('.callStopwatchContainer');
+        if (!$container.length && !$stopwatch.length) return;
 
         const $form = $('#form').length ? $('#form') : ($('#questiontable').length ? $('#questiontable') : null);
         if (!$form || !$form.length) return;
@@ -217,36 +330,80 @@
             const $fixedNav = $('.navbar.fixed-top, #redcap-header, .rcproject-navbar');
             const minTop = $fixedNav.length ? Math.round($fixedNav.outerHeight() + 10) : 55;
             const dockedTop = Math.max(formTop - scrollTop, minTop);
-            const maxHeight = Math.max(200, windowHeight - dockedTop - 20);
 
-            $container.removeClass('callHistoryStacked').addClass('callHistoryDocked').css({
-                position: 'fixed',
-                left: `${targetLeft}px`,
-                top: `${dockedTop}px`,
-                width: `${sidebarWidth}px`,
-                'max-width': `${sidebarWidth}px`,
-                'max-height': `${maxHeight}px`,
-                'overflow-y': 'auto',
-                'z-index': 1000,
-                margin: 0,
-                display: 'block'
-            });
+            const hasStopwatch = $stopwatch.length > 0;
+            const stopwatchHeight = hasStopwatch ? Math.round($stopwatch.outerHeight() || 140) : 0;
+            const historyMaxHeight = Math.max(160, windowHeight - dockedTop - stopwatchHeight - 35);
+
+            if ($container.length) {
+                $container.removeClass('callHistoryStacked').addClass('callHistoryDocked').css({
+                    position: 'fixed',
+                    left: `${targetLeft}px`,
+                    top: `${dockedTop}px`,
+                    width: `${sidebarWidth}px`,
+                    'max-width': `${sidebarWidth}px`,
+                    'max-height': `${historyMaxHeight}px`,
+                    'overflow-y': 'auto',
+                    'z-index': 1000,
+                    margin: 0,
+                    display: 'block'
+                });
+            }
+
+            if (hasStopwatch) {
+                const historyHeight = $container.length ? Math.round($container.outerHeight() || 0) : 0;
+                const stopwatchTop = dockedTop + historyHeight + 12;
+
+                $stopwatch.removeClass('callHistoryStacked').addClass('callHistoryDocked').css({
+                    position: 'fixed',
+                    left: `${targetLeft}px`,
+                    top: `${stopwatchTop}px`,
+                    width: `${sidebarWidth}px`,
+                    'max-width': `${sidebarWidth}px`,
+                    'z-index': 1000,
+                    margin: 0,
+                    display: 'block'
+                });
+            }
         } else {
-            $container.removeClass('callHistoryDocked').addClass('callHistoryStacked').css({
-                position: 'relative',
-                left: 'auto',
-                top: 'auto',
-                width: '100%',
-                'max-width': `${formWidth}px`,
-                'max-height': 'none',
-                'overflow-y': 'visible',
-                'z-index': 'auto',
-                'margin-top': '24px',
-                'margin-bottom': '24px',
-                display: 'block'
-            });
-            if ($form.next()[0] !== $container[0]) {
-                $form.after($container);
+            if ($container.length) {
+                $container.removeClass('callHistoryDocked').addClass('callHistoryStacked').css({
+                    position: 'relative',
+                    left: 'auto',
+                    top: 'auto',
+                    width: '100%',
+                    'max-width': `${formWidth}px`,
+                    'max-height': 'none',
+                    'overflow-y': 'visible',
+                    'z-index': 'auto',
+                    'margin-top': '24px',
+                    'margin-bottom': '16px',
+                    display: 'block'
+                });
+                if ($form.next()[0] !== $container[0]) {
+                    $form.after($container);
+                }
+            }
+
+            if ($stopwatch.length) {
+                $stopwatch.removeClass('callHistoryDocked').addClass('callHistoryStacked').css({
+                    position: 'relative',
+                    left: 'auto',
+                    top: 'auto',
+                    width: '100%',
+                    'max-width': `${formWidth}px`,
+                    'max-height': 'none',
+                    'overflow-y': 'visible',
+                    'z-index': 'auto',
+                    'margin-top': '16px',
+                    'margin-bottom': '24px',
+                    display: 'block'
+                });
+                if ($container.length) {
+                    $container.after($stopwatch);
+                } else {
+                    $form.after($stopwatch);
+                }
             }
         }
     };
@@ -274,6 +431,20 @@
             } else {
                 $("#center").append(htmlToAppend);
             }
+        }
+
+        // Render Stopwatch Widget below Call History table
+        if (Boolean(module.enableCallTimer) && !$(".callStopwatchContainer").length && module.renderers && module.renderers.renderCallStopwatchWidget) {
+            const stopwatchHtml = module.renderers.renderCallStopwatchWidget();
+            const $historyContainer = $(".callHistoryContainer");
+            if ($historyContainer.length) {
+                $historyContainer.after(stopwatchHtml);
+            } else if ($('#form').length) {
+                $('#form').after(stopwatchHtml);
+            } else {
+                $("#center").append(stopwatchHtml);
+            }
+            initCallStopwatch();
         }
 
         $(".callHistorySettings").off('click').on('click', threeDotClick);
