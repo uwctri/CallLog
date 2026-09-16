@@ -3,7 +3,6 @@
 namespace UWMadison\CallLog\Services;
 
 use REDCap;
-use Project;
 use Throwable;
 use ExternalModules\ExternalModules;
 use UWMadison\CallLog\CallMetadataRepository;
@@ -126,9 +125,7 @@ class ReportService
                 foreach ($instanceRows as $data) {
                     $u = trim((string)($data['call_open_user'] ?? ''));
                     $fullName = trim((string)($data['call_open_user_full_name'] ?? ''));
-                    if ($u === '' && $fullName !== '') {
-                        $u = $fullName;
-                    }
+                    if ($u === '' && $fullName !== '') $u = $fullName;
                     if ($u === '') continue;
 
                     $uKey = $ensureUser($u, $fullName ?: null);
@@ -136,13 +133,8 @@ class ReportService
 
                     $users[$uKey]['attempts']++;
 
-                    if (!empty($data['call_left_message']) && $data['call_left_message'] == '1') {
-                        $users[$uKey]['voicemails']++;
-                    }
-
-                    if (!empty($data['call_requested_callback']) && $data['call_requested_callback'] == '1') {
-                        $users[$uKey]['callbacksScheduled']++;
-                    }
+                    if (!empty($data['call_left_message']) && $data['call_left_message'] == '1') $users[$uKey]['voicemails']++;
+                    if (!empty($data['call_requested_callback']) && $data['call_requested_callback'] == '1') $users[$uKey]['callbacksScheduled']++;
                 }
             } catch (Throwable $e) {
                 error_log("[CallLog ReportService] Query error in attempts aggregation: " . $e->getMessage());
@@ -167,16 +159,12 @@ class ReportService
                         $completedTime = $call['completedTime'] ?? '';
 
                         // Date filter on completion time if applicable
-                        if ($startDate && !empty($completedTime) && $completedTime < $startDate) {
-                            continue;
-                        }
+                        if ($startDate && !empty($completedTime) && $completedTime < $startDate) continue;
 
                         if ($status === 'complete') {
                             $targetCompleter = $completedBy !== '' ? $completedBy : ($callStartedBy !== '' ? $callStartedBy : 'REDCap');
                             $uKey = $ensureUser($targetCompleter);
-                            if ($uKey) {
-                                $users[$uKey]['completed']++;
-                            }
+                            if ($uKey) $users[$uKey]['completed']++;
                         }
 
                         if ($callStartedBy !== '') {
@@ -322,19 +310,12 @@ class ReportService
 
         try {
             // 1. Query latest batch generation runs (cron_temporal and cron_daily)
-            $sqlBatch = "SELECT l.log_id, l.timestamp, l.message, 
-                                MAX(CASE WHEN p.name = 'trigger' THEN p.value END) as `trigger`,
-                                MAX(CASE WHEN p.name = 'records_evaluated' THEN p.value END) as records_evaluated,
-                                MAX(CASE WHEN p.name = 'calls_generated' THEN p.value END) as calls_generated,
-                                MAX(CASE WHEN p.name = 'duration_seconds' THEN p.value END) as duration_seconds
-                         FROM redcap_external_modules_log l
-                         LEFT JOIN redcap_external_modules_log_parameters p ON l.log_id = p.log_id
-                         WHERE l.project_id = ? AND l.message LIKE 'Call generation batch completed%'
-                         GROUP BY l.log_id
-                         ORDER BY l.log_id DESC
-                         LIMIT 10";
-
-            $resBatch = ExternalModules::query($sqlBatch, [$projectId]);
+            $resBatch = $this->module->queryLogs(
+                "select log_id, timestamp, message, `trigger`, records_evaluated, calls_generated, duration_seconds
+                 where project_id = ? and message like 'Call generation batch completed%'
+                 order by log_id desc limit 10",
+                [$projectId]
+            );
             $foundTemporal = false;
             $foundDaily = false;
             $now = time();
@@ -371,19 +352,12 @@ class ReportService
             }
 
             // 2. Query recent automated lifecycle events (auto-completed, expired, generated)
-            $sqlRecent = "SELECT l.log_id, l.timestamp, l.message, l.record,
-                                 MAX(CASE WHEN p.name = 'action' THEN p.value END) as `action`,
-                                 MAX(CASE WHEN p.name = 'call_name' THEN p.value END) as call_name,
-                                 MAX(CASE WHEN p.name = 'reason' THEN p.value END) as reason,
-                                 MAX(CASE WHEN p.name = 'template' THEN p.value END) as template
-                          FROM redcap_external_modules_log l
-                          LEFT JOIN redcap_external_modules_log_parameters p ON l.log_id = p.log_id
-                          WHERE l.project_id = ?
-                          GROUP BY l.log_id
-                          ORDER BY l.log_id DESC
-                          LIMIT 6";
-
-            $resRecent = ExternalModules::query($sqlRecent, [$projectId]);
+            $resRecent = $this->module->queryLogs(
+                "select log_id, timestamp, message, record, action, call_name, reason, template
+                 where project_id = ?
+                 order by log_id desc limit 6",
+                [$projectId]
+            );
             while ($row = $resRecent->fetch_assoc()) {
                 $ts = !empty($row['timestamp']) ? strtotime($row['timestamp']) : time();
                 $diagnostics['recentSystemLogs'][] = [

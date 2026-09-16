@@ -24,9 +24,8 @@ class LoggingService
     {
         $sanitized = [];
         foreach ($parameters as $key => $value) {
-            if ($value === null) {
-                continue;
-            } elseif (is_bool($value)) {
+            if ($value === null) continue;
+            if (is_bool($value)) {
                 $sanitized[$key] = $value ? '1' : '0';
             } elseif (is_scalar($value)) {
                 $sanitized[$key] = (string)$value;
@@ -36,9 +35,7 @@ class LoggingService
         }
 
         try {
-            if (is_object($this->module)) {
-                return $this->module->log($message, $sanitized);
-            }
+            if ($this->module) return $this->module->log($message, $sanitized);
         } catch (Throwable $e) {
             // Silently fall back to error_log to never interrupt critical workflow
             error_log("[CallLog] LoggingService failed: " . $e->getMessage());
@@ -298,6 +295,29 @@ class LoggingService
             'project_id' => $projectId,
             'user' => $user
         ], $summary);
+
+        $this->log($message, $params);
+    }
+
+    /**
+     * Log metadata modifications (such as instrument resets or deployments)
+     */
+    public function logMetadataAction(
+        int $projectId,
+        string $target,
+        string $metadataAction,
+        string $user,
+        array $details = []
+    ): void {
+        $message = $details['message'] ?? "Call Log metadata action '{$metadataAction}' performed on target '{$target}' by {$user}";
+        unset($details['message']);
+        $params = array_merge([
+            'action' => 'metadata_action',
+            'project_id' => $projectId,
+            'target' => $target,
+            'metadata_action' => $metadataAction,
+            'user' => $user
+        ], $details);
 
         $this->log($message, $params);
     }

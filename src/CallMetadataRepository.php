@@ -18,36 +18,23 @@ class CallMetadataRepository
     public function getMetadata(int $projectId, string $record): array
     {
         $metaEvent = $this->getEventOfInstrument($projectId, $this->instrumentMeta);
-        if (!$metaEvent) {
-            return [];
-        }
+        if (!$metaEvent) return [];
 
         $data = REDCap::getData($projectId, 'array', $record, $this->metadataField);
         $raw = $data[$record][$metaEvent][$this->metadataField] ?? '';
 
-        if (empty($raw)) {
-            return [];
-        }
+        if (empty($raw)) return [];
 
         $this->existingRecordCache["{$projectId}_{$record}"] = true;
 
         $decoded = json_decode($raw, true);
-        if (!is_array($decoded)) {
-            return [];
-        }
+        if (!is_array($decoded)) return [];
 
         foreach ($decoded as $k => &$item) {
-            if (is_array($item)) {
-                if (empty($item['id'])) {
-                    $item['id'] = (string)$k;
-                }
-                if (!isset($item['instances']) || !is_array($item['instances'])) {
-                    $item['instances'] = [];
-                }
-                if (empty($item['status'])) {
-                    $item['status'] = 'incomplete';
-                }
-            }
+            if (!is_array($item)) continue;
+            if (empty($item['id'])) $item['id'] = (string)$k;
+            if (!isset($item['instances']) || !is_array($item['instances'])) $item['instances'] = [];
+            if (empty($item['status'])) $item['status'] = 'incomplete';
         }
         unset($item);
 
@@ -73,32 +60,21 @@ class CallMetadataRepository
     public function saveMetadata(int $projectId, string $record, array $data): bool
     {
         $metaEvent = $this->getEventOfInstrument($projectId, $this->instrumentMeta);
-        if (!$metaEvent) {
-            return false;
-        }
+        if (!$metaEvent) return false;
 
         if (empty($this->existingRecordCache["{$projectId}_{$record}"])) {
             $table = REDCap::getDataTable($projectId);
             $sql = "SELECT field_name FROM {$table} WHERE project_id = ? AND record = ? LIMIT 1";
             $result = ExternalModules::query($sql, [$projectId, $record]);
-            if (empty($result->fetch_assoc())) {
-                return false;
-            }
+            if (empty($result->fetch_assoc())) return false;
             $this->existingRecordCache["{$projectId}_{$record}"] = true;
         }
 
         foreach ($data as $k => &$item) {
-            if (is_array($item)) {
-                if (empty($item['id'])) {
-                    $item['id'] = (string)$k;
-                }
-                if (!isset($item['instances']) || !is_array($item['instances'])) {
-                    $item['instances'] = [];
-                }
-                if (empty($item['status'])) {
-                    $item['status'] = 'incomplete';
-                }
-            }
+            if (!is_array($item)) continue;
+            if (empty($item['id'])) $item['id'] = (string)$k;
+            if (!isset($item['instances']) || !is_array($item['instances'])) $item['instances'] = [];
+            if (empty($item['status'])) $item['status'] = 'incomplete';
         }
         unset($item);
 

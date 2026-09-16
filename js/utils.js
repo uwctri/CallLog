@@ -1,5 +1,26 @@
 (() => {
     const module = ExternalModules.UWMadison.CallLog;
+    const dateFormatterCache = new Map();
+
+    function getDateFormatter(type, locale) {
+        const loc = locale || 'default';
+        const key = `${type}_${loc}`;
+        if (!dateFormatterCache.has(key)) {
+            let options;
+            switch (type) {
+                case 'D': options = { weekday: 'short' }; break;
+                case 'l': options = { weekday: 'long' }; break;
+                case 'M': options = { month: 'short' }; break;
+                case 'F': options = { month: 'long' }; break;
+            }
+            try {
+                dateFormatterCache.set(key, new Intl.DateTimeFormat(locale || undefined, options));
+            } catch (e) {
+                dateFormatterCache.set(key, new Intl.DateTimeFormat(undefined, options));
+            }
+        }
+        return dateFormatterCache.get(key);
+    }
 
     module.utils = {
         toArray(val) {
@@ -130,14 +151,21 @@
             s = s.replace(/DD/g, 'd');
             return s;
         },
-        formatPhpDate(d, format) {
+        getLocale() {
+            if (module && module.locale) return module.locale;
+            if (typeof document !== 'undefined' && document.documentElement && document.documentElement.lang) {
+                return document.documentElement.lang;
+            }
+            if (typeof navigator !== 'undefined' && (navigator.language || (navigator.languages && navigator.languages[0]))) {
+                return navigator.language || navigator.languages[0];
+            }
+            return undefined;
+        },
+        formatPhpDate(d, format, locale = null) {
             if (!(d instanceof Date) || isNaN(d.getTime())) return '';
             if (!format) format = 'm/d/Y g:i A';
 
-            const dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const dayNamesFull = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const monthNamesFull = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const loc = locale || this.getLocale();
 
             function getSuffix(n) {
                 let j = n % 10, k = n % 100;
@@ -166,16 +194,16 @@
                     // Day
                     case 'd': out += String(d.getDate()).padStart(2, '0'); break;
                     case 'j': out += String(d.getDate()); break;
-                    case 'D': out += dayNamesShort[d.getDay()]; break;
-                    case 'l': out += dayNamesFull[d.getDay()]; break;
+                    case 'D': out += getDateFormatter('D', loc).format(d); break;
+                    case 'l': out += getDateFormatter('l', loc).format(d); break;
                     case 'N': out += String(d.getDay() === 0 ? 7 : d.getDay()); break;
                     case 'w': out += String(d.getDay()); break;
                     case 'S': out += getSuffix(d.getDate()); break;
 
                     // Month
-                    case 'F': out += monthNamesFull[d.getMonth()]; break;
+                    case 'F': out += getDateFormatter('F', loc).format(d); break;
                     case 'm': out += String(d.getMonth() + 1).padStart(2, '0'); break;
-                    case 'M': out += monthNamesShort[d.getMonth()]; break;
+                    case 'M': out += getDateFormatter('M', loc).format(d); break;
                     case 'n': out += String(d.getMonth() + 1); break;
                     case 't': out += String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()); break;
 
@@ -200,7 +228,7 @@
             }
             return out;
         },
-        formatDateTime(val, forceTime = false, forceDateOnly = false, customFormat = null) {
+        formatDateTime(val, forceTime = false, forceDateOnly = false, customFormat = null, locale = null) {
             if (val === undefined || val === null || val === '') return '';
             let parsed = this.parseDateComponents(val);
             if (!parsed) return String(val);
@@ -212,7 +240,19 @@
                 ? this.getDateOnlyFormat(format)
                 : format;
 
-            return this.formatPhpDate(parsed.date, useFmt);
+            return this.formatPhpDate(parsed.date, useFmt, locale);
+        },
+        saveMetadata(metadata, reload = false, record = null) {
+            const rec = record || this.getParam('id');
+            const payload = {
+                record: rec,
+                metadata: typeof metadata === 'string' ? metadata : JSON.stringify(metadata)
+            };
+            return module.ajax("metadataSave", payload).then(() => {
+                if (!reload) return;
+                window.onbeforeunload = () => {};
+                window.location.reload();
+            }).catch(err => console.error(err));
         }
     };
 

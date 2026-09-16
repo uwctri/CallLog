@@ -41,9 +41,7 @@ class DateMathService
         ?array $customNames = null
     ): string {
         $timestamp = strtotime($date);
-        if ($timestamp === false) {
-            return date('Y-m-d');
-        }
+        if ($timestamp === false) return date('Y-m-d');
 
         $op = ($operation === '-') ? '-' : '+';
         $days = max(0, $days);
@@ -51,9 +49,7 @@ class DateMathService
         $calculatedDate = date('Y-m-d', strtotime("{$op}{$days} days", $timestamp));
 
         // Skip weekend/holiday adjustments if offsetting beyond cutoff
-        if ($days > $this->dateMathCutoff) {
-            return $calculatedDate;
-        }
+        if ($days > $this->dateMathCutoff) return $calculatedDate;
 
         return $this->adjustForWeekendsAndHolidays($calculatedDate, $op, $enabledHolidays, $customDates, $customNames);
     }
@@ -90,9 +86,7 @@ class DateMathService
             $isWeekend = ($dayOfWeek >= 6);
             $isHoliday = isset($holidays[$fullDate]);
 
-            if (!$isWeekend && !$isHoliday) {
-                break;
-            }
+            if (!$isWeekend && !$isHoliday) break;
 
             $currentTs = strtotime($step, $currentTs);
             $attempt++;
@@ -133,9 +127,7 @@ class DateMathService
         ];
 
         foreach ($fixedMap as $key => [$dateStr, $label]) {
-            if (isset($enabledMap[$key])) {
-                $holidays[$dateStr] = $label;
-            }
+            if (isset($enabledMap[$key])) $holidays[$dateStr] = $label;
         }
 
         // Floating Standard Holidays
@@ -150,9 +142,7 @@ class DateMathService
         ];
 
         foreach ($floatingMap as $key => [$dateStr, $label]) {
-            if (isset($enabledMap[$key])) {
-                $holidays[$dateStr] = $label;
-            }
+            if (isset($enabledMap[$key])) $holidays[$dateStr] = $label;
         }
 
         // Custom Site Closures
@@ -166,9 +156,7 @@ class DateMathService
                 if (preg_match('/^\d{2}-\d{2}$/', $cDate)) {
                     $holidays[sprintf('%04d-%s', $year, $cDate)] = $cName;
                 } elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $cDate)) {
-                    if (str_starts_with($cDate, (string)$year)) {
-                        $holidays[$cDate] = $cName;
-                    }
+                    if (str_starts_with($cDate, (string)$year)) $holidays[$cDate] = $cName;
                 }
             }
         }

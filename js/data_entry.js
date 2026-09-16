@@ -61,10 +61,8 @@
     addGoToCallLogButton();
     modifyRequiredPopup();
 
-    if (module.recentCaller && module.renderers && module.renderers.renderCallStartedWarning) {
+    if (module.recentCaller) {
         const callerName = module.userNameMap ? (module.userNameMap[module.recentCaller] || module.recentCaller) : module.recentCaller;
-        $("#questiontable").before(
-            module.renderers.renderCallStartedWarning(callerName)
-        );
+        $("#questiontable").before(module.renderers.renderCallStartedWarning(callerName));
     }
 })();

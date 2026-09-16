@@ -3,12 +3,7 @@
     const pageRefresh = 60 * 1000;
     const COOKIE_NAME = `call_log_dashboard_${pid}`;
 
-    const formatDateTime = (val, forceTime = false, forceDateOnly = false) => {
-        if (module.utils && module.utils.formatDateTime) {
-            return module.utils.formatDateTime(val, forceTime, forceDateOnly);
-        }
-        return val !== undefined && val !== null ? String(val) : '';
-    };
+    const formatDateTime = (val, forceTime = false, forceDateOnly = false) => module.utils.formatDateTime(val, forceTime, forceDateOnly);
 
     const isRowHidden = (row) => {
         if (!row) return false;

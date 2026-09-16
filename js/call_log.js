@@ -1,40 +1,26 @@
 (() => {
     const module = ExternalModules.UWMadison.CallLog;
-    const getParam = (name) => (module.utils && module.utils.getParam) ? module.utils.getParam(name) : (typeof window.getParameterByName === 'function' ? window.getParameterByName(name) : null);
+    const getParam = (name) => module.utils.getParam(name);
 
-    if (typeof window.displayFormSaveBtnTooltip === 'function') {
-        window.displayFormSaveBtnTooltip = function () { };
-    }
+    if (typeof window.displayFormSaveBtnTooltip === 'function') window.displayFormSaveBtnTooltip = function () { };
 
     if (typeof window.dbtf === 'function' && !window.__callLogDbtfOverridden) {
         window.__callLogDbtfOverridden = true;
         const origDbtf = window.dbtf;
         window.dbtf = function (t, c) {
             const fields = ['call_left_message', 'call_not_answered', 'call_disconnected', 'call_requested_callback', 'call_outcome'];
-            if (module.disableBranchingLogic && fields.includes(c)) {
-                return false;
-            }
+            if (module.disableBranchingLogic && fields.includes(c)) return false;
             return origDbtf.apply(this, arguments);
         };
     }
 
-    module.saveMetadata = () => {
-        module.ajax("metadataSave", {
-            record: getParam('id'),
-            metadata: JSON.stringify(module.metadata)
-        }).catch(function (err) {
-            console.error(err);
-        });
-    };
+    module.saveMetadata = () => module.utils.saveMetadata(module.metadata);
 
     const goToCallList = () => {
         const link = module.callListUrl || $("#external_modules_panel a:contains('Call List')").prop('href');
         if ($(".callTab").length === 0 || typeof appendHiddenInputToForm !== 'function' || typeof dataEntrySubmit !== 'function') {
-            if (link) {
-                window.location.href = link;
-            } else {
-                window.history.back();
-            }
+            if (link) window.location.href = link;
+            else window.history.back();
             return false;
         }
         appendHiddenInputToForm('save-and-redirect', link);
@@ -42,15 +28,11 @@
         return false;
     };
 
-    // Format a date+time pair using the project's configured dateTimeFormat (via utils),
-    // falling back to a plain concatenation if utils is unavailable.
+    // Format a date+time pair using the project's configured dateTimeFormat (via utils)
     const formatCallDatetime = (date, time) => {
         const raw = [date, time].filter(Boolean).join(' ').trim();
         if (!raw) return '';
-        if (module.utils && module.utils.formatDateTime) {
-            return module.utils.formatDateTime(raw, true);
-        }
-        return raw;
+        return module.utils.formatDateTime(raw, true);
     };
 
     const getPreviousCalldatetime = (callID) => {
@@ -526,13 +508,8 @@
         const formatTimeInput = function () {
             const raw = $(this).val();
             if (!raw) return;
-            const parseFn = (module.utils && module.utils.parseTime24) || module.parseTime24;
-            if (typeof parseFn === 'function') {
-                const parsed = parseFn(raw);
-                if (parsed) {
-                    $(this).val(parsed);
-                }
-            }
+            const parsed = module.utils.parseTime24(raw);
+            if (parsed) $(this).val(parsed);
         };
 
         $modal.find('input[name=callbackTime]').off('blur.parseTime change.parseTime').on('blur.parseTime change.parseTime', formatTimeInput);
@@ -551,9 +528,8 @@
             const isCbScheduled = $modal.find('input[name=scheduleCallback]').is(':checked');
             const cbDateVal = isCbScheduled ? $modal.find('input[name=callbackDate]').val() : '';
             let cbTimeVal = isCbScheduled ? $modal.find('input[name=callbackTime]').val() : '';
-            const parseFn = (module.utils && module.utils.parseTime24) || module.parseTime24;
-            if (cbTimeVal && typeof parseFn === 'function') {
-                const parsed = parseFn(cbTimeVal);
+            if (cbTimeVal) {
+                const parsed = module.utils.parseTime24(cbTimeVal);
                 if (parsed) {
                     cbTimeVal = parsed;
                     $modal.find('input[name=callbackTime]').val(parsed);

@@ -26,9 +26,7 @@ class InstrumentDeploymentService
     public function deploy(int $projectId, string $csvPath, ?int $eventId = null): array
     {
         global $Proj;
-        if (!isset($Proj) || $Proj->project_id != $projectId) {
-            $Proj = new Project($projectId);
-        }
+        if (!isset($Proj) || $Proj->project_id != $projectId) $Proj = new Project($projectId);
 
         $events = $Proj->eventInfo ?? [];
         $hasMultipleEvents = count($events) > 1;
@@ -43,9 +41,7 @@ class InstrumentDeploymentService
             }
         } else {
             // Single event project - automatically use the default event ID
-            if (!$eventId && !empty($events)) {
-                $eventId = (int)array_key_first($events);
-            }
+            if (!$eventId && !empty($events)) $eventId = (int)array_key_first($events);
         }
 
         // Validate existing event assignments to ensure instruments are assigned to only ONE event
@@ -98,9 +94,7 @@ class InstrumentDeploymentService
         }
 
         // Assign instruments to the selected single event in redcap_events_forms
-        if ($eventId) {
-            $this->assignToSingleEvent($projectId, $eventId);
-        }
+        if ($eventId) $this->assignToSingleEvent($projectId, $eventId);
 
         return [
             'success' => true,
@@ -117,14 +111,10 @@ class InstrumentDeploymentService
     public function validateSingleEventAssignment(int $projectId): array
     {
         global $Proj;
-        if (!isset($Proj) || $Proj->project_id != $projectId) {
-            $Proj = new Project($projectId);
-        }
+        if (!isset($Proj) || $Proj->project_id != $projectId) $Proj = new Project($projectId);
 
         $validEventIds = array_keys($Proj->eventInfo ?? []);
-        if (empty($validEventIds)) {
-            return ['valid' => true];
-        }
+        if (empty($validEventIds)) return ['valid' => true];
 
         $inClause = implode(',', array_fill(0, count($validEventIds), '?'));
         $sql = "SELECT DISTINCT event_id, form_name 
@@ -186,9 +176,7 @@ class InstrumentDeploymentService
     public function checkInstrumentConfiguration(int $projectId): array
     {
         global $Proj;
-        if (!isset($Proj) || $Proj->project_id != $projectId) {
-            $Proj = new Project($projectId);
-        }
+        if (!isset($Proj) || $Proj->project_id != $projectId) $Proj = new Project($projectId);
 
         $isDeployed = isset($Proj->forms[$this->instrumentCall]) && isset($Proj->forms[$this->instrumentMeta]);
         if (!$isDeployed) {
@@ -268,15 +256,11 @@ class InstrumentDeploymentService
         $targetEventId = $assignedEventId ?? (!empty($events) ? (int)array_key_first($events) : null);
 
         if ($targetEventId) {
-            if (isset($Proj)) {
-                $repeatableValid = (bool)$Proj->isRepeatingFormOrEvent($targetEventId, $this->instrumentCall);
-            }
+            if (isset($Proj)) $repeatableValid = (bool)$Proj->isRepeatingFormOrEvent($targetEventId, $this->instrumentCall);
             if (!$repeatableValid) {
                 $sqlRepeat = "SELECT 1 FROM redcap_events_repeat WHERE (form_name = '{$this->instrumentCall}' OR form_name IS NULL OR form_name = '') AND event_id = ? LIMIT 1";
                 $resRepeat = ExternalModules::query($sqlRepeat, [$targetEventId]);
-                if ($resRepeat && $resRepeat->fetch_assoc()) {
-                    $repeatableValid = true;
-                }
+                if ($resRepeat && $resRepeat->fetch_assoc()) $repeatableValid = true;
             }
         }
 
@@ -289,9 +273,7 @@ class InstrumentDeploymentService
                     $repeatableValid = false;
                 } else {
                     $repeatableValid = true;
-                    if (!$assignedEventId) {
-                        $assignedEventId = (int)$row['event_id'];
-                    }
+                    if (!$assignedEventId) $assignedEventId = (int)$row['event_id'];
                 }
             }
         }
@@ -325,17 +307,13 @@ class InstrumentDeploymentService
     public function enableRepeatable(int $projectId, ?int $eventId = null): array
     {
         global $Proj;
-        if (!isset($Proj) || $Proj->project_id != $projectId) {
-            $Proj = new Project($projectId);
-        }
+        if (!isset($Proj) || $Proj->project_id != $projectId) $Proj = new Project($projectId);
 
         $events = $Proj->eventInfo ?? [];
         if (!$eventId) {
             $repo = new CallMetadataRepository();
             $eventId = $repo->getEventOfInstrument($projectId, $this->instrumentCall);
-            if (!$eventId && !empty($events)) {
-                $eventId = (int)array_key_first($events);
-            }
+            if (!$eventId && !empty($events)) $eventId = (int)array_key_first($events);
         }
 
         if (!$eventId) {
@@ -362,9 +340,7 @@ class InstrumentDeploymentService
     public function isDeployed(int $projectId): bool
     {
         global $Proj;
-        if (!isset($Proj) || $Proj->project_id != $projectId) {
-            $Proj = new Project($projectId);
-        }
+        if (!isset($Proj) || $Proj->project_id != $projectId) $Proj = new Project($projectId);
         return isset($Proj->forms[$this->instrumentCall]) && isset($Proj->forms[$this->instrumentMeta]);
     }
 

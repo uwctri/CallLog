@@ -1,6 +1,6 @@
 (() => {
     const module = ExternalModules.UWMadison.CallLog;
-    const { toArray, getVal } = module.utils || {};
+    const { toArray, getVal } = module.utils;
     const starterCallScripts = {
         new: `<p>Hello <strong>{{participant_name}}</strong>, my name is <strong>[user-fullname]</strong> calling with the research study team.</p>
 <p>I am reaching out regarding your recent enrollment in our study. We are excited to have you participate! This introductory call takes about <strong>{{expected_duration}} minutes</strong>.</p>
@@ -83,12 +83,8 @@
 
             formatPreview(fmt) {
                 let now = new Date();
-                let norm = (module.utils && module.utils.normalizePhpDateFormat)
-                    ? module.utils.normalizePhpDateFormat(fmt || 'm/d/Y g:i A')
-                    : (fmt || 'm/d/Y g:i A');
-                return (module.utils && module.utils.formatPhpDate)
-                    ? module.utils.formatPhpDate(now, norm)
-                    : '';
+                let norm = module.utils.normalizePhpDateFormat(fmt || 'm/d/Y g:i A');
+                return module.utils.formatPhpDate(now, norm);
             },
 
             callTypes: [],

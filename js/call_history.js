@@ -1,7 +1,7 @@
 (() => {
     const callHistoryPageSize = 20;
     const module = ExternalModules.UWMadison.CallLog;
-    const getParam = (name) => (module.utils && module.utils.getParam) ? module.utils.getParam(name) : (typeof window.getParameterByName === 'function' ? window.getParameterByName(name) : null);
+    const getParam = (name) => module.utils.getParam(name);
     const escapeHtml = (value) => String(value)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -9,17 +9,7 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 
-    const saveMetadata = (metadata) => {
-        module.ajax("metadataSave", {
-            record: getParam('id'),
-            metadata: JSON.stringify(metadata)
-        }).then(function () {
-            window.onbeforeunload = function () { };
-            window.location.reload();
-        }).catch(function (err) {
-            console.error(err);
-        });
-    };
+    const saveMetadata = (metadata) => module.utils.saveMetadata(metadata, true);
 
     const threeDotClick = () => {
         if (typeof Swal === 'undefined' && (!module.swal || !module.swal.fire)) return;
@@ -27,19 +17,15 @@
         const isCallLogPage = (getParam('page') === (module.static ? module.static.instrument : 'call_log'));
         const hasCallHistory = module.data && Object.keys(module.data).length > 0;
         const rawMetadata = escapeHtml(JSON.stringify(module.metadata || {}, null, 2));
-        let settingsHtml = module.renderers ? module.renderers.renderCallHistorySettings() : '<div class="call-metadata-card">';
+        let settingsHtml = module.renderers.renderCallHistorySettings();
         let callHistoryRows = "";
         $.each(module.metadata, (k, v) => {
-            if (module.renderers && module.renderers.renderCallHistoryRow) {
-                const statusVal = v.status || 'incomplete';
-                callHistoryRows += module.renderers.renderCallHistoryRow(v.name || '', k, statusVal);
-            }
+            const statusVal = v.status || 'incomplete';
+            callHistoryRows += module.renderers.renderCallHistoryRow(v.name || '', k, statusVal);
         });
         settingsHtml += callHistoryRows + '</div>';
-        if (module.renderers && module.renderers.renderCallHistoryRawMetadata) {
-            settingsHtml += module.renderers.renderCallHistoryRawMetadata(rawMetadata);
-        }
-        if (isCallLogPage && hasCallHistory && module.renderers && module.renderers.renderCallHistoryDeleteAction) {
+        settingsHtml += module.renderers.renderCallHistoryRawMetadata(rawMetadata);
+        if (isCallLogPage && hasCallHistory) {
             settingsHtml += module.renderers.renderCallHistoryDeleteAction();
         }
         settingsHtml += '</div></div>';
@@ -409,7 +395,7 @@
     };
 
     const buildCallHistoryTable = () => {
-        if (!module.metadata || !module.renderers || !module.renderers.renderCallHistoryTable) return;
+        if (!module.metadata) return;
 
         const validInstances = [];
         if (module.data && typeof module.data === 'object') {
@@ -423,7 +409,7 @@
         if (!$(".callHistoryContainer").length) {
             const htmlToAppend = validInstances.length > 0
                 ? module.renderers.renderCallHistoryTable()
-                : (module.renderers.renderCallHistoryEmpty ? module.renderers.renderCallHistoryEmpty() : module.renderers.renderCallHistoryTable());
+                : module.renderers.renderCallHistoryEmpty();
             
             const $form = $('#form');
             if ($form.length) {
@@ -434,7 +420,7 @@
         }
 
         // Render Stopwatch Widget below Call History table
-        if (Boolean(module.enableCallTimer) && !$(".callStopwatchContainer").length && module.renderers && module.renderers.renderCallStopwatchWidget) {
+        if (Boolean(module.enableCallTimer) && !$(".callStopwatchContainer").length) {
             const stopwatchHtml = module.renderers.renderCallStopwatchWidget();
             const $historyContainer = $(".callHistoryContainer");
             if ($historyContainer.length) {

@@ -16,21 +16,15 @@ use UWMadison\CallLog\Services\ApiService;
 use UWMadison\CallLog\Services\LoggingService;
 use UWMadison\CallLog\Services\ReportService;
 use UWMadison\CallLog\CallMetadataRepository;
-use UWMadison\CallLog\CallTemplateType;
-use UWMadison\CallLog\CallItemDTO;
 
 spl_autoload_register(function ($class) {
     $prefix = 'UWMadison\\CallLog\\';
     $baseDir = __DIR__ . '/src/';
     $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        return;
-    }
+    if (strncmp($prefix, $class, $len) !== 0) return;
     $relativeClass = substr($class, $len);
     $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
-    if (file_exists($file)) {
-        require_once $file;
-    }
+    if (file_exists($file)) require_once $file;
 });
 
 /**
@@ -134,9 +128,7 @@ class CallLog extends AbstractExternalModule
     public function redcap_save_record($project_id, $record, $instrument, $event_id = null, $group_id = null, $survey_hash = null, $response_id = null, $repeat_instance = 1)
     {
         // Skip call generation evaluation when saving internal module metadata
-        if ($instrument === $this->instrumentMeta) {
-            return;
-        }
+        if ($instrument === $this->instrumentMeta) return;
 
         $project_id = (int)$project_id;
         $record = (string)$record;
@@ -180,9 +172,7 @@ div.formMenuList:has(a[href*="page=' . $this->instrumentCall . '"]),
 #record_status_table tr:has(a[href*="page=' . $this->instrumentCall . '"]),
 div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { display: none !important; }';
         }
-        if (!empty($hidingCss)) {
-            echo "<style id='callLogVisibilityHider'>" . implode("\n", $hidingCss) . "</style>";
-        }
+        if (!empty($hidingCss)) echo "<style id='callLogVisibilityHider'>" . implode("\n", $hidingCss) . "</style>";
 
         $isRelevantPage = $this->isPage('ExternalModules/')
             || $this->isPage('DataEntry/record_home.php')

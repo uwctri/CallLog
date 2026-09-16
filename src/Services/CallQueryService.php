@@ -6,7 +6,6 @@ use REDCap;
 use Project;
 use UWMadison\CallLog\CallMetadataRepository;
 use UWMadison\CallLog\CallTemplateType;
-use UWMadison\CallLog\CallItemDTO;
 
 class CallQueryService
 {
@@ -26,9 +25,7 @@ class CallQueryService
         $includeCompleted = !empty($options['includeCompleted']);
         $includeExpired = !empty($options['includeExpired']);
         global $Proj;
-        if (!isset($Proj) || $Proj->project_id != $projectId) {
-            $Proj = new Project($projectId);
-        }
+        if (!isset($Proj) || $Proj->project_id != $projectId) $Proj = new Project($projectId);
 
         $callEvent = $this->metadataRepo->getEventOfInstrument($projectId, "call_log");
         $metaEvent = $this->metadataRepo->getEventOfInstrument($projectId, "call_log_metadata");

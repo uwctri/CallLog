@@ -2,11 +2,7 @@
 
 namespace UWMadison\CallLog\Services;
 
-use REDCap;
-use RestUtility;
 use UWMadison\CallLog\CallMetadataRepository;
-use UWMadison\CallLog\CallTemplateType;
-use UWMadison\CallLog\CallItemDTO;
 
 class ApiService
 {
@@ -34,9 +30,7 @@ class ApiService
     {
         $action = $payload['action'] ?? '';
         $records = json_decode($payload['record_list'] ?? '', true);
-        if (!is_array($records)) {
-            $records = !empty($payload['record']) ? [$payload['record']] : [];
-        }
+        if (!is_array($records)) $records = !empty($payload['record']) ? [$payload['record']] : [];
 
         $success = true;
         $result = [];
@@ -67,9 +61,7 @@ class ApiService
                 foreach ($records as $record) {
                     $rec = trim((string)$record);
                     if (empty($rec)) continue;
-                    if ($this->createAdhocCall($projectId, $rec, $config['adhoc'] ?? [], $callTypeId, $reasonId, $payload)) {
-                        $createdCount++;
-                    }
+                    if ($this->createAdhocCall($projectId, $rec, $config['adhoc'] ?? [], $callTypeId, $reasonId, $payload)) $createdCount++;
                 }
                 $success = true;
                 $result['createdCount'] = $createdCount;
