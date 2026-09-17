@@ -193,6 +193,7 @@ class CallGeneratorService
 
         foreach ($config as $callConfig) {
             if (!empty($metadata[$callConfig['id']])) continue;
+            $expireDays = (isset($callConfig['expire']) && $callConfig['expire'] !== null && $callConfig['expire'] !== '') ? (int)$callConfig['expire'] : null;
             $dto = new CallItemDTO([
                 "id" => $callConfig['id'],
                 "template" => CallTemplateType::NEW->value,
@@ -201,7 +202,7 @@ class CallGeneratorService
                 "load" => date("Y-m-d H:i"),
                 "instances" => [],
                 "voiceMails" => 0,
-                "expire" => $callConfig['expire'] ?? 0,
+                "expire" => $expireDays,
                 "hideAfterAttempt" => $callConfig['hideAfterAttempt'] ?? 9999,
                 "status" => "incomplete"
             ]);
@@ -216,7 +217,7 @@ class CallGeneratorService
                 'trigger' => $trigger,
                 'details' => [
                     'trigger_instrument' => $savedInstrument ?? '',
-                    'expire_days' => $callConfig['expire'] ?? 0
+                    'expire_days' => $expireDays
                 ]
             ];
         }

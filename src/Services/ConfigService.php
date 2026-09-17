@@ -337,7 +337,9 @@ class ConfigService
             ];
 
             if ($template === "new") {
-                $days = intval($settings["new_expire_days"][$i][0] ?? $settings["new_expire_days"][$i] ?? 0);
+                $rawDays = $settings["new_expire_days"][$i] ?? null;
+                if (is_array($rawDays)) $rawDays = reset($rawDays);
+                $days = ($rawDays !== '' && $rawDays !== null && is_numeric($rawDays)) ? (int)$rawDays : null;
                 $newEntryConfig[] = array_merge(["expire" => $days], $commonConfig);
             } elseif ($template === "reminder") {
                 $field = $settings["reminder_variable"][$i][0] ?? $settings["reminder_variable"][$i] ?? '';

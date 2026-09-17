@@ -682,7 +682,7 @@ if (typeof tinymce === 'undefined') {
                                     <div class="setting-blurb mb-3 w-100" style="max-width: 100%;">
                                         <strong>Purpose:</strong> Designed for initial participant outreach, screening welcomes, or intake onboarding calls upon study registration.
                                         <div class="mt-1 text-muted small">
-                                            <strong>How it works:</strong> Triggers automatically when a new participant record is created or imported (while call metadata is empty). The call remains active on dashboard queues until completed by a caller, or until the configured number of expiration days elapses. Call List tabs containing New Entry calls automatically display an <em>Expiration Date</em> column showing the exact date and days remaining.
+                                            <strong>How it works:</strong> Triggers automatically when a new participant record is created or imported (while call metadata is empty). The call remains active on dashboard queues until completed by a caller, or until the configured number of expiration days elapses (leave blank if calls should never expire; enter <code>0</code> to expire the same day created). Call List tabs containing New Entry calls automatically display an <em>Expiration Date</em> column showing the exact date and days remaining (or <em>No Expiration</em> if left blank).
                                         </div>
                                     </div>
                                     <div class="row g-3 align-items-center mb-2">

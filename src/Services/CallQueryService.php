@@ -51,18 +51,22 @@ class CallQueryService
             }
         }
 
-        $settings = $this->configService->getRawProjectSettings($projectId);
         $callIds = $settings['call_id'] ?? [];
         $callDurations = $settings['call_expected_duration'] ?? [];
         $callTemplates = $settings['call_template'] ?? [];
+        $callNewExpires = $settings['new_expire_days'] ?? [];
         $callIdToDuration = [];
         $callIdToTemplate = [];
+        $callIdToNewExpire = [];
         foreach ($callIds as $i => $cid) {
             if (!empty($cid)) {
                 $d = $callDurations[$i] ?? 30;
                 if (is_array($d)) $d = reset($d);
                 $callIdToDuration[$cid] = ($d !== null && $d !== '' && is_numeric($d)) ? (int)$d : 30;
                 $callIdToTemplate[$cid] = $callTemplates[$i] ?? '';
+                $exp = $callNewExpires[$i] ?? null;
+                if (is_array($exp)) $exp = reset($exp);
+                $callIdToNewExpire[$cid] = ($exp !== '' && $exp !== null && is_numeric($exp)) ? (int)$exp : null;
             }
         }
 
@@ -217,8 +221,13 @@ class CallQueryService
                         $isExpired = true;
                     } elseif ($templateVal === CallTemplateType::FOLLOWUP->value && ($autoRemoveConfig[$baseCallID] ?? false) && !empty($call['end']) && ($call['end'] < $today)) {
                         $isExpired = true;
-                    } elseif ($templateVal === CallTemplateType::NEW->value && !empty($call['expire']) && (date('Y-m-d', strtotime("{$call['load']} +{$call['expire']} days")) < $today)) {
-                        $isExpired = true;
+                    } elseif ($templateVal === CallTemplateType::NEW->value) {
+                        $effExpire = array_key_exists($baseCallID, $callIdToNewExpire)
+                            ? $callIdToNewExpire[$baseCallID]
+                            : ((isset($call['expire']) && $call['expire'] !== '' && $call['expire'] !== null && is_numeric($call['expire'])) ? (int)$call['expire'] : null);
+                        if ($effExpire !== null && (date('Y-m-d', strtotime("{$call['load']} +{$effExpire} days")) < $today)) {
+                            $isExpired = true;
+                        }
                     }
                 }
 
@@ -437,7 +446,9 @@ class CallQueryService
 
                 if (($call['template'] ?? '') === 'new') {
                     $loadDate = $call['load'] ?? '';
-                    $expireDays = isset($call['expire']) && $call['expire'] !== '' ? (int)$call['expire'] : null;
+                    $expireDays = array_key_exists($baseCallID, $callIdToNewExpire)
+                        ? $callIdToNewExpire[$baseCallID]
+                        : ((isset($call['expire']) && $call['expire'] !== '' && $call['expire'] !== null && is_numeric($call['expire'])) ? (int)$call['expire'] : null);
                     if (!empty($loadDate) && $expireDays !== null) {
                         $expireTs = strtotime("{$loadDate} +{$expireDays} days");
                         $instanceData['_expireDate'] = date('Y-m-d', $expireTs);

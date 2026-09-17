@@ -53,7 +53,7 @@ class CallItemDTO
         $this->appt = isset($data['appt']) ? (string)$data['appt'] : null;
         $this->created = isset($data['created']) ? (string)$data['created'] : null;
         $this->load = isset($data['load']) ? (string)$data['load'] : null;
-        $this->expire = isset($data['expire']) ? (int)$data['expire'] : null;
+        $this->expire = (isset($data['expire']) && $data['expire'] !== null && $data['expire'] !== '') ? (int)$data['expire'] : null;
         $this->callStarted = isset($data['callStarted']) ? (string)$data['callStarted'] : null;
         $this->callStartedBy = isset($data['callStartedBy']) ? (string)$data['callStartedBy'] : null;
         $this->requestedCallback = isset($data['requestedCallback']) ? (string)$data['requestedCallback'] : (isset($data['call_requested_callback']) ? (is_array($data['call_requested_callback']) ? ($data['call_requested_callback'][1] ?? '0') : (string)$data['call_requested_callback']) : null);

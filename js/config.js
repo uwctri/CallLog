@@ -954,7 +954,7 @@
                     call_script: this.callTypes.map(c => c.script || ''),
                     call_expected_duration: this.callTypes.map(c => c.expectedDuration || 30),
                     hide_after_attempts: this.callTypes.map(c => c.hideAfterAttempt),
-                    new_expire_days: this.callTypes.map(c => c.newExpireDays),
+                    new_expire_days: this.callTypes.map(c => (c.newExpireDays !== '' && c.newExpireDays !== null && c.newExpireDays !== undefined) ? String(c.newExpireDays).trim() : ''),
                     reminder_variable: this.callTypes.map(c => c.reminderVariable),
                     reminder_days: this.callTypes.map(c => c.reminderDays),
                     reminder_include_events: this.callTypes.map(c => (c.reminderEvents || []).join(', ')),
