@@ -10,10 +10,10 @@ use UWMadison\CallLog\CallTemplateType;
 class CallQueryService
 {
     private $module;
-    private $configService;
-    private $metadataRepo;
+    private ConfigService $configService;
+    private CallMetadataRepository $metadataRepo;
 
-    public function __construct($module, ConfigService $configService, $metadataRepo)
+    public function __construct($module, ConfigService $configService, CallMetadataRepository $metadataRepo)
     {
         $this->module = $module;
         $this->configService = $configService;

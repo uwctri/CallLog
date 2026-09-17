@@ -9,14 +9,14 @@ class ApiService
     private $module;
     private ConfigService $configService;
     private CallGeneratorService $generatorService;
-    private $metadataRepo;
+    private CallMetadataRepository $metadataRepo;
     private ?LoggingService $loggingService;
 
     public function __construct(
         $module,
         ConfigService $configService,
         CallGeneratorService $generatorService,
-        $metadataRepo,
+        CallMetadataRepository $metadataRepo,
         ?LoggingService $loggingService = null
     ) {
         $this->module = $module;

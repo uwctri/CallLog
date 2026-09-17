@@ -11,13 +11,18 @@ use UWMadison\CallLog\CallItemDTO;
 class CallGeneratorService
 {
     private $module;
-    private $configService;
-    private $metadataRepo;
-    private $dateMathService;
+    private ConfigService $configService;
+    private CallMetadataRepository $metadataRepo;
+    private DateMathService $dateMathService;
     private ?LoggingService $loggingService;
 
-    public function __construct($module, ConfigService $configService, $metadataRepo, DateMathService $dateMathService, ?LoggingService $loggingService = null)
-    {
+    public function __construct(
+        $module,
+        ConfigService $configService,
+        CallMetadataRepository $metadataRepo,
+        DateMathService $dateMathService,
+        ?LoggingService $loggingService = null
+    ) {
         $this->module = $module;
         $this->configService = $configService;
         $this->metadataRepo = $metadataRepo;
