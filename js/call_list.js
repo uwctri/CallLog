@@ -25,15 +25,6 @@
         let isCbToday = Boolean(row['_callbackToday']);
 
         if (hasCallback && cbDate) {
-            let now = new Date();
-            let yyyy = now.getFullYear();
-            let mm = String(now.getMonth() + 1).padStart(2, '0');
-            let dd = String(now.getDate()).padStart(2, '0');
-            let hh = String(now.getHours()).padStart(2, '0');
-            let min = String(now.getMinutes()).padStart(2, '0');
-            let nowDateTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
-            let todayDate = `${yyyy}-${mm}-${dd}`;
-
             let cleanDate = cbDate;
             if (cleanDate.includes('/')) {
                 let parts = cleanDate.split('/');
@@ -42,27 +33,53 @@
                 }
             }
 
-            if (cbTime) {
-                let cleanTime = cbTime.length > 5 ? cbTime.substring(0, 5) : cbTime;
-                isCbFuture = (`${cleanDate} ${cleanTime}` > nowDateTime);
+            if (typeof dayjs !== 'undefined') {
+                const now = dayjs();
+                if (cbTime) {
+                    const cbDateTime = dayjs(`${cleanDate} ${cbTime.substring(0, 5)}`);
+                    isCbFuture = cbDateTime.isValid() ? cbDateTime.isAfter(now) : false;
+                } else {
+                    const cbD = dayjs(cleanDate);
+                    isCbFuture = cbD.isValid() ? cbD.isAfter(now, 'day') : false;
+                }
                 isCbToday = !isCbFuture;
             } else {
-                isCbFuture = (cleanDate > todayDate);
-                isCbToday = !isCbFuture;
+                let now = new Date();
+                let yyyy = now.getFullYear();
+                let mm = String(now.getMonth() + 1).padStart(2, '0');
+                let dd = String(now.getDate()).padStart(2, '0');
+                let hh = String(now.getHours()).padStart(2, '0');
+                let min = String(now.getMinutes()).padStart(2, '0');
+                let nowDateTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+                let todayDate = `${yyyy}-${mm}-${dd}`;
+
+                if (cbTime) {
+                    let cleanTime = cbTime.length > 5 ? cbTime.substring(0, 5) : cbTime;
+                    isCbFuture = (`${cleanDate} ${cleanTime}` > nowDateTime);
+                    isCbToday = !isCbFuture;
+                } else {
+                    isCbFuture = (cleanDate > todayDate);
+                    isCbToday = !isCbFuture;
+                }
             }
         }
 
         let isFutureAdhoc = Boolean(row['_futureAdhoc']);
         if (row['_adhocContactOn'] && row['_adhocContactOn'].length > 10) {
-            let now = new Date();
-            let yyyy = now.getFullYear();
-            let mm = String(now.getMonth() + 1).padStart(2, '0');
-            let dd = String(now.getDate()).padStart(2, '0');
-            let hh = String(now.getHours()).padStart(2, '0');
-            let min = String(now.getMinutes()).padStart(2, '0');
-            let nowDateTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
-            let cleanContact = row['_adhocContactOn'].length > 16 ? row['_adhocContactOn'].substring(0, 16) : row['_adhocContactOn'];
-            isFutureAdhoc = (cleanContact > nowDateTime);
+            if (typeof dayjs !== 'undefined') {
+                const contactTime = dayjs(row['_adhocContactOn']);
+                isFutureAdhoc = contactTime.isValid() ? contactTime.isAfter(dayjs()) : false;
+            } else {
+                let now = new Date();
+                let yyyy = now.getFullYear();
+                let mm = String(now.getMonth() + 1).padStart(2, '0');
+                let dd = String(now.getDate()).padStart(2, '0');
+                let hh = String(now.getHours()).padStart(2, '0');
+                let min = String(now.getMinutes()).padStart(2, '0');
+                let nowDateTime = `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+                let cleanContact = row['_adhocContactOn'].length > 16 ? row['_adhocContactOn'].substring(0, 16) : row['_adhocContactOn'];
+                isFutureAdhoc = (cleanContact > nowDateTime);
+            }
         }
 
         return Boolean((row['_atMaxAttempts'] && !isCbToday) || isCbFuture || row['_noCallsToday'] || isFutureAdhoc);
@@ -1129,7 +1146,7 @@
                         let isSaved = Boolean(resObj.saved || (resObj.data && resObj.data.saved));
                         if (isSaved) {
                             let caller = resObj.callStartedBy || (resObj.data && resObj.data.callStartedBy) || module.user || '';
-                            let startTime = resObj.callStarted || (resObj.data && resObj.data.callStarted) || new Date().toISOString().slice(0, 19).replace('T', ' ');
+                            let startTime = resObj.callStarted || (resObj.data && resObj.data.callStarted) || (typeof dayjs !== 'undefined' ? dayjs().format('YYYY-MM-DD HH:mm:ss') : new Date().toISOString().slice(0, 19).replace('T', ' '));
                             self.updateRowCallState(record, callId, {
                                 _callStarted: true,
                                 _isCallStarted: true,

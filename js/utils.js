@@ -23,6 +23,23 @@
     }
 
     module.utils = {
+        get dayjs() {
+            return typeof dayjs !== 'undefined' ? dayjs : null;
+        },
+        diffDays(d1, d2) {
+            if (typeof dayjs !== 'undefined') {
+                return dayjs(d1).diff(dayjs(d2), 'day');
+            }
+            let ms1 = new Date(d1).getTime();
+            let ms2 = new Date(d2).getTime();
+            return Math.floor((ms1 - ms2) / (1000 * 60 * 60 * 24));
+        },
+        fromNow(d) {
+            if (typeof dayjs !== 'undefined' && dayjs(d).fromNow) {
+                return dayjs(d).fromNow();
+            }
+            return '';
+        },
         toArray(val) {
             if (!val) return [];
             if (Array.isArray(val)) {
