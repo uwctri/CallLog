@@ -245,8 +245,12 @@
                     ? true
                     : Boolean(r.show_phone_banner && (r.show_phone_banner[0] === '1' || r.show_phone_banner === '1' || r.show_phone_banner === true));
                 this.enableCallTimer = Boolean(r.enable_call_timer && (r.enable_call_timer[0] === '1' || r.enable_call_timer === '1' || r.enable_call_timer === true));
-                this.datetimeFormat = (r.datetime_format && r.datetime_format[0]) ? r.datetime_format[0] : 'm/d/Y g:i A';
-                this.displayNameField = (r.display_name_field && r.display_name_field[0]) ? r.display_name_field[0] : (r.display_name_field || '');
+                this.datetimeFormat = Array.isArray(r.datetime_format)
+                    ? (r.datetime_format[0] || 'm/d/Y g:i A')
+                    : (typeof r.datetime_format === 'string' && r.datetime_format ? r.datetime_format : 'm/d/Y g:i A');
+                this.displayNameField = Array.isArray(r.display_name_field)
+                    ? (r.display_name_field[0] || '')
+                    : (typeof r.display_name_field === 'string' ? r.display_name_field : '');
                 this.triggerSave = toArray(r.trigger_save);
                 this.callSummary = toArray(r.call_summary);
 
@@ -447,14 +451,14 @@
             },
 
             getAvailableCallIds() {
-                return this.callTypes.map(c => c.id.trim()).filter(Boolean);
+                return this.callTypes.map(c => String(c.id || '').trim()).filter(Boolean);
             },
 
             getTabExtraInfo(includedIds) {
                 if (!includedIds || includedIds.length === 0) return [];
                 const templatesFound = new Set();
                 includedIds.forEach(id => {
-                    const found = this.callTypes.find(c => c.id.trim() === id);
+                    const found = this.callTypes.find(c => String(c.id || '').trim() === id);
                     if (found && found.template) templatesFound.add(found.template);
                 });
 
@@ -917,6 +921,15 @@
                     } catch (e) {}
                 }
 
+                const cleanStr = (val, fallback = '') => {
+                    if (typeof val === 'string') return val.trim();
+                    if (Array.isArray(val)) {
+                        return (val.length > 0 && typeof val[0] === 'string') ? val[0].trim() : fallback;
+                    }
+                    if (val !== null && val !== undefined) return String(val).trim();
+                    return fallback;
+                };
+
                 const payload = {
                     show_record_home_button: [this.showRecordHomeButton ? '1' : '0'],
                     show_call_log_instrument: [this.showCallLogInstrument ? '1' : '0'],
@@ -925,18 +938,18 @@
                     require_call_outcome: [this.requireCallOutcome ? '1' : '0'],
                     show_phone_banner: [this.showPhoneBanner ? '1' : '0'],
                     enable_call_timer: [this.enableCallTimer ? '1' : '0'],
-                    datetime_format: [this.datetimeFormat ? this.datetimeFormat.trim() : 'm/d/Y g:i A'],
-                    display_name_field: [this.displayNameField ? this.displayNameField.trim() : ''],
+                    datetime_format: [cleanStr(this.datetimeFormat, 'm/d/Y g:i A')],
+                    display_name_field: [cleanStr(this.displayNameField, '')],
                     trigger_save: this.triggerSave,
                     same_day_mcv_nts: [this.sameDayMcvNts ? '1' : '0'],
                     enabled_holidays: this.enabledHolidays,
-                    custom_holidays_date: this.customHolidays.map(h => h.date.trim()).filter(Boolean),
-                    custom_holidays_name: this.customHolidays.map(h => h.name.trim()).filter(Boolean),
+                    custom_holidays_date: this.customHolidays.map(h => cleanStr(h.date)).filter(Boolean),
+                    custom_holidays_name: this.customHolidays.map(h => cleanStr(h.name)).filter(Boolean),
                     call_summary: this.callSummary,
                     withdraw_event: this.withdrawRules.map(w => w.event),
                     withdraw_var: this.withdrawRules.map(w => w.var).filter(Boolean),
-                    call_id: this.callTypes.map(c => c.id.trim()),
-                    call_name: this.callTypes.map(c => c.name.trim()),
+                    call_id: this.callTypes.map(c => cleanStr(c.id)),
+                    call_name: this.callTypes.map(c => cleanStr(c.name)),
                     call_template: this.callTypes.map(c => c.template),
                     call_script: this.callTypes.map(c => c.script || ''),
                     call_expected_duration: this.callTypes.map(c => c.expectedDuration || 30),
@@ -957,12 +970,12 @@
                     adhoc_reason: this.callTypes.map(c => c.adhocReason),
                     visit_indicator: this.callTypes.map(c => c.visitIndicator),
                     visit_include_events: this.callTypes.map(c => (c.visitEvents || []).join(', ')),
-                    tab_name: this.callTabs.map(t => t.name.trim()),
+                    tab_name: this.callTabs.map(t => cleanStr(t.name)),
                     tab_calls_included: this.callTabs.map(t => (t.callsIncluded || []).join(', ')),
                     tab_order: this.callTabs.map((_, i) => i),
                     tab_field: this.callTabs.map(t => (t.fields || []).map(f => f.field).filter(Boolean)),
-                    tab_field_name: this.callTabs.map(t => (t.fields || []).map(f => f.name.trim())),
-                    tab_field_default: this.callTabs.map(t => (t.fields || []).map(f => f.default.trim())),
+                    tab_field_name: this.callTabs.map(t => (t.fields || []).map(f => cleanStr(f.name))),
+                    tab_field_default: this.callTabs.map(t => (t.fields || []).map(f => cleanStr(f.default))),
                     tab_field_link: this.callTabs.map(t => (t.fields || []).map(f => f.link)),
                     ...(() => {
                         const validExpands = (this.expandsFields || []).filter(e => e && e.field && String(e.field).trim());
