@@ -253,10 +253,17 @@
             },
 
             updateStatusBadgeColVisibility() {
-                const shouldShow = Boolean(this.showTypes && (this.showTypes.hidden || this.showTypes.expired || this.showTypes.completed));
+                const filterActive = Boolean(this.showTypes && (this.showTypes.hidden || this.showTypes.expired || this.showTypes.completed));
                 $('.callTable').each((_, el) => {
                     if ($.fn.DataTable.isDataTable(el)) {
                         const dt = $(el).DataTable();
+                        let hasCallbacks = false;
+                        try {
+                            const data = dt.rows().data().toArray();
+                            hasCallbacks = data.some(r => !r['_isCompleted'] && Boolean(r['_callbackRequestor'] || (r['call_requested_callback'] && (r['call_requested_callback'][1] === '1' || r['call_requested_callback'] === '1'))));
+                        } catch (e) {}
+
+                        const shouldShow = Boolean(filterActive || hasCallbacks);
                         const col = dt.column('_status_badge:name');
                         if (col && col.length && col.visible() !== shouldShow) {
                             col.visible(shouldShow, false);
@@ -423,8 +430,20 @@
                                 val = fieldConfig.default || '';
                             }
 
-                            if (fieldConfig.map && typeof fieldConfig.map === 'object' && fieldConfig.map[val] !== undefined) {
-                                val = fieldConfig.map[val];
+                            if (fieldConfig.map && typeof fieldConfig.map === 'object') {
+                                if (Array.isArray(val)) {
+                                    val = val.map(v => {
+                                        let vKey = (v !== null && v !== undefined) ? String(v).trim() : '';
+                                        return fieldConfig.map[v] !== undefined ? fieldConfig.map[v] : (vKey !== '' && fieldConfig.map[vKey] !== undefined ? fieldConfig.map[vKey] : v);
+                                    }).join(', ');
+                                } else {
+                                    let mapKey = (val !== null && val !== undefined) ? String(val).trim() : '';
+                                    if (fieldConfig.map[val] !== undefined) {
+                                        val = fieldConfig.map[val];
+                                    } else if (mapKey !== '' && fieldConfig.map[mapKey] !== undefined) {
+                                        val = fieldConfig.map[mapKey];
+                                    }
+                                }
                             }
 
                             if (fieldConfig.isFormStatus) {
@@ -536,20 +555,14 @@
                     config.push({
                         name: '_call_date_gen',
                         title: 'Generated',
-                        data: '_call_date',
+                        data: '_callGenerated',
                         className: 'callDateCol',
                         defaultContent: '',
                         render: (val, type, row) => {
-                            if (type !== "display") return val || row['_callGenerated'] || '';
-                            let dateVal = val || row['_callGenerated'];
+                            let dateVal = val || row['_callGenerated'] || row['load'] || '';
+                            if (type !== "display") return dateVal;
                             let formattedDate = formatDateTime(dateVal);
-                            let html = formattedDate || '';
-                            let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
-                            if (!isCompleted && row['_callbackRequestor']) {
-                                let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : row['_callbackRequestor']);
-                                html += ` <span class="badge bg-danger-subtle text-danger border ms-1" title="Requested by ${cbWho}"><i class="fas fa-bell me-1"></i>Callback (${cbWho})</span>`;
-                            }
-                            return html;
+                            return formattedDate || '';
                         }
                     });
                 }
@@ -640,13 +653,7 @@
                         render: (val, type, row) => {
                             if (type !== 'display') return val || '';
                             let formattedDate = val ? formatDateTime(val) : '';
-                            let html = formattedDate || '';
-                            let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
-                            if (!isCompleted && row['_callbackRequestor']) {
-                                let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : row['_callbackRequestor']);
-                                html += ` <span class="badge bg-danger-subtle text-danger border ms-1" title="Requested by ${cbWho}"><i class="fas fa-bell me-1"></i>Callback (${cbWho})</span>`;
-                            }
-                            return html;
+                            return formattedDate || '';
                         }
                     });
                 }
@@ -661,18 +668,17 @@
                         render: (val, type, row) => {
                             if (type !== "display") return val || '';
                             let formattedDate = formatDateTime(val);
-                            let html = formattedDate || '';
-                            let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
-                            if (!isCompleted && row['_callbackRequestor']) {
-                                let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : row['_callbackRequestor']);
-                                html += ` <span class="badge bg-danger-subtle text-danger border ms-1" title="Requested by ${cbWho}"><i class="fas fa-bell me-1"></i>Callback (${cbWho})</span>`;
-                            }
-                            return html;
+                            return formattedDate || '';
                         }
                     });
                 }
 
-                const showBadgeColInitial = Boolean(this.showTypes && (this.showTypes.hidden || this.showTypes.expired || this.showTypes.completed));
+                let hasCallbacksInitial = false;
+                if (tabIdOrIndex && this.displayedData) {
+                    let tabRows = (typeof tabIdOrIndex === 'string') ? (this.displayedData[tabIdOrIndex] || []) : [];
+                    hasCallbacksInitial = tabRows.some(r => !r['_isCompleted'] && Boolean(r['_callbackRequestor'] || (r['call_requested_callback'] && (r['call_requested_callback'][1] === '1' || r['call_requested_callback'] === '1'))));
+                }
+                const showBadgeColInitial = Boolean((this.showTypes && (this.showTypes.hidden || this.showTypes.expired || this.showTypes.completed)) || hasCallbacksInitial);
                 config.push({
                     name: '_status_badge',
                     title: 'Status',
@@ -687,6 +693,12 @@
                         let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
                         if (isCompleted) {
                             return `<span class="badge bg-success-subtle text-success border px-2 py-1" title="Call completed"><i class="fas fa-check-circle me-1"></i>Completed</span>`;
+                        }
+                        if (row['_callbackRequestor']) {
+                            let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : row['_callbackRequestor']);
+                            let cbDtRaw = (row['_callbackDate'] ? (row['_callbackTime'] ? `${row['_callbackDate']} ${row['_callbackTime']}` : row['_callbackDate']) : (row['call_callback_date'] ? (row['call_callback_time'] ? `${row['call_callback_date']} ${row['call_callback_time']}` : row['call_callback_date']) : ''));
+                            let cbDt = cbDtRaw ? formatDateTime(cbDtRaw) : '';
+                            return `<span class="badge bg-danger-subtle text-danger border px-2.5 py-1 text-center d-inline-flex flex-column align-items-center justify-content-center" style="line-height: 1.3;" title="Callback requested by ${cbWho}${cbDt ? ' for ' + cbDt : ''}"><div class="fw-bold"><i class="fas fa-bell me-1"></i>Callback - ${cbWho}</div>${cbDt ? `<div class="small fw-normal text-muted" style="font-size: 0.75rem;">${cbDt}</div>` : ''}</span>`;
                         }
                         let isExpired = Boolean(row['_isExpired'] || row['_status'] === 'expired');
                         if (isExpired) {
@@ -777,8 +789,20 @@
                 if (expands && expands.length) {
                     expandsHtml = expands.map(f => {
                         let val = (rowData[f.field] !== undefined && rowData[f.field] !== null && rowData[f.field] !== '') ? rowData[f.field] : (f.default || '');
-                        if (f.map && typeof f.map === 'object' && f.map[val] !== undefined) {
-                            val = f.map[val];
+                        if (f.map && typeof f.map === 'object') {
+                            if (Array.isArray(val)) {
+                                val = val.map(v => {
+                                    let vKey = (v !== null && v !== undefined) ? String(v).trim() : '';
+                                    return f.map[v] !== undefined ? f.map[v] : (vKey !== '' && f.map[vKey] !== undefined ? f.map[vKey] : v);
+                                }).join(', ');
+                            } else {
+                                let mapKey = (val !== null && val !== undefined) ? String(val).trim() : '';
+                                if (f.map[val] !== undefined) {
+                                    val = f.map[val];
+                                } else if (mapKey !== '' && f.map[mapKey] !== undefined) {
+                                    val = f.map[mapKey];
+                                }
+                            }
                         }
                         if (f.isDate || (val && typeof val === 'string' && /^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(val.trim()))) {
                             val = formatDateTime(val, f.hasTime);
@@ -1919,6 +1943,7 @@
                     this.dataLoaded = true;
 
                     this.$nextTick(() => {
+                        this.updateStatusBadgeColVisibility();
                         $('.callTable').each((index, el) => {
                             if ($.fn.DataTable.isDataTable(el)) {
                                 $(el).DataTable().columns.adjust();

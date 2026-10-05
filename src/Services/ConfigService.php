@@ -789,11 +789,42 @@ class ConfigService
 
     private function getDictionaryValuesFor(string $fieldName, array $dd): array
     {
+        global $Proj;
+        if (isset($Proj->metadata[$fieldName])) {
+            $meta = $Proj->metadata[$fieldName];
+            $type = $meta['element_type'] ?? '';
+
+            if ($type === 'yesno') {
+                return ['1' => 'Yes', '0' => 'No'];
+            }
+            if ($type === 'truefalse') {
+                return ['1' => 'True', '0' => 'False'];
+            }
+            if ($type === 'sql') {
+                if (function_exists('getSqlFieldEnum') && function_exists('parseEnum')) {
+                    $sqlEnum = getSqlFieldEnum($meta['element_enum'] ?? '');
+                    if (!empty($sqlEnum)) {
+                        return parseEnum($sqlEnum);
+                    }
+                }
+            }
+            if (in_array($type, ['select', 'radio', 'checkbox', 'dropdown'], true)) {
+                $enumStr = $meta['element_enum'] ?? '';
+                if (!empty($enumStr)) {
+                    if (function_exists('parseEnum')) {
+                        $parsed = parseEnum($enumStr);
+                        if (!empty($parsed)) return $parsed;
+                    }
+                    return $this->explodeCodedValueText($enumStr);
+                }
+            }
+        }
+
         $fieldInfo = $dd[$fieldName] ?? null;
         if (!$fieldInfo) return [];
 
-        $type = $fieldInfo["element_type"] ?? "";
-        if (!in_array($type, ["select", "radio", "checkbox", "yesno", "truefalse"], true)) {
+        $type = $fieldInfo["field_type"] ?? $fieldInfo["element_type"] ?? "";
+        if (!in_array($type, ["select", "dropdown", "radio", "checkbox", "yesno", "truefalse"], true)) {
             return [];
         }
 
@@ -804,7 +835,7 @@ class ConfigService
             return ["1" => "True", "0" => "False"];
         }
 
-        $enumStr = $fieldInfo["select_choices_or_calculations"] ?? "";
+        $enumStr = $fieldInfo["select_choices_or_calculations"] ?? $fieldInfo["element_enum"] ?? "";
         return $this->explodeCodedValueText($enumStr);
     }
 

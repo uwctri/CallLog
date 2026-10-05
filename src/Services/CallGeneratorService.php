@@ -193,12 +193,27 @@ class CallGeneratorService
 
     private function metadataNewEntry(int $projectId, string $record, array &$metadata, array $config, string $trigger, ?string $savedInstrument, array &$pendingLogs): bool
     {
-        if (!empty($metadata)) return false;
         $changeOccurred = false;
 
         foreach ($config as $callConfig) {
-            if (!empty($metadata[$callConfig['id']])) continue;
             $expireDays = (isset($callConfig['expire']) && $callConfig['expire'] !== null && $callConfig['expire'] !== '') ? (int)$callConfig['expire'] : null;
+
+            if (!empty($metadata[$callConfig['id']])) {
+                if ($expireDays === null) {
+                    if (isset($metadata[$callConfig['id']]['expire']) && $metadata[$callConfig['id']]['expire'] !== null) {
+                        unset($metadata[$callConfig['id']]['expire']);
+                        if (($metadata[$callConfig['id']]['status'] ?? '') === 'expired') {
+                            $metadata[$callConfig['id']]['status'] = 'incomplete';
+                        }
+                        $changeOccurred = true;
+                    }
+                } elseif (!isset($metadata[$callConfig['id']]['expire']) || (int)$metadata[$callConfig['id']]['expire'] !== $expireDays) {
+                    $metadata[$callConfig['id']]['expire'] = $expireDays;
+                    $changeOccurred = true;
+                }
+                continue;
+            }
+
             $dto = new CallItemDTO([
                 "id" => $callConfig['id'],
                 "template" => CallTemplateType::NEW->value,

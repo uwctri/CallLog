@@ -51,6 +51,7 @@ class CallQueryService
             }
         }
 
+        $settings = $this->configService->getRawProjectSettings($projectId);
         $callIds = $settings['call_id'] ?? [];
         $callDurations = $settings['call_expected_duration'] ?? [];
         $callTemplates = $settings['call_template'] ?? [];
@@ -69,6 +70,12 @@ class CallQueryService
                 $callIdToNewExpire[$cid] = ($exp !== '' && $exp !== null && is_numeric($exp)) ? (int)$exp : null;
             }
         }
+        if (!isset($callIdToNewExpire['call_new']) && isset($callIdToNewExpire['call_1'])) $callIdToNewExpire['call_new'] = $callIdToNewExpire['call_1'];
+        if (!isset($callIdToNewExpire['call_1']) && isset($callIdToNewExpire['call_new'])) $callIdToNewExpire['call_1'] = $callIdToNewExpire['call_new'];
+        if (!isset($callIdToDuration['call_new']) && isset($callIdToDuration['call_1'])) $callIdToDuration['call_new'] = $callIdToDuration['call_1'];
+        if (!isset($callIdToDuration['call_1']) && isset($callIdToDuration['call_new'])) $callIdToDuration['call_1'] = $callIdToDuration['call_new'];
+        if (!isset($callIdToTemplate['call_new']) && isset($callIdToTemplate['call_1'])) $callIdToTemplate['call_new'] = $callIdToTemplate['call_1'];
+        if (!isset($callIdToTemplate['call_1']) && isset($callIdToTemplate['call_new'])) $callIdToTemplate['call_1'] = $callIdToTemplate['call_new'];
 
         $tabNames = [];
         $packagedCallData = [];
@@ -215,16 +222,22 @@ class CallQueryService
 
                 $isExpired = false;
                 if (!$isCompleted) {
+                    $effExpire = null;
+                    if ($templateVal === CallTemplateType::NEW->value) {
+                        $effExpire = array_key_exists($baseCallID, $callIdToNewExpire)
+                            ? $callIdToNewExpire[$baseCallID]
+                            : ((isset($call['expire']) && $call['expire'] !== '' && $call['expire'] !== null && is_numeric($call['expire'])) ? (int)$call['expire'] : null);
+                    }
+
                     if (($call['status'] ?? '') === 'expired') {
-                        $isExpired = true;
+                        if ($templateVal !== CallTemplateType::NEW->value || $effExpire !== null) {
+                            $isExpired = true;
+                        }
                     } elseif ($templateVal === CallTemplateType::REMINDER->value && !empty($call['end']) && ($call['end'] <= $today)) {
                         $isExpired = true;
                     } elseif ($templateVal === CallTemplateType::FOLLOWUP->value && ($autoRemoveConfig[$baseCallID] ?? false) && !empty($call['end']) && ($call['end'] < $today)) {
                         $isExpired = true;
                     } elseif ($templateVal === CallTemplateType::NEW->value) {
-                        $effExpire = array_key_exists($baseCallID, $callIdToNewExpire)
-                            ? $callIdToNewExpire[$baseCallID]
-                            : ((isset($call['expire']) && $call['expire'] !== '' && $call['expire'] !== null && is_numeric($call['expire'])) ? (int)$call['expire'] : null);
                         if ($effExpire !== null && (date('Y-m-d', strtotime("{$call['load']} +{$effExpire} days")) < $today)) {
                             $isExpired = true;
                         }
@@ -362,7 +375,11 @@ class CallQueryService
 
                 $alwaysShowCallbackCol = $alwaysShowCallbackCol || (!$isCompleted && $cbReq === '1' && $cbDate <= $today);
 
-                $instanceData['_status'] = $isCompleted ? 'complete' : ($isExpired ? 'expired' : (($call['status'] ?? '') ?: 'incomplete'));
+                $rawStatus = ($call['status'] ?? '') ?: 'incomplete';
+                if ($rawStatus === 'expired' && $templateVal === CallTemplateType::NEW->value && $effExpire === null) {
+                    $rawStatus = 'incomplete';
+                }
+                $instanceData['_status'] = $isCompleted ? 'complete' : ($isExpired ? 'expired' : $rawStatus);
                 $instanceData['_isCompleted'] = $isCompleted;
                 $instanceData['_isExpired'] = $isExpired;
 
@@ -381,7 +398,7 @@ class CallQueryService
                 $instanceData['_callStartedBy'] = $call['callStartedBy'] ?? '';
                 $instanceData['_callDuration'] = $callDuration;
 
-                $instanceData['_callGenerated'] = $call['created'] ?? $call['load'] ?? $call['reported'] ?? '';
+                $instanceData['_callGenerated'] = $call['load'] ?? $call['created'] ?? $call['reported'] ?? '';
 
                 $noCallsToday = $call['noCallsToday'] ?? [];
                 if (!is_array($noCallsToday)) $noCallsToday = [$noCallsToday];
