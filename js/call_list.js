@@ -5,9 +5,18 @@
 
     const formatDateTime = (val, forceTime = false, forceDateOnly = false) => module.utils.formatDateTime(val, forceTime, forceDateOnly);
 
+    const isRowCompleted = (row) => Boolean(
+        row && (
+            row['_isCompleted'] ||
+            row['_status'] === 'complete' ||
+            row['_call_outcome'] === '1' ||
+            row['call_outcome'] === '1'
+        )
+    );
+
     const isRowHidden = (row) => {
         if (!row) return false;
-        let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
+        let isCompleted = isRowCompleted(row);
         if (isCompleted) return false;
         let isExpired = Boolean(row['_isExpired'] || row['_status'] === 'expired');
         if (isExpired) return false;
@@ -260,7 +269,7 @@
                         let hasCallbacks = false;
                         try {
                             const data = dt.rows().data().toArray();
-                            hasCallbacks = data.some(r => !r['_isCompleted'] && Boolean(r['_callbackRequestor'] || (r['call_requested_callback'] && (r['call_requested_callback'][1] === '1' || r['call_requested_callback'] === '1'))));
+                            hasCallbacks = data.some(r => !isRowCompleted(r) && Boolean(r['_callbackRequestor'] || (r['call_requested_callback'] && (r['call_requested_callback'][1] === '1' || r['call_requested_callback'] === '1'))));
                         } catch (e) {}
 
                         const shouldShow = Boolean(filterActive || hasCallbacks);
@@ -357,7 +366,7 @@
                         render: (val, type, row) => {
                             if (type !== "display") return val;
 
-                            let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
+                            let isCompleted = isRowCompleted(row);
                             let hasCallStarted = !isCompleted && Boolean(row['_isCallStarted']);
                             let hasCallback = !isCompleted && Boolean(row['_callbackRequestor']);
                             let hasMultiTabs = Boolean(row['_onMultipleTabs']);
@@ -570,9 +579,9 @@
                 if (defaultTab.showNewExpiration) {
                     config.push({
                         name: '_expireDate',
-                        title: 'Expiration Date',
+                        title: 'Expiration',
                         data: '_expireDate',
-                        defaultContent: 'No Expiration',
+                        defaultContent: '',
                         render: (val, type, row) => {
                             if (type !== 'display') return val || '';
                             if (!val) return '<span class="text-muted small">No Expiration</span>';
@@ -676,7 +685,7 @@
                 let hasCallbacksInitial = false;
                 if (tabIdOrIndex && this.displayedData) {
                     let tabRows = (typeof tabIdOrIndex === 'string') ? (this.displayedData[tabIdOrIndex] || []) : [];
-                    hasCallbacksInitial = tabRows.some(r => !r['_isCompleted'] && Boolean(r['_callbackRequestor'] || (r['call_requested_callback'] && (r['call_requested_callback'][1] === '1' || r['call_requested_callback'] === '1'))));
+                    hasCallbacksInitial = tabRows.some(r => !isRowCompleted(r) && Boolean(r['_callbackRequestor'] || (r['call_requested_callback'] && (r['call_requested_callback'][1] === '1' || r['call_requested_callback'] === '1'))));
                 }
                 const showBadgeColInitial = Boolean((this.showTypes && (this.showTypes.hidden || this.showTypes.expired || this.showTypes.completed)) || hasCallbacksInitial);
                 config.push({
@@ -690,7 +699,7 @@
                     visible: showBadgeColInitial,
                     render: (val, type, row) => {
                         if (type !== 'display') return val || '';
-                        let isCompleted = Boolean(row['_isCompleted'] || row['_status'] === 'complete');
+                        let isCompleted = isRowCompleted(row);
                         if (isCompleted) {
                             return `<span class="badge bg-success-subtle text-success border px-2 py-1" title="Call completed"><i class="fas fa-check-circle me-1"></i>Completed</span>`;
                         }
@@ -698,7 +707,13 @@
                             let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : row['_callbackRequestor']);
                             let cbDtRaw = (row['_callbackDate'] ? (row['_callbackTime'] ? `${row['_callbackDate']} ${row['_callbackTime']}` : row['_callbackDate']) : (row['call_callback_date'] ? (row['call_callback_time'] ? `${row['call_callback_date']} ${row['call_callback_time']}` : row['call_callback_date']) : ''));
                             let cbDt = cbDtRaw ? formatDateTime(cbDtRaw) : '';
-                            return `<span class="badge bg-danger-subtle text-danger border px-2.5 py-1 text-center d-inline-flex flex-column align-items-center justify-content-center" style="line-height: 1.3;" title="Callback requested by ${cbWho}${cbDt ? ' for ' + cbDt : ''}"><div class="fw-bold"><i class="fas fa-bell me-1"></i>Callback - ${cbWho}</div>${cbDt ? `<div class="small fw-normal text-muted" style="font-size: 0.75rem;">${cbDt}</div>` : ''}</span>`;
+                            return `<div class="badge bg-danger-subtle text-danger border px-2 py-1 d-inline-flex align-items-center justify-content-center text-start" style="width: 185px; box-sizing: border-box; line-height: 1.25;" title="Callback requested by ${cbWho}${cbDt ? ' for ' + cbDt : ''}">` +
+                                `<i class="fas fa-bell me-2 fs-6 flex-shrink-0 align-self-center"></i>` +
+                                `<div class="d-flex flex-column justify-content-center text-truncate flex-grow-1" style="line-height: 1.2;">` +
+                                    `<span class="fw-bold text-truncate" style="font-size: 0.8125rem;">Callback - ${cbWho}</span>` +
+                                    (cbDt ? `<span class="small fw-normal text-muted text-truncate" style="font-size: 0.75rem;">${cbDt}</span>` : '') +
+                                `</div>` +
+                            `</div>`;
                         }
                         let isExpired = Boolean(row['_isExpired'] || row['_status'] === 'expired');
                         if (isExpired) {
@@ -836,7 +851,7 @@
                 let actionButtonsHtml = '';
                 let ongoingCallInfoHtml = '';
 
-                let isCompleted = Boolean(rowData['_isCompleted'] || rowData['_status'] === 'complete');
+                let isCompleted = isRowCompleted(rowData);
                 let isExpired = !isCompleted && Boolean(rowData['_isExpired'] || rowData['_status'] === 'expired');
                 let isHidden = isRowHidden(rowData);
 
@@ -1032,7 +1047,7 @@
                 $.fn.dataTable.ext.search.push(
                     (_settings, _searchData, _index, rowData) => {
                         const showTypes = self.showTypes || { active: true, hidden: false, expired: false, completed: false };
-                        const isCompleted = Boolean(rowData['_isCompleted'] || rowData['_status'] === 'complete');
+                        const isCompleted = isRowCompleted(rowData);
                         const isExpired = !isCompleted && Boolean(rowData['_isExpired'] || rowData['_status'] === 'expired');
                         const isHidden = isRowHidden(rowData);
                         const isActive = !isCompleted && !isExpired && !isHidden;

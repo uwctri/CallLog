@@ -544,15 +544,24 @@ class ConfigService
 
         $callIds = $settings['call_id'] ?? [];
         $callTemplates = $settings['call_template'] ?? [];
+        $callNewExpires = $settings['new_expire_days'] ?? [];
         $callIdToTemplate = [];
+        $callIdToNewExpire = [];
         if (is_array($callIds) && is_array($callTemplates)) {
             foreach ($callIds as $idx => $cId) {
                 $cId = trim((string)$cId);
                 if ($cId !== '') {
                     $callIdToTemplate[$cId] = $callTemplates[$idx] ?? '';
+                    if (isset($callNewExpires[$idx])) {
+                        $exp = $callNewExpires[$idx];
+                        if (is_array($exp)) $exp = reset($exp);
+                        $callIdToNewExpire[$cId] = ($exp !== '' && $exp !== null && is_numeric($exp)) ? (int)$exp : null;
+                    }
                 }
             }
         }
+        if (!isset($callIdToNewExpire['call_new']) && isset($callIdToNewExpire['call_1'])) $callIdToNewExpire['call_new'] = $callIdToNewExpire['call_1'];
+        if (!isset($callIdToNewExpire['call_1']) && isset($callIdToNewExpire['call_new'])) $callIdToNewExpire['call_1'] = $callIdToNewExpire['call_new'];
 
         $tabNames = $settings["tab_name"] ?? [];
         $validOrders = is_array($orderMapping) ? array_filter($orderMapping, fn($v) => $v !== null && $v !== '') : [];
@@ -644,7 +653,17 @@ class ConfigService
                 || ($tabId === 'adhoc')
                 || (stripos($tabName, 'adhoc') !== false);
 
-            $showNew = in_array('new', $tabTemplates, true);
+            $showNew = false;
+            if (in_array('new', $tabTemplates, true)) {
+                foreach ($callsArray as $call) {
+                    if ((isset($callIdToTemplate[$call]) && $callIdToTemplate[$call] === 'new') || $call === 'call_new' || $call === 'call_1') {
+                        if (isset($callIdToNewExpire[$call]) && $callIdToNewExpire[$call] !== null) {
+                            $showNew = true;
+                            break;
+                        }
+                    }
+                }
+            }
 
             $tabConfig[$tabOrder] = [
                 "tab_name" => $tabName,

@@ -91,6 +91,7 @@ class CallQueryService
             [
                 $recordIdField,
                 "call_metadata",
+                'call_outcome',
                 'call_open_date',
                 'call_left_message',
                 'call_requested_callback',
@@ -164,7 +165,39 @@ class CallQueryService
                 }
             }
 
-            foreach ($meta as $callID => $call) {
+            // Collect all logged call instances for this record and find which calls had a completed outcome
+            $repeatLogsByCallId = [];
+            $completedCallIds = [];
+            $allRepeatLogs = [];
+            if (!empty($recordData['repeat_instances'])) {
+                foreach ($recordData['repeat_instances'] as $ev => $forms) {
+                    if (!empty($forms['call_log']) && is_array($forms['call_log'])) {
+                        foreach ($forms['call_log'] as $iId => $iData) {
+                            $allRepeatLogs[(int)$iId] = $iData;
+                            $cId = trim((string)($iData['call_id'] ?? ''));
+                            if ($cId !== '') {
+                                $repeatLogsByCallId[$cId][] = (int)$iId;
+                                $baseCId = explode('|', explode('||', $cId)[0])[0];
+                                if ($baseCId !== $cId) {
+                                    $repeatLogsByCallId[$baseCId][] = (int)$iId;
+                                }
+
+                                $rawOut = $iData['call_outcome'] ?? '';
+                                if (is_array($rawOut)) $rawOut = reset($rawOut);
+                                if ((string)$rawOut === '1') {
+                                    $completedCallIds[$cId] = true;
+                                    $completedCallIds[$baseCId] = true;
+                                    if ($baseCId === 'call_1' || $cId === 'call_1') $completedCallIds['call_new'] = true;
+                                    if ($baseCId === 'call_new' || $cId === 'call_new') $completedCallIds['call_1'] = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            $metaChanged = false;
+            foreach ($meta as $callID => &$call) {
                 $fullCallID = $callID;
                 [$baseCallID, $callIDEvent] = array_pad(array_values(array_filter(explode('|', $callID))), 2, "");
 
@@ -200,6 +233,31 @@ class CallQueryService
                 }
 
                 $isCompleted = (($call['status'] ?? '') === 'complete');
+                if (!$isCompleted) {
+                    if (
+                        !empty($completedCallIds[$callID]) ||
+                        !empty($completedCallIds[$baseCallID]) ||
+                        ($baseCallID === 'call_new' && !empty($completedCallIds['call_1'])) ||
+                        ($baseCallID === 'call_1' && !empty($completedCallIds['call_new']))
+                    ) {
+                        $isCompleted = true;
+                        $call['status'] = 'complete';
+                        $metaChanged = true;
+                    } elseif (!empty($call['instances']) && is_array($call['instances'])) {
+                        foreach ($call['instances'] as $instNum) {
+                            $instData = $allRepeatLogs[(int)$instNum] ?? [];
+                            $rawOut = $instData['call_outcome'] ?? '';
+                            if (is_array($rawOut)) $rawOut = reset($rawOut);
+                            if ((string)$rawOut === '1') {
+                                $isCompleted = true;
+                                $call['status'] = 'complete';
+                                $metaChanged = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 if (!$includeCompleted && $isCompleted) {
                     continue;
                 }
@@ -278,6 +336,9 @@ class CallQueryService
                 if (!empty($displayNameField)) {
                     $instanceData[$displayNameField] = $participantName;
                 }
+                $rawLastOutcome = $instanceData['call_outcome'] ?? '';
+                if (is_array($rawLastOutcome)) $rawLastOutcome = reset($rawLastOutcome);
+                $instanceData['_call_outcome'] = (string)$rawLastOutcome;
 
                 $targetEvent = (string)($call['event_id'] ?? $callIDEvent ?? '');
                 $visitName = $eventDisplayNames[$targetEvent] ?? '';
@@ -513,6 +574,9 @@ class CallQueryService
                 foreach ($targetTabs as $tTab) {
                     $recordTabs[(string)$record][$tTab] = $tabNames[$tTab] ?? $tTab;
                 }
+            }
+            if ($metaChanged) {
+                $this->metadataRepo->saveMetadata($projectId, (string)$record, $meta);
             }
         }
 

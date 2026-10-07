@@ -537,19 +537,29 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             $callId = trim((string)($instData['call_id'] ?? ''));
             if ($callId === '') continue;
             $instNum = (int)$instId;
+            $baseId = explode('|', explode('||', $callId)[0])[0];
             if ($instNum > 0) {
                 $instancesByCallId[$callId][] = $instNum;
+                if ($baseId !== $callId) {
+                    $instancesByCallId[$baseId][] = $instNum;
+                }
             }
 
-            $outcome = (string)($instData['call_outcome'] ?? '');
+            $rawOutcome = $instData['call_outcome'] ?? '';
+            if (is_array($rawOutcome)) $rawOutcome = reset($rawOutcome);
+            $outcome = (string)$rawOutcome;
             if ($outcome === '1') {
                 $completeByCallId[$callId] = true;
+                $completeByCallId[$baseId] = true;
+                if ($baseId === 'call_1' || $callId === 'call_1') $completeByCallId['call_new'] = true;
+                if ($baseId === 'call_new' || $callId === 'call_new') $completeByCallId['call_1'] = true;
             }
         }
 
         // 1. Ensure all existing metadata entries have required fields and sync instances/status
         foreach ($metadata as $callId => &$item) {
             if (!is_array($item)) continue;
+            $baseMetaId = explode('|', explode('||', (string)$callId)[0])[0];
 
             if (empty($item['id'])) {
                 $item['id'] = (string)$callId;
@@ -567,8 +577,14 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             }
 
             // Sync instances from logged calls
-            if (isset($instancesByCallId[$callId])) {
-                $merged = array_values(array_unique(array_merge($item['instances'], $instancesByCallId[$callId])));
+            $matchedInsts = array_merge(
+                $instancesByCallId[$callId] ?? [],
+                $instancesByCallId[$baseMetaId] ?? [],
+                ($baseMetaId === 'call_new') ? ($instancesByCallId['call_1'] ?? []) : [],
+                ($baseMetaId === 'call_1') ? ($instancesByCallId['call_new'] ?? []) : []
+            );
+            if (!empty($matchedInsts)) {
+                $merged = array_values(array_unique(array_merge($item['instances'], $matchedInsts)));
                 sort($merged, SORT_NUMERIC);
                 if ($merged !== $item['instances']) {
                     $item['instances'] = $merged;
@@ -577,7 +593,24 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             }
 
             // Sync complete status if logged call outcome was completed
-            if (!empty($completeByCallId[$callId]) && $item['status'] !== 'complete') {
+            $isComplete = !empty($completeByCallId[$callId])
+                || !empty($completeByCallId[$baseMetaId])
+                || ($baseMetaId === 'call_new' && !empty($completeByCallId['call_1']))
+                || ($baseMetaId === 'call_1' && !empty($completeByCallId['call_new']));
+
+            if (!$isComplete && !empty($item['instances'])) {
+                foreach ($item['instances'] as $iNum) {
+                    $instRec = $allCallData[$iNum] ?? [];
+                    $iOut = $instRec['call_outcome'] ?? '';
+                    if (is_array($iOut)) $iOut = reset($iOut);
+                    if ((string)$iOut === '1') {
+                        $isComplete = true;
+                        break;
+                    }
+                }
+            }
+
+            if ($isComplete && $item['status'] !== 'complete') {
                 $item['status'] = 'complete';
                 $changed = true;
             }
@@ -586,10 +619,15 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
 
         // 2. Add any calls that have logged instances but were missing from metadata
         foreach ($instancesByCallId as $callId => $instList) {
-            if (!isset($metadata[$callId])) {
-                $baseId = explode('|', explode('||', $callId)[0])[0];
+            $baseId = explode('|', explode('||', $callId)[0])[0];
+            $alreadyExists = isset($metadata[$callId])
+                || isset($metadata[$baseId])
+                || ($baseId === 'call_new' && isset($metadata['call_1']))
+                || ($baseId === 'call_1' && isset($metadata['call_new']));
+            if (!$alreadyExists) {
                 $merged = array_values(array_unique($instList));
                 sort($merged, SORT_NUMERIC);
+                $isComp = !empty($completeByCallId[$callId]) || !empty($completeByCallId[$baseId]);
                 $metadata[$callId] = [
                     'id' => $callId,
                     'name' => $callNames[$baseId] ?? ($callNames[$callId] ?? (strpos($callId, '||') !== false ? 'Adhoc Call' : $callId)),
@@ -598,7 +636,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                     'instances' => $merged,
                     'voiceMails' => 0,
                     'hideAfterAttempt' => 9999,
-                    'status' => !empty($completeByCallId[$callId]) ? 'complete' : 'incomplete',
+                    'status' => $isComp ? 'complete' : 'incomplete',
                     'load' => date('Y-m-d H:i')
                 ];
                 $changed = true;
