@@ -307,6 +307,43 @@
     box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.3) !important;
 }
 
+/* Deny / Neutral Action Button */
+.call-log-swal-popup .swal2-deny,
+.call-log-swal-deny {
+    background-color: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+.call-log-swal-popup .swal2-deny:hover,
+.call-log-swal-deny:hover {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
+}
+.call-log-swal-popup .swal2-deny:focus,
+.call-log-swal-deny:focus {
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.3) !important;
+}
+
+/* SweetAlert Input Field */
+.call-log-swal-popup .swal2-input {
+    height: 38px !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.9rem !important;
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+    margin: 0.85rem auto !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+}
+.call-log-swal-popup .swal2-input:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+    outline: none !important;
+}
+
 /* Timer Progress Bar */
 .call-log-swal-popup .swal2-timer-progress-bar {
     background: rgba(37, 99, 235, 0.5) !important;

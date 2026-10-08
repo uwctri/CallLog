@@ -440,6 +440,7 @@ class ApiService
                 $tabId = $payload['tab_id'] ?? '';
                 $order = $payload['order'] ?? [];
                 $hidden = $payload['hidden'] ?? [];
+                $labels = $payload['labels'] ?? ($payload['titles'] ?? null);
                 if (!empty($tabId) && method_exists($this->module, 'getUserSetting')) {
                     $raw = $this->module->getUserSetting('user-settings');
                     $userSettings = (!empty($raw) && is_string($raw))
@@ -451,9 +452,16 @@ class ApiService
                     if (!isset($userSettings['tabs'])) {
                         $userSettings['tabs'] = [];
                     }
+                    if (!isset($userSettings['tabs'][$tabId]) || !is_array($userSettings['tabs'][$tabId])) {
+                        $userSettings['tabs'][$tabId] = [];
+                    }
+                    if ($labels === null) {
+                        $labels = $userSettings['tabs'][$tabId]['labels'] ?? [];
+                    }
                     $userSettings['tabs'][$tabId] = [
                         'order' => is_array($order) ? array_values($order) : [],
                         'hidden' => is_array($hidden) ? array_values($hidden) : [],
+                        'labels' => is_array($labels) ? $labels : [],
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
                     $this->module->setUserSetting('user-settings', json_encode($userSettings));

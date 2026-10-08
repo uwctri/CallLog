@@ -744,6 +744,15 @@
                     if (userTabSettings) {
                         let savedOrder = userTabSettings.order || [];
                         let savedHidden = userTabSettings.hidden || [];
+                        let savedLabels = userTabSettings.labels || userTabSettings.titles || {};
+
+                        if (savedLabels && typeof savedLabels === 'object') {
+                            config.forEach(col => {
+                                if (col.name && col.name !== '_badges' && savedLabels[col.name]) {
+                                    col.title = savedLabels[col.name];
+                                }
+                            });
+                        }
 
                         if (savedHidden.length) {
                             config.forEach(col => {
@@ -1549,18 +1558,25 @@
                     .filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_status_badge' && c.sName !== '_callNotes')
                     .map(c => c.sName);
 
+                let labels = (module.userSettings && module.userSettings.tabs && module.userSettings.tabs[tab_id] && module.userSettings.tabs[tab_id].labels)
+                    ? { ...module.userSettings.tabs[tab_id].labels }
+                    : {};
+
                 if (!module.userSettings) module.userSettings = {};
                 if (!module.userSettings.tabs) module.userSettings.tabs = {};
                 module.userSettings.tabs[tab_id] = {
+                    ...module.userSettings.tabs[tab_id],
                     order: order,
                     hidden: hidden,
+                    labels: labels,
                     updated_at: new Date().toISOString()
                 };
 
                 module.ajax('saveUserColumns', {
                     tab_id: tab_id,
                     order: order,
-                    hidden: hidden
+                    hidden: hidden,
+                    labels: labels
                 }).catch(err => {
                     console.error("Failed to save user column settings:", err);
                 });
@@ -1634,6 +1650,132 @@
                 }
             },
 
+            getDefaultColTitle(tab_id, colName) {
+                if (!colName || colName === '_badges') return '';
+                let defaultCols = this.createColConfig(tab_id, true);
+                let def = defaultCols.find(c => c.name === colName);
+                if (def && def.title) {
+                    return def.title.replace(/<[^>]*>?/gm, '').trim();
+                }
+                return colName;
+            },
+
+            renameColumn(tab_id, colName, newTitle) {
+                if (!colName || colName === '_badges') return;
+                let $pane = $(`#${tab_id}`);
+                let $table = $pane.find('.callTable');
+                if (!$table.length || !$.fn.DataTable.isDataTable($table[0])) return;
+                let dt = $table.DataTable();
+                let col = dt.column(colName + ':name');
+                if (!col || !col.length) return;
+
+                let defaultTitle = this.getDefaultColTitle(tab_id, colName);
+                let trimmed = (typeof newTitle === 'string') ? newTitle.trim() : '';
+
+                if (!module.userSettings) module.userSettings = {};
+                if (!module.userSettings.tabs) module.userSettings.tabs = {};
+                if (!module.userSettings.tabs[tab_id]) module.userSettings.tabs[tab_id] = {};
+                if (!module.userSettings.tabs[tab_id].labels) module.userSettings.tabs[tab_id].labels = {};
+
+                let finalTitle = '';
+                if (!trimmed || trimmed === defaultTitle) {
+                    delete module.userSettings.tabs[tab_id].labels[colName];
+                    finalTitle = defaultTitle;
+                } else {
+                    module.userSettings.tabs[tab_id].labels[colName] = trimmed;
+                    finalTitle = trimmed;
+                }
+
+                let colIdx = col.index();
+                let aoColumns = dt.settings()[0].aoColumns;
+                if (aoColumns && aoColumns[colIdx]) {
+                    aoColumns[colIdx].sTitle = finalTitle;
+                }
+
+                if (typeof colConfig !== 'undefined' && colConfig && colConfig[tab_id]) {
+                    let cfgCol = colConfig[tab_id].find(c => c.name === colName);
+                    if (cfgCol) {
+                        cfgCol.title = finalTitle;
+                    }
+                }
+
+                $(col.header()).text(finalTitle);
+                dt.columns.adjust().draw(false);
+                this.saveUserColumns(tab_id);
+            },
+
+            resetColumnName(tab_id, colName) {
+                this.renameColumn(tab_id, colName, '');
+            },
+
+            escapeHtml(text) {
+                if (!text) return '';
+                return String(text)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            },
+
+            promptRenameColumn(tab_id, colName) {
+                if (!colName || colName === '_badges') return;
+                const self = this;
+                let defaultTitle = this.getDefaultColTitle(tab_id, colName);
+                let userTabSettings = (module.userSettings && module.userSettings.tabs && module.userSettings.tabs[tab_id]) ? module.userSettings.tabs[tab_id] : null;
+                let savedLabels = (userTabSettings && (userTabSettings.labels || userTabSettings.titles)) ? (userTabSettings.labels || userTabSettings.titles) : {};
+                let currentTitle = savedLabels[colName] || defaultTitle || colName;
+                let isCurrentlyRenamed = Boolean(savedLabels && savedLabels[colName]);
+
+                const swalFn = (typeof Swal !== 'undefined' && Swal.fire)
+                    ? Swal.fire.bind(Swal)
+                    : ((module.swal && module.swal.fire) ? module.swal.fire.bind(module.swal) : null);
+
+                if (swalFn) {
+                    let subText = defaultTitle
+                        ? `<div class="text-muted small mt-1 mb-2">Original name: <span class="fw-semibold text-dark">${self.escapeHtml(defaultTitle)}</span></div>`
+                        : '';
+
+                    swalFn({
+                        title: 'Rename Column',
+                        html: `${subText}<div class="text-start small text-secondary mb-1">Enter a new column label (or leave blank to restore default):</div>`,
+                        input: 'text',
+                        inputValue: currentTitle,
+                        inputPlaceholder: defaultTitle || 'Column label',
+                        inputAttributes: {
+                            maxlength: '60',
+                            autocomplete: 'off',
+                            autocorrect: 'off',
+                            spellcheck: 'false'
+                        },
+                        showCancelButton: true,
+                        showDenyButton: isCurrentlyRenamed,
+                        confirmButtonText: '<i class="fas fa-check me-1"></i> Save',
+                        denyButtonText: '<i class="fas fa-undo me-1"></i> Reset to Default',
+                        cancelButtonText: 'Cancel',
+                        focusConfirm: false,
+                        didOpen: () => {
+                            let input = (typeof Swal !== 'undefined') ? Swal.getInput() : null;
+                            if (input) {
+                                input.select();
+                            }
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            let newName = (result.value !== undefined && result.value !== null) ? result.value.trim() : '';
+                            self.renameColumn(tab_id, colName, newName);
+                        } else if (result.isDenied) {
+                            self.resetColumnName(tab_id, colName);
+                        }
+                    });
+                } else {
+                    let promptVal = window.prompt(`Rename column "${defaultTitle || colName}" (leave empty to reset to default):`, currentTitle);
+                    if (promptVal !== null) {
+                        self.renameColumn(tab_id, colName, promptVal.trim());
+                    }
+                }
+            },
+
             setupColumnContextMenu() {
                 const self = this;
                 let $menu = $('#callHeaderContextMenu');
@@ -1676,10 +1818,11 @@
                     let aoColumns = dt.settings()[0].aoColumns;
                     let clickedCol = aoColumns[colIdx];
                     let colName = clickedCol ? clickedCol.sName : null;
-                    let isCol0 = !colName || colName === '_badges' || colName === '_status_badge';
+                    let isSystemCol = !colName || colName === '_badges';
+                    let cannotHide = isSystemCol || colName === '_status_badge';
 
                     let colTitle = '';
-                    if (!isCol0) {
+                    if (!isSystemCol) {
                         colTitle = (clickedCol && clickedCol.sTitle) ? clickedCol.sTitle : $th.text().trim();
                         colTitle = colTitle.replace(/<[^>]*>?/gm, '').trim();
                     }
@@ -1700,8 +1843,25 @@
 
                     menuHtml += `<hr class="dropdown-divider my-1">`;
 
-                    // 2. Hide column
-                    if (isCol0) {
+                    // 2. Rename column
+                    if (isSystemCol) {
+                        menuHtml += `<span class="dropdown-item disabled text-muted py-1.5"><i class="fas fa-pen me-2"></i> Cannot Rename System Column</span>`;
+                    } else {
+                        let userTabSettings = (module.userSettings && module.userSettings.tabs && module.userSettings.tabs[tab_id]) ? module.userSettings.tabs[tab_id] : null;
+                        let savedLabels = (userTabSettings && (userTabSettings.labels || userTabSettings.titles)) ? (userTabSettings.labels || userTabSettings.titles) : {};
+                        let isRenamed = Boolean(savedLabels && savedLabels[colName]);
+                        let defaultTitle = self.getDefaultColTitle(tab_id, colName);
+
+                        menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="rename-col" data-colname="${colName}"><i class="fas fa-pen me-2 text-primary"></i> Rename Column</a>`;
+                        if (isRenamed) {
+                            menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="reset-col-name" data-colname="${colName}"><i class="fas fa-undo me-2 text-secondary"></i> Reset Name to "${self.escapeHtml(defaultTitle)}"</a>`;
+                        }
+                    }
+
+                    menuHtml += `<hr class="dropdown-divider my-1">`;
+
+                    // 3. Hide column
+                    if (cannotHide) {
                         menuHtml += `<span class="dropdown-item disabled text-muted py-1.5"><i class="fas fa-eye-slash me-2"></i> Cannot Hide System Column</span>`;
                     } else if (visibleDataCols.length <= 1) {
                         menuHtml += `<span class="dropdown-item disabled text-muted py-1.5" title="At least one column must remain visible"><i class="fas fa-eye-slash me-2"></i> Cannot Hide Only Visible Column</span>`;
@@ -1710,7 +1870,7 @@
                         menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="hide-col" data-colname="${colName}"><i class="fas fa-eye-slash me-2 text-secondary"></i> ${label}</a>`;
                     }
 
-                    // 3. Unhide submenu
+                    // 4. Unhide submenu
                     if (hiddenCols.length > 0) {
                         menuHtml += `
                             <div class="dropdown-submenu">
@@ -1734,13 +1894,13 @@
 
                     menuHtml += `<hr class="dropdown-divider my-1">`;
 
-                    // 4. Auto-fit column widths
+                    // 5. Auto-fit column widths
                     menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="autofit"><i class="fas fa-arrows-alt-h me-2 text-secondary"></i> Auto-fit Column Widths</a>`;
 
                     menuHtml += `<hr class="dropdown-divider my-1">`;
 
-                    // 5. Reset Columns (unhides all columns and restores default order)
-                    menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="reset-columns"><i class="fas fa-undo me-2 text-warning"></i> Reset Columns</a>`;
+                    // 6. Reset Columns (unhides all columns, restores default order, and resets column names)
+                    menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="reset-columns" title="Restores default column order, visibility, and names"><i class="fas fa-undo me-2 text-warning"></i> Reset Columns</a>`;
 
                     $menu.html(menuHtml);
 
@@ -1753,6 +1913,10 @@
 
                         if (action === 'toggle-lock') {
                             self.toggleLockColumns(tab_id);
+                        } else if (action === 'rename-col') {
+                            self.promptRenameColumn(tab_id, targetCol);
+                        } else if (action === 'reset-col-name') {
+                            self.resetColumnName(tab_id, targetCol);
                         } else if (action === 'hide-col') {
                             self.hideColumn(tab_id, targetCol);
                         } else if (action === 'unhide-col') {

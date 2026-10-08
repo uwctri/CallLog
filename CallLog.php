@@ -125,6 +125,11 @@ class CallLog extends AbstractExternalModule
         );
     }
 
+    public function redcap_module_link_check_display($project_id, $link)
+    {
+        return $link;
+    }
+
     public function redcap_save_record($project_id, $record, $instrument, $event_id = null, $group_id = null, $survey_hash = null, $response_id = null, $repeat_instance = 1)
     {
         // Skip call generation evaluation when saving internal module metadata
