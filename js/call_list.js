@@ -957,13 +957,13 @@
                         return `
                             <tr class="call-history-row">
                                 <td class="call-history-date-cell align-top text-nowrap">
-                                    <i class="far fa-calendar-alt text-muted me-1.5" style="font-size: 0.75rem;"></i>${datePart || '—'}
+                                    <i class="far fa-calendar-alt text-muted me-1" style="font-size: 0.75rem;"></i>${datePart || '—'}
                                 </td>
                                 <td class="call-history-time-cell align-top text-nowrap">
                                     <i class="far fa-clock text-muted me-1" style="font-size: 0.75rem;"></i>${timePart || '—'}
                                 </td>
                                 <td class="call-history-user-cell align-top text-nowrap">
-                                    <i class="fas fa-user-circle text-secondary me-1.5" style="font-size: 0.8rem;"></i>${this.escapeHtml(callerName)}
+                                    <i class="fas fa-user-circle text-secondary me-1" style="font-size: 0.8rem;"></i>${this.escapeHtml(callerName)}
                                 </td>
                                 <td class="call-history-outcome-cell align-top text-nowrap">
                                     ${outcomeBadges}
@@ -1084,7 +1084,7 @@
                                 </div>
                                 <div class="col-md-8">
                                     <h6 class="fw-bold mb-2 text-dark d-flex align-items-center">
-                                        <i class="fas fa-history me-1.5 text-primary"></i> Call History & Notes
+                                        <i class="fas fa-history me-2 text-primary"></i> Call History & Notes
                                         ${notesList.length ? `<span class="badge bg-secondary-subtle text-secondary border rounded-pill ms-2" style="font-size: 0.72rem; padding: 0.25em 0.6em;">${notesList.length}</span>` : ''}
                                     </h6>
                                     <div>${notesHtml}</div>
@@ -1097,7 +1097,7 @@
                         <div class="call-drawer-content px-4 py-3">
                             ${drawerHeaderHtml}
                             <h6 class="fw-bold mb-2 text-dark d-flex align-items-center">
-                                <i class="fas fa-history me-1.5 text-primary"></i> Participant Call History & Notes
+                                <i class="fas fa-history me-2 text-primary"></i> Participant Call History & Notes
                                 ${notesList.length ? `<span class="badge bg-secondary-subtle text-secondary border rounded-pill ms-2" style="font-size: 0.72rem; padding: 0.25em 0.6em;">${notesList.length}</span>` : ''}
                             </h6>
                             <div>${notesHtml}</div>
