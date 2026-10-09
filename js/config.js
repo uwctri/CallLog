@@ -261,6 +261,7 @@
                 const durations = r.call_expected_duration || [];
 
                 const newExp = r.new_expire_days || [];
+                const newLog = r.new_logic || [];
                 const remVar = r.reminder_variable || [];
                 const remDays = r.reminder_days || [];
                 const remEvts = r.reminder_include_events || [];
@@ -307,6 +308,9 @@
                         hideAfterAttempt: hides[i] || '',
                         expectedDuration: getVal(durations, i, 30),
                         newExpireDays: getVal(newExp, i, ''),
+                        newLogic: getVal(newLog, i, ''),
+                        logicFieldPickerOpen: false,
+                        logicFieldPickerFilter: '',
                         reminderVariable: getVal(remVar, i, ''),
                         reminderDays: getVal(remDays, i, ''),
                         reminderEvents: rEvts,
@@ -327,6 +331,7 @@
 
                 const tNames = toArray(r.tab_name);
                 const tCalls = r.tab_calls_included || [];
+                const tFilterLogic = r.tab_filter_logic || [];
                 const tFields = r.tab_field || [];
                 const tFNames = r.tab_field_name || [];
                 const tFDefs = r.tab_field_default || [];
@@ -368,6 +373,9 @@
                     return {
                         name: name || '',
                         callsIncluded: incList,
+                        filterLogic: getVal(tFilterLogic, i, ''),
+                        logicFieldPickerOpen: false,
+                        logicFieldPickerFilter: '',
                         fields: fields
                     };
                 });
@@ -502,9 +510,12 @@
                     guideOpen: false,
                     fieldPickerOpen: false,
                     fieldPickerFilter: '',
+                    logicFieldPickerOpen: false,
+                    logicFieldPickerFilter: '',
                     hideAfterAttempt: '',
                     expectedDuration: 30,
                     newExpireDays: '',
+                    newLogic: '',
                     reminderVariable: '',
                     reminderDays: '',
                     reminderEvents: [...defaultEvts],
@@ -646,6 +657,50 @@
                 }
             },
 
+            insertLogicField(callType, fieldId) {
+                if (!callType || !fieldId) return;
+                const tag = `[${fieldId}]`;
+                const el = document.getElementById('new_logic_' + callType._uid);
+                if (el) {
+                    const start = el.selectionStart ?? el.value.length;
+                    const end = el.selectionEnd ?? el.value.length;
+                    const current = el.value || '';
+                    const updated = current.substring(0, start) + tag + current.substring(end);
+                    callType.newLogic = updated;
+                    el.value = updated;
+                    this.$nextTick(() => {
+                        el.focus();
+                        el.setSelectionRange(start + tag.length, start + tag.length);
+                    });
+                } else {
+                    const cur = (callType.newLogic || '').trim();
+                    callType.newLogic = cur ? `${cur} ${tag}` : tag;
+                }
+                callType.logicFieldPickerOpen = false;
+            },
+
+            insertTabLogicField(tab, fieldId, tabIdx) {
+                if (!tab || !fieldId) return;
+                const tag = `[${fieldId}]`;
+                const el = document.getElementById('tab_filter_logic_' + tabIdx);
+                if (el) {
+                    const start = el.selectionStart ?? el.value.length;
+                    const end = el.selectionEnd ?? el.value.length;
+                    const current = el.value || '';
+                    const updated = current.substring(0, start) + tag + current.substring(end);
+                    tab.filterLogic = updated;
+                    el.value = updated;
+                    this.$nextTick(() => {
+                        el.focus();
+                        el.setSelectionRange(start + tag.length, start + tag.length);
+                    });
+                } else {
+                    const cur = (tab.filterLogic || '').trim();
+                    tab.filterLogic = cur ? `${cur} ${tag}` : tag;
+                }
+                tab.logicFieldPickerOpen = false;
+            },
+
             setScriptContent(callType, html) {
                 callType.script = html;
                 const editorId = 'call_script_' + callType._uid;
@@ -696,6 +751,9 @@
                 this.callTabs.push({
                     name: 'Tab ' + (this.callTabs.length + 1),
                     callsIncluded: [],
+                    filterLogic: '',
+                    logicFieldPickerOpen: false,
+                    logicFieldPickerFilter: '',
                     fields: []
                 });
             },
@@ -955,6 +1013,7 @@
                     call_expected_duration: this.callTypes.map(c => c.expectedDuration || 30),
                     hide_after_attempts: this.callTypes.map(c => c.hideAfterAttempt),
                     new_expire_days: this.callTypes.map(c => (c.newExpireDays !== '' && c.newExpireDays !== null && c.newExpireDays !== undefined) ? String(c.newExpireDays).trim() : ''),
+                    new_logic: this.callTypes.map(c => cleanStr(c.newLogic, '')),
                     reminder_variable: this.callTypes.map(c => c.reminderVariable),
                     reminder_days: this.callTypes.map(c => c.reminderDays),
                     reminder_include_events: this.callTypes.map(c => (c.reminderEvents || []).join(', ')),
@@ -973,6 +1032,7 @@
                     tab_name: this.callTabs.map(t => cleanStr(t.name)),
                     tab_calls_included: this.callTabs.map(t => (t.callsIncluded || []).join(', ')),
                     tab_order: this.callTabs.map((_, i) => i),
+                    tab_filter_logic: this.callTabs.map(t => cleanStr(t.filterLogic, '')),
                     tab_field: this.callTabs.map(t => (t.fields || []).map(f => f.field).filter(Boolean)),
                     tab_field_name: this.callTabs.map(t => (t.fields || []).map(f => cleanStr(f.name))),
                     tab_field_default: this.callTabs.map(t => (t.fields || []).map(f => cleanStr(f.default))),

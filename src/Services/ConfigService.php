@@ -53,6 +53,7 @@ class ConfigService
             'call_expected_duration' => [],
             'hide_after_attempts' => [],
             'new_expire_days' => [],
+            'new_logic' => [],
             'reminder_variable' => [],
             'reminder_days' => [],
             'reminder_include_events' => [],
@@ -82,6 +83,7 @@ class ConfigService
             'tab_name' => [],
             'tab_calls_included' => [],
             'tab_order' => [],
+            'tab_filter_logic' => [],
             'tab_field' => [[]],
             'tab_field_name' => [[]],
             'tab_field_default' => [[]],
@@ -340,7 +342,13 @@ class ConfigService
                 $rawDays = $settings["new_expire_days"][$i] ?? null;
                 if (is_array($rawDays)) $rawDays = reset($rawDays);
                 $days = ($rawDays !== '' && $rawDays !== null && is_numeric($rawDays)) ? (int)$rawDays : null;
-                $newEntryConfig[] = array_merge(["expire" => $days], $commonConfig);
+                $rawLogic = $settings["new_logic"][$i] ?? '';
+                if (is_array($rawLogic)) $rawLogic = reset($rawLogic);
+                $logic = trim((string)$rawLogic);
+                $newEntryConfig[] = array_merge([
+                    "expire" => $days,
+                    "logic" => $logic
+                ], $commonConfig);
             } elseif ($template === "reminder") {
                 $field = $settings["reminder_variable"][$i][0] ?? $settings["reminder_variable"][$i] ?? '';
                 if (empty($field)) continue;
@@ -573,6 +581,9 @@ class ConfigService
         foreach ($tabNames as $i => $tabName) {
             $tabOrder = $orderMapping[$i] ?? $i;
             $calls = $settings["tab_calls_included"][$i] ?? '';
+            $rawFilterLogic = $settings["tab_filter_logic"][$i] ?? '';
+            if (is_array($rawFilterLogic)) $rawFilterLogic = reset($rawFilterLogic);
+            $filterLogic = trim((string)$rawFilterLogic);
             $baseTabId = preg_replace('/_+/', '_', trim(preg_replace('/[^A-Za-z0-9_\-]/', '', str_replace(' ', '_', strtolower($tabName))), '_'));
             if (empty($baseTabId)) {
                 $baseTabId = "tab_" . ($i + 1);
@@ -669,6 +680,8 @@ class ConfigService
                 "tab_name" => $tabName,
                 "included_calls" => $calls,
                 "tab_id" => $tabId,
+                "filterLogic" => $filterLogic,
+                "filter_logic" => $filterLogic,
                 "fields" => [],
                 "showVisit" => $showVisit,
                 "showFollowupWindows" => $showFollowup,

@@ -74,6 +74,52 @@
                         </div>
                     </div>
 
+                    <!-- Tab Filter Logic (Optional) -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold text-dark mb-0">
+                                    <i class="fas fa-filter text-success me-1"></i> Tab Filter Logic <span class="text-muted fw-normal">(Optional)</span>
+                                </label>
+                                <div class="position-relative d-inline-block" @click.outside="tab.logicFieldPickerOpen = false">
+                                    <button type="button" 
+                                            class="btn btn-xs btn-outline-secondary py-0 px-1.5 small" 
+                                            style="font-size: 0.75rem;"
+                                            @click="tab.logicFieldPickerOpen = !tab.logicFieldPickerOpen">
+                                        <i class="fas fa-plus-circle text-success me-1"></i>Insert Field
+                                        <i class="fas fa-caret-down ms-1 opacity-75"></i>
+                                    </button>
+                                    <div class="searchable-field-menu shadow-lg p-2" 
+                                         x-show="tab.logicFieldPickerOpen" 
+                                         x-transition 
+                                         style="position: absolute; top: 100%; right: 0; z-index: 1050; min-width: 260px; max-width: 320px; max-height: 250px; overflow-y: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px;">
+                                        <input type="text" 
+                                               class="form-control form-control-sm mb-2" 
+                                               x-model="tab.logicFieldPickerFilter" 
+                                               placeholder="Search project fields..." 
+                                               @click.stop>
+                                        <template x-for="f in (meta.fields || []).filter(field => !tab.logicFieldPickerFilter || (field.label || field.id).toLowerCase().includes(tab.logicFieldPickerFilter.toLowerCase()))" :key="f.id">
+                                            <div class="searchable-field-item small py-1 px-2 cursor-pointer hover-bg-light rounded text-truncate" 
+                                                 @click="insertTabLogicField(tab, f.id, tabIdx)"
+                                                 :title="f.name || f.id">
+                                                <span class="fw-bold font-monospace text-success" x-text="`[${f.id}]`"></span>
+                                                <span class="text-muted ms-1" x-text="f.name ? `- ${f.name}` : ''"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            <textarea :id="`tab_filter_logic_${tabIdx}`"
+                                      class="form-control form-control-sm font-monospace" 
+                                      rows="2" 
+                                      x-model="tab.filterLogic" 
+                                      placeholder="e.g. [location] = '1' or ([site] = 'A' and [status] = '1')"></textarea>
+                            <div class="text-muted small mt-1">
+                                Filters participant records displayed on this tab using REDCap-style conditional logic (e.g. <code>[location] = '1'</code>). Leave blank to display all records matching the included call types.
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Auto Extra Columns Info Box -->
                     <div class="p-3 bg-subtle-blue border rounded-3 mb-4" x-show="tab.callsIncluded && tab.callsIncluded.length > 0">
                         <div class="fw-bold small text-primary mb-1">

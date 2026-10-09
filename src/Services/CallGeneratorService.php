@@ -214,6 +214,19 @@ class CallGeneratorService
                 continue;
             }
 
+            // Evaluate conditional logic if configured
+            $logic = trim((string)($callConfig['logic'] ?? ''));
+            if ($logic !== '') {
+                try {
+                    $passes = REDCap::evaluateLogic($logic, $projectId, $record);
+                    if ($passes !== true) {
+                        continue;
+                    }
+                } catch (\Throwable $e) {
+                    continue;
+                }
+            }
+
             $dto = new CallItemDTO([
                 "id" => $callConfig['id'],
                 "template" => CallTemplateType::NEW->value,
@@ -237,7 +250,8 @@ class CallGeneratorService
                 'trigger' => $trigger,
                 'details' => [
                     'trigger_instrument' => $savedInstrument ?? '',
-                    'expire_days' => $expireDays
+                    'expire_days' => $expireDays,
+                    'logic' => $logic
                 ]
             ];
         }

@@ -68,13 +68,56 @@
                             <div class="setting-blurb mb-3 w-100" style="max-width: 100%;">
                                 <strong>Purpose:</strong> Designed for initial participant outreach, screening welcomes, or intake onboarding calls upon study registration.
                                 <div class="mt-1 text-muted small">
-                                    <strong>How it works:</strong> Triggers automatically when a new participant record is created or imported (while call metadata is empty). The call remains active on dashboard queues until completed by a caller, or until the configured number of expiration days elapses (leave blank if calls should never expire; enter <code>0</code> to expire the same day created). Call List tabs containing New Entry calls automatically display an <em>Expiration</em> column showing the exact date and days remaining (or <em>No Expiration</em> if left blank).
+                                    <strong>How it works:</strong> Triggers automatically when a new participant record is created or imported (while call metadata is empty). If conditional logic is specified, the call is only created if the logic evaluates to true for that participant. The call remains active on dashboard queues until completed by a caller, or until the configured number of expiration days elapses (leave blank if calls should never expire; enter <code>0</code> to expire the same day created). Call List tabs containing New Entry calls automatically display an <em>Expiration</em> column showing the exact date and days remaining (or <em>No Expiration</em> if left blank).
                                 </div>
                             </div>
-                            <div class="row g-3 align-items-center mb-2">
+                            <div class="row g-3 align-items-start mb-2">
                                 <div class="col-md-4">
                                     <label class="form-label small fw-bold text-dark mb-1">Days Until Expire</label>
                                     <input type="number" class="form-control form-control-sm" x-model="callType.newExpireDays" placeholder="e.g. 30">
+                                    <div class="text-muted small mt-1">Leave blank to never expire.</div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label small fw-bold text-dark mb-0">
+                                            Conditional Logic <span class="text-muted fw-normal">(Optional)</span>
+                                        </label>
+                                        <div class="position-relative d-inline-block" @click.outside="callType.logicFieldPickerOpen = false">
+                                            <button type="button" 
+                                                    class="btn btn-xs btn-outline-secondary py-0 px-1.5 small" 
+                                                    style="font-size: 0.75rem;"
+                                                    @click="callType.logicFieldPickerOpen = !callType.logicFieldPickerOpen">
+                                                <i class="fas fa-plus-circle text-primary me-1"></i>Insert Field
+                                                <i class="fas fa-caret-down ms-1 opacity-75"></i>
+                                            </button>
+                                            <div class="searchable-field-menu shadow-lg p-2" 
+                                                 x-show="callType.logicFieldPickerOpen" 
+                                                 x-transition 
+                                                 style="position: absolute; top: 100%; right: 0; z-index: 1050; min-width: 260px; max-width: 320px; max-height: 250px; overflow-y: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px;">
+                                                <input type="text" 
+                                                       class="form-control form-control-sm mb-2" 
+                                                       x-model="callType.logicFieldPickerFilter" 
+                                                       placeholder="Search project fields..." 
+                                                       @click.stop>
+                                                <template x-for="f in (meta.fields || []).filter(field => !callType.logicFieldPickerFilter || (field.label || field.id).toLowerCase().includes(callType.logicFieldPickerFilter.toLowerCase()))" :key="f.id">
+                                                    <div class="searchable-field-item small py-1 px-2 cursor-pointer hover-bg-light rounded text-truncate" 
+                                                         @click="insertLogicField(callType, f.id)"
+                                                         :title="f.name || f.id">
+                                                        <span class="fw-bold font-monospace text-primary" x-text="`[${f.id}]`"></span>
+                                                        <span class="text-muted ms-1" x-text="f.name ? `- ${f.name}` : ''"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <textarea :id="`new_logic_${callType._uid}`"
+                                              class="form-control form-control-sm font-monospace" 
+                                              rows="2" 
+                                              x-model="callType.newLogic" 
+                                              placeholder="e.g. [location] = '1'"></textarea>
+                                    <div class="text-muted small mt-1">
+                                        Only creates this call if the REDCap logic evaluates to true (e.g. <code>[location] = '1'</code>). Leave blank to generate unconditionally.
+                                    </div>
                                 </div>
                             </div>
                         </div>

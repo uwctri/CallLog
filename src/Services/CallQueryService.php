@@ -79,12 +79,18 @@ class CallQueryService
 
         $tabNames = [];
         $packagedCallData = [];
+        $tabFilterLogicMap = [];
+        $tabFilterCache = [];
         $alwaysShowCallbackCol = false;
         $today = date('Y-m-d');
 
         foreach ($tabs['config'] as $tab) {
             $packagedCallData[$tab["tab_id"]] = [];
             $tabNames[$tab["tab_id"]] = $tab["tab_name"] ?? $tab["tab_id"];
+            $fLogic = trim((string)($tab["filterLogic"] ?? $tab["filter_logic"] ?? ''));
+            if ($fLogic !== '') {
+                $tabFilterLogicMap[$tab["tab_id"]] = $fLogic;
+            }
         }
 
         $fields = array_merge(
@@ -229,6 +235,31 @@ class CallQueryService
                 }
 
                 if ((substr($baseCallID, 0, 1) === '_') || empty($targetTabs)) {
+                    continue;
+                }
+
+                if (!empty($tabFilterLogicMap)) {
+                    $filteredTargetTabs = [];
+                    foreach ($targetTabs as $tTab) {
+                        if (isset($tabFilterLogicMap[$tTab])) {
+                            $fLogic = $tabFilterLogicMap[$tTab];
+                            if (!isset($tabFilterCache[$tTab][(string)$record])) {
+                                try {
+                                    $tabFilterCache[$tTab][(string)$record] = (REDCap::evaluateLogic($fLogic, $projectId, (string)$record) === true);
+                                } catch (\Throwable $e) {
+                                    $tabFilterCache[$tTab][(string)$record] = false;
+                                }
+                            }
+                            if (!$tabFilterCache[$tTab][(string)$record]) {
+                                continue;
+                            }
+                        }
+                        $filteredTargetTabs[] = $tTab;
+                    }
+                    $targetTabs = $filteredTargetTabs;
+                }
+
+                if (empty($targetTabs)) {
                     continue;
                 }
 
