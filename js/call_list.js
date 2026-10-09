@@ -319,11 +319,16 @@
                     if (!tab_id) return;
                     if ($.fn.DataTable.isDataTable(el)) {
                         let dt = $(el).DataTable();
+                        let $pane = $(el).closest('.tab-pane');
+                        let searchVal = $pane.find('.customSearch').val();
+                        if (searchVal === undefined || searchVal === null) {
+                            searchVal = dt.search() || '';
+                        }
                         state.tabs[tab_id] = {
                             page: dt.page(),
                             len: dt.page.len(),
                             order: dt.order(),
-                            search: dt.search() || ''
+                            search: searchVal
                         };
                     }
                 });
@@ -433,8 +438,9 @@
                         data: colName,
                         defaultContent: fieldConfig.default || '',
                         render: (val, type, row) => {
-                            if (type !== "display") return val !== undefined && val !== null ? val : (fieldConfig.default || '');
+                            if (type === "sort" || type === "type") return val !== undefined && val !== null ? val : (fieldConfig.default || '');
 
+                            let rawVal = (val !== undefined && val !== null) ? val : (fieldConfig.default || '');
                             if (val === undefined || val === null || val === '') {
                                 val = fieldConfig.default || '';
                             }
@@ -457,12 +463,24 @@
 
                             if (fieldConfig.isFormStatus) {
                                 let formName = colName.replace('_complete', '');
-                                val = module.renderers.renderFormStatus(pid, row['_record_id'], formName, val || '0');
+                                if (type === "filter") {
+                                    val = (val === '2' || val === 2) ? 'Complete' : ((val === '1' || val === 1) ? 'Unverified' : 'Incomplete');
+                                } else {
+                                    val = module.renderers.renderFormStatus(pid, row['_record_id'], formName, val || '0');
+                                }
                             }
 
                             if (fieldConfig.isDate || (val && typeof val === 'string' && /^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(val.trim()))) {
                                 val = formatDateTime(val, fieldConfig.hasTime);
                             }
+
+                            if (type === "filter") {
+                                let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
+                                let cleanRaw = String(rawVal).replace(/<[^>]*>?/gm, '').trim();
+                                return (cleanRaw && cleanRaw !== cleanVal) ? `${cleanVal} ${cleanRaw}` : cleanVal;
+                            }
+
+                            if (type !== "display") return val !== undefined && val !== null ? val : (fieldConfig.default || '');
 
                             if (fieldConfig.link && fieldConfig.link !== 'none') {
                                 let linkType = fieldConfig.link;
@@ -498,6 +516,7 @@
                             className: 'text-center',
                             defaultContent: '0',
                             render: (val, type) => {
+                                if (type === 'filter') return val !== undefined && val !== null ? String(val) : '0';
                                 if (type !== 'display') return val !== undefined && val !== null ? val : 0;
                                 let num = parseInt(val, 10) || 0;
                                 return `<span class="badge ${num > 0 ? 'bg-secondary' : 'bg-light text-muted border'} rounded-pill px-2">${num}</span>`;
@@ -525,6 +544,7 @@
                         className: 'text-center',
                         defaultContent: '0',
                         render: (val, type) => {
+                            if (type === 'filter') return val !== undefined && val !== null ? String(val) : '0';
                             if (type !== 'display') return val !== undefined && val !== null ? val : 0;
                             let num = parseInt(val, 10) || 0;
                             return `<span class="badge ${num > 0 ? 'bg-secondary' : 'bg-light text-muted border'} rounded-pill px-2">${num}</span>`;
@@ -569,8 +589,12 @@
                         defaultContent: '',
                         render: (val, type, row) => {
                             let dateVal = val || row['_callGenerated'] || row['load'] || '';
+                            if (type === 'sort' || type === 'type') return dateVal;
+                            let formattedDate = formatDateTime(dateVal) || '';
+                            if (type === 'filter') {
+                                return (dateVal && dateVal !== formattedDate) ? `${formattedDate} ${dateVal}` : formattedDate;
+                            }
                             if (type !== "display") return dateVal;
-                            let formattedDate = formatDateTime(dateVal);
                             return formattedDate || '';
                         }
                     });
@@ -583,9 +607,13 @@
                         data: '_expireDate',
                         defaultContent: '',
                         render: (val, type, row) => {
+                            if (type === 'sort' || type === 'type') return val || '';
+                            let formattedDate = val ? formatDateTime(val, false, true) : 'No Expiration';
+                            if (type === 'filter') {
+                                return (val && val !== formattedDate) ? `${formattedDate} ${val}` : formattedDate;
+                            }
                             if (type !== 'display') return val || '';
                             if (!val) return '<span class="text-muted small">No Expiration</span>';
-                            let formattedDate = formatDateTime(val, false, true);
                             let days = row['_daysRemaining'];
                             if (days !== null && days !== undefined) {
                                 if (days < 0) return formattedDate;
@@ -605,6 +633,11 @@
                         data: '_windowLower',
                         defaultContent: 'Not Specified',
                         render: (val, type) => {
+                            if (type === 'sort' || type === 'type') return val || '';
+                            let formattedDate = val ? formatDateTime(val, false, true) : 'Not Specified';
+                            if (type === 'filter') {
+                                return (val && val !== formattedDate) ? `${formattedDate} ${val}` : formattedDate;
+                            }
                             if (type !== 'display') return val || '';
                             return val ? formatDateTime(val, false, true) : '<span class="text-muted small">Not Specified</span>';
                         }
@@ -615,6 +648,11 @@
                         data: '_windowUpper',
                         defaultContent: 'Not Specified',
                         render: (val, type) => {
+                            if (type === 'sort' || type === 'type') return val || '';
+                            let formattedDate = val ? formatDateTime(val, false, true) : 'Not Specified';
+                            if (type === 'filter') {
+                                return (val && val !== formattedDate) ? `${formattedDate} ${val}` : formattedDate;
+                            }
                             if (type !== 'display') return val || '';
                             return val ? formatDateTime(val, false, true) : '<span class="text-muted small">Not Specified</span>';
                         }
@@ -628,6 +666,11 @@
                         data: '_appt_dt',
                         defaultContent: 'Not Specified',
                         render: (val, type) => {
+                            if (type === 'sort' || type === 'type') return val || '';
+                            let formattedDate = val ? formatDateTime(val) : 'Not Specified';
+                            if (type === 'filter') {
+                                return (val && val !== formattedDate) ? `${formattedDate} ${val}` : formattedDate;
+                            }
                             if (type !== 'display') return val || '';
                             return val ? formatDateTime(val) : '<span class="text-muted small">Not Specified</span>';
                         }
@@ -641,6 +684,11 @@
                         data: '_appt_dt',
                         defaultContent: 'Not Specified',
                         render: (val, type) => {
+                            if (type === 'sort' || type === 'type') return val || '';
+                            let formattedDate = val ? formatDateTime(val) : 'Not Specified';
+                            if (type === 'filter') {
+                                return (val && val !== formattedDate) ? `${formattedDate} ${val}` : formattedDate;
+                            }
                             if (type !== 'display') return val || '';
                             return val ? formatDateTime(val) : '<span class="text-muted small">Not Specified</span>';
                         }
@@ -660,8 +708,12 @@
                         data: '_adhocContactOn',
                         defaultContent: '',
                         render: (val, type, row) => {
-                            if (type !== 'display') return val || '';
+                            if (type === 'sort' || type === 'type') return val || '';
                             let formattedDate = val ? formatDateTime(val) : '';
+                            if (type === 'filter') {
+                                return (val && val !== formattedDate) ? `${formattedDate} ${val}` : formattedDate;
+                            }
+                            if (type !== 'display') return val || '';
                             return formattedDate || '';
                         }
                     });
@@ -675,8 +727,12 @@
                         className: 'callDateCol',
                         defaultContent: '',
                         render: (val, type, row) => {
+                            if (type === 'sort' || type === 'type') return val || '';
+                            let formattedDate = formatDateTime(val) || '';
+                            if (type === 'filter') {
+                                return (val && val !== formattedDate) ? `${formattedDate} ${val}` : formattedDate;
+                            }
                             if (type !== "display") return val || '';
-                            let formattedDate = formatDateTime(val);
                             return formattedDate || '';
                         }
                     });
@@ -698,8 +754,22 @@
                     searchable: true,
                     visible: showBadgeColInitial,
                     render: (val, type, row) => {
-                        if (type !== 'display') return val || '';
                         let isCompleted = isRowCompleted(row);
+                        let isExpired = !isCompleted && Boolean(row['_isExpired'] || row['_status'] === 'expired');
+                        let isHidden = isRowHidden(row);
+
+                        if (type === 'filter') {
+                            if (isCompleted) return 'Completed';
+                            if (row['_callbackRequestor']) {
+                                let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : (row['_callbackRequestor'] || ''));
+                                return `Callback ${cbWho}`.trim();
+                            }
+                            if (isExpired) return 'Expired';
+                            if (isHidden) return 'Hidden';
+                            return 'Active Open';
+                        }
+
+                        if (type !== 'display') return val || '';
                         if (isCompleted) {
                             return `<span class="badge bg-success-subtle text-success border px-2 py-1" title="Call completed"><i class="fas fa-check-circle me-1"></i>Completed</span>`;
                         }
@@ -715,11 +785,9 @@
                                 `</div>` +
                             `</div>`;
                         }
-                        let isExpired = Boolean(row['_isExpired'] || row['_status'] === 'expired');
                         if (isExpired) {
                             return `<span class="badge bg-danger-subtle text-danger border px-2 py-1" title="Call window has expired"><i class="fas fa-exclamation-triangle me-1"></i>Expired</span>`;
                         }
-                        let isHidden = isRowHidden(row);
                         if (isHidden) {
                             return `<span class="badge bg-secondary-subtle text-secondary border px-2 py-1" title="Hidden call"><i class="fas fa-eye-slash me-1"></i>Hidden</span>`;
                         }
@@ -1158,13 +1226,7 @@
                         let dt = $table.DataTable();
                         let query = $(e.target).val() || '';
 
-                        if (query.split(' ')[0] === 'regex') {
-                            dt.search(query.replace('regex ', ''), true, false).draw(false);
-                        } else if (query[0] === '!') {
-                            dt.search('^(?!.*' + query.slice(1) + ')', true, false).draw(false);
-                        } else {
-                            dt.search(query, false, true).draw(false);
-                        }
+                        self.applyTableSearch(dt, query);
                         self.debouncePersist();
                     }
                 });
@@ -1437,7 +1499,7 @@
                 if (tabState && tabState.search) {
                     let $pane = $(el).closest('.tab-pane');
                     $pane.find('.customSearch').val(tabState.search);
-                    dt.search(tabState.search);
+                    self.applyTableSearch(dt, tabState.search);
                 }
 
                 dt.on('order.dt page.dt', () => {
@@ -1776,6 +1838,149 @@
                 }
             },
 
+            populateColumnSearch(tab_id, colTitle) {
+                let $pane = $(`#${tab_id}`);
+                if (!$pane.length) return;
+                let $input = $pane.find('.customSearch');
+                if (!$input.length) return;
+
+                let searchText = `${colTitle}:`;
+                $input.val(searchText).focus();
+                try {
+                    let len = searchText.length;
+                    $input[0].setSelectionRange(len, len);
+                } catch (e) {}
+                $input.trigger('input');
+            },
+
+            findColumnIndex(dt, candidateCol) {
+                if (!dt || !candidateCol) return -1;
+                let aoColumns = dt.settings()[0].aoColumns;
+                let cleanCandidate = candidateCol.trim().toLowerCase();
+                let strippedCandidate = cleanCandidate.replace(/[\s_-]+/g, '');
+
+                // 1. Exact match on sTitle (stripped of HTML tags)
+                for (let i = 0; i < aoColumns.length; i++) {
+                    let col = aoColumns[i];
+                    if (col.bSearchable === false || col.sName === '_badges') continue;
+                    let title = (col.sTitle || '').replace(/<[^>]*>?/gm, '').trim().toLowerCase();
+                    if (title && title === cleanCandidate) return i;
+                }
+
+                // 2. Exact match on sName
+                for (let i = 0; i < aoColumns.length; i++) {
+                    let col = aoColumns[i];
+                    if (col.bSearchable === false || col.sName === '_badges') continue;
+                    let sName = (col.sName || '').trim().toLowerCase();
+                    if (sName && (sName === cleanCandidate || sName.replace(/^_+/, '') === cleanCandidate)) return i;
+                }
+
+                // 3. Exact match on mData
+                for (let i = 0; i < aoColumns.length; i++) {
+                    let col = aoColumns[i];
+                    if (col.bSearchable === false || col.sName === '_badges') continue;
+                    if (typeof col.mData === 'string') {
+                        let mData = col.mData.trim().toLowerCase();
+                        if (mData && (mData === cleanCandidate || mData.replace(/^_+/, '') === cleanCandidate)) return i;
+                    }
+                }
+
+                // 4. Match on header DOM text
+                for (let i = 0; i < aoColumns.length; i++) {
+                    let col = aoColumns[i];
+                    if (col.bSearchable === false || col.sName === '_badges') continue;
+                    try {
+                        let headerText = $(dt.column(i).header()).text().trim().toLowerCase();
+                        if (headerText && headerText === cleanCandidate) return i;
+                    } catch (e) {}
+                }
+
+                // 5. Fuzzy / stripped match (ignoring spaces, underscores, dashes)
+                for (let i = 0; i < aoColumns.length; i++) {
+                    let col = aoColumns[i];
+                    if (col.bSearchable === false || col.sName === '_badges') continue;
+                    let titleStripped = (col.sTitle || '').replace(/<[^>]*>?/gm, '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+                    if (titleStripped && titleStripped === strippedCandidate) return i;
+
+                    let sNameStripped = (col.sName || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
+                    if (sNameStripped && sNameStripped === strippedCandidate) return i;
+
+                    if (typeof col.mData === 'string') {
+                        let mDataStripped = col.mData.trim().toLowerCase().replace(/[\s_-]+/g, '');
+                        if (mDataStripped && mDataStripped === strippedCandidate) return i;
+                    }
+
+                    try {
+                        let headerStripped = $(dt.column(i).header()).text().trim().toLowerCase().replace(/[\s_-]+/g, '');
+                        if (headerStripped && headerStripped === strippedCandidate) return i;
+                    } catch (e) {}
+                }
+
+                return -1;
+            },
+
+            applyTableSearch(dt, query) {
+                if (!dt) return;
+                query = (typeof query === 'string') ? query : '';
+                let trimmedQuery = query.trim();
+
+                if ((trimmedQuery.startsWith('"') && trimmedQuery.endsWith('"')) || (trimmedQuery.startsWith("'") && trimmedQuery.endsWith("'"))) {
+                    trimmedQuery = trimmedQuery.slice(1, -1).trim();
+                }
+
+                let colonIndex = trimmedQuery.indexOf(':');
+                let matchedColIdx = -1;
+                let targetVal = '';
+
+                if (colonIndex > 0) {
+                    let candidateCol = trimmedQuery.substring(0, colonIndex).trim();
+                    candidateCol = candidateCol.replace(/^["']|["']$/g, '').trim();
+
+                    let colIdx = this.findColumnIndex(dt, candidateCol);
+                    if (colIdx !== -1) {
+                        matchedColIdx = colIdx;
+                        targetVal = trimmedQuery.substring(colonIndex + 1).trim();
+                        if ((targetVal.startsWith('"') && targetVal.endsWith('"')) || (targetVal.startsWith("'") && targetVal.endsWith("'"))) {
+                            targetVal = targetVal.slice(1, -1);
+                        }
+                    }
+                }
+
+                if (matchedColIdx !== -1) {
+                    // Column-specific search
+                    dt.search('');
+                    let totalCols = dt.columns().count();
+                    for (let i = 0; i < totalCols; i++) {
+                        if (i !== matchedColIdx) {
+                            dt.column(i).search('');
+                        }
+                    }
+
+                    if (!targetVal) {
+                        dt.column(matchedColIdx).search('', false, true).draw(false);
+                    } else if (targetVal.split(' ')[0] === 'regex') {
+                        dt.column(matchedColIdx).search(targetVal.replace('regex ', ''), true, false).draw(false);
+                    } else if (targetVal[0] === '!') {
+                        dt.column(matchedColIdx).search('^(?!.*' + targetVal.slice(1) + ')', true, false).draw(false);
+                    } else {
+                        dt.column(matchedColIdx).search(targetVal, false, true).draw(false);
+                    }
+                } else {
+                    // Normal search across all columns
+                    dt.columns().every(function() {
+                        this.search('');
+                    });
+
+                    if (query.split(' ')[0] === 'regex') {
+                        dt.search(query.replace('regex ', ''), true, false).draw(false);
+                    } else if (query[0] === '!') {
+                        dt.search('^(?!.*' + query.slice(1) + ')', true, false).draw(false);
+                    } else {
+                        dt.search(query, false, true).draw(false);
+                    }
+                }
+            },
+
             setupColumnContextMenu() {
                 const self = this;
                 let $menu = $('#callHeaderContextMenu');
@@ -1833,6 +2038,12 @@
                     let hiddenCols = aoColumns.filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_status_badge' && c.sName !== '_callNotes');
 
                     let menuHtml = '';
+
+                    // 0. Search Column
+                    if (!isSystemCol && colTitle) {
+                        menuHtml += `<a class="dropdown-item py-1.5" href="#" data-action="search-col" data-colname="${self.escapeHtml(colName)}" data-coltitle="${self.escapeHtml(colTitle)}"><i class="fas fa-search me-2 text-primary"></i> Search "${self.escapeHtml(colTitle)}"</a>`;
+                        menuHtml += `<hr class="dropdown-divider my-1">`;
+                    }
 
                     // 1. Lock / Unlock
                     if (isUnlocked) {
@@ -1911,7 +2122,10 @@
                         let action = $(this).data('action');
                         let targetCol = $(this).data('colname');
 
-                        if (action === 'toggle-lock') {
+                        if (action === 'search-col') {
+                            let titleForSearch = $(this).data('coltitle') || targetCol || '';
+                            self.populateColumnSearch(tab_id, titleForSearch);
+                        } else if (action === 'toggle-lock') {
                             self.toggleLockColumns(tab_id);
                         } else if (action === 'rename-col') {
                             self.promptRenameColumn(tab_id, targetCol);

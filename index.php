@@ -100,7 +100,7 @@ $activeTabId = (!empty($savedTab) && in_array($savedTab, $validTabIds, true))
                                 <div class="d-flex align-items-center gap-2 flex-wrap" :class="{ 'opacity-50 pointer-events-none': !dataLoaded }">
                                     <div class="custom-search-wrap position-relative" style="width: 220px;">
                                         <i class="fas fa-search search-icon text-muted"></i>
-                                        <input type="search" class="form-control form-control-sm customSearch" placeholder="Search calls..." :disabled="!dataLoaded || (!displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'] || displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'].length === 0)">
+                                        <input type="search" class="form-control form-control-sm customSearch" placeholder="Search calls..." title="Search calls or filter by column using ColName:Value (e.g. Record ID:101)" :disabled="!dataLoaded || (!displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'] || displayedData['<?php echo htmlspecialchars($tab['tab_id']); ?>'].length === 0)">
                                     </div>
 
                                     <div class="position-relative d-inline-block" x-data="{ openCallerFilter: false }" @click.outside="openCallerFilter = false">
