@@ -482,9 +482,9 @@ class CallQueryService
 
                 foreach (array_reverse($instances) as $inst) {
                     $itterData = $recordData['repeat_instances'][$callEvent]["call_log"][$inst] ?? [];
-                    $leftMsg = ($itterData['call_left_message'][1] ?? '') === "1" ? '<b>Left Message</b>' : '';
+                    $leftMsg = ($itterData['call_left_message'][1] ?? '') === "1" ? 'Left Message' : '';
                     $setCB = ($itterData['call_requested_callback'][1] ?? '') === "1" ? 'Set Callback' : '';
-                    $text = $leftMsg && $setCB ? $leftMsg . " & " . $setCB : $leftMsg . $setCB . '&nbsp;';
+                    $text = ($leftMsg && $setCB) ? "{$leftMsg} & {$setCB}" : ($leftMsg ?: ($setCB ?: '&nbsp;'));
                     $notes = !empty($itterData['call_notes']) ? $itterData['call_notes'] : 'none';
                     $openDt = $itterData['call_open_datetime'] ?? '';
                     $openUser = $itterData['call_open_user_full_name'] ?? '';

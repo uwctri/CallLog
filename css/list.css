@@ -949,3 +949,81 @@ table.DTCR_clonedTable.dataTable {
     border-top: 1px solid #e2e8f0;
     margin: 4px 0;
 }
+
+/* Call History & Notes Table in Drawer */
+.call-list-dashboard .call-history-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+}
+
+.call-list-dashboard .call-history-table {
+    margin-bottom: 0;
+    font-size: 0.8125rem;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.call-list-dashboard .call-history-table thead th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #cbd5e1;
+    padding: 8px 12px;
+    white-space: nowrap;
+}
+
+.call-list-dashboard .call-history-table tbody tr.call-history-row {
+    transition: background-color 0.12s ease;
+}
+
+.call-list-dashboard .call-history-table tbody tr.call-history-row:hover {
+    background-color: #f1f5f9;
+}
+
+.call-list-dashboard .call-history-table td {
+    padding: 10px 12px;
+    vertical-align: top !important;
+    border-bottom: 1px solid #e2e8f0;
+    color: #1e293b;
+}
+
+.call-list-dashboard .call-history-table tbody tr.call-history-row:last-child td {
+    border-bottom: none;
+}
+
+.call-list-dashboard .call-history-date-cell {
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+}
+
+.call-list-dashboard .call-history-time-cell {
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.call-list-dashboard .call-history-user-cell {
+    font-weight: 500;
+    color: #334155;
+    white-space: nowrap;
+}
+
+.call-list-dashboard .call-history-outcome-cell {
+    white-space: nowrap;
+}
+
+.call-list-dashboard .call-history-note-text {
+    color: #1e293b;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.5;
+    font-size: 0.8125rem;
+}

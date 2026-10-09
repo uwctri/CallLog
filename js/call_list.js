@@ -3,7 +3,7 @@
     const pageRefresh = 60 * 1000;
     const COOKIE_NAME = `call_log_dashboard_${pid}`;
 
-    const formatDateTime = (val, forceTime = false, forceDateOnly = false) => module.utils.formatDateTime(val, forceTime, forceDateOnly);
+    const formatDateTime = (val, forceTime = false, forceDateOnly = false, customFormat = null) => module.utils.formatDateTime(val, forceTime, forceDateOnly, customFormat);
 
     const isRowCompleted = (row) => Boolean(
         row && (
@@ -909,17 +909,94 @@
 
                 let notesHtml = '';
                 if (notesList.length) {
-                    notesHtml = notesList.map(n => `
-                        <div class="py-1.5 border-bottom d-flex justify-content-between align-items-start gap-3">
-                            <div>
-                                <span class="fw-semibold text-dark small">${formatDateTime(n[0])}</span> <span class="text-secondary small">(${n[1]})</span>
-                                <div class="small text-primary">${n[2] !== '&nbsp;' ? n[2] : ''}</div>
+                    let rowsHtml = notesList.map(n => {
+                        let rawDt = n[0] || '';
+                        let parsed = (module.utils && module.utils.parseDateComponents) ? module.utils.parseDateComponents(rawDt) : null;
+
+                        let datePart = '';
+                        let timePart = '';
+                        if (parsed) {
+                            datePart = formatDateTime(rawDt, false, true);
+                            if (parsed.hasTime) {
+                                let is24 = Boolean(module && module.dateTimeFormat && (module.dateTimeFormat.includes('24') || module.dateTimeFormat.includes('H') || module.dateTimeFormat.includes('G')));
+                                let timeFmt = is24 ? 'H:i' : 'g:i A';
+                                timePart = formatDateTime(rawDt, true, false, timeFmt);
+                            }
+                        } else {
+                            datePart = formatDateTime(rawDt, false, true) || rawDt;
+                        }
+
+                        let rawUser = (n[1] || '').trim();
+                        let callerName = (module && module.userNameMap && module.userNameMap[rawUser])
+                            ? module.userNameMap[rawUser]
+                            : (rawUser || 'User');
+
+                        let outcomeStr = (n[2] || '').replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, '').trim();
+                        let hasLeftMsg = outcomeStr.toLowerCase().includes('left message');
+                        let hasSetCB = outcomeStr.toLowerCase().includes('set callback') || outcomeStr.toLowerCase().includes('callback');
+
+                        let outcomeBadges = '';
+                        if (hasLeftMsg && hasSetCB) {
+                            outcomeBadges = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold me-1"><i class="fas fa-comment-dots me-1"></i>Left Message</span>' +
+                                           '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold"><i class="fas fa-calendar-check me-1"></i>Set Callback</span>';
+                        } else if (hasLeftMsg) {
+                            outcomeBadges = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold"><i class="fas fa-comment-dots me-1"></i>Left Message</span>';
+                        } else if (hasSetCB) {
+                            outcomeBadges = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-bold"><i class="fas fa-calendar-check me-1"></i>Set Callback</span>';
+                        } else if (outcomeStr) {
+                            outcomeBadges = `<span class="badge bg-secondary-subtle text-secondary border fw-bold">${this.escapeHtml(outcomeStr)}</span>`;
+                        } else {
+                            outcomeBadges = '<span class="text-muted">—</span>';
+                        }
+
+                        let rawNote = (n[3] !== undefined && n[3] !== null && n[3] !== 'none' && n[3].trim() !== '') ? n[3].trim() : '';
+                        let noteDisplay = rawNote
+                            ? `<div class="call-history-note-text">${this.escapeHtml(rawNote)}</div>`
+                            : '<span class="text-muted fst-italic">No notes recorded</span>';
+
+                        return `
+                            <tr class="call-history-row">
+                                <td class="call-history-date-cell align-top text-nowrap">
+                                    <i class="far fa-calendar-alt text-muted me-1.5" style="font-size: 0.75rem;"></i>${datePart || '—'}
+                                </td>
+                                <td class="call-history-time-cell align-top text-nowrap">
+                                    <i class="far fa-clock text-muted me-1" style="font-size: 0.75rem;"></i>${timePart || '—'}
+                                </td>
+                                <td class="call-history-user-cell align-top text-nowrap">
+                                    <i class="fas fa-user-circle text-secondary me-1.5" style="font-size: 0.8rem;"></i>${this.escapeHtml(callerName)}
+                                </td>
+                                <td class="call-history-outcome-cell align-top text-nowrap">
+                                    ${outcomeBadges}
+                                </td>
+                                <td class="align-top text-start">
+                                    ${noteDisplay}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    notesHtml = `
+                        <div class="call-history-card">
+                            <div class="table-responsive">
+                                <table class="table table-sm call-history-table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 110px; min-width: 105px;">Date</th>
+                                            <th style="width: 95px; min-width: 90px;">Time</th>
+                                            <th style="width: 155px; min-width: 140px;">Caller</th>
+                                            <th style="width: 155px; min-width: 140px;">Outcome</th>
+                                            <th style="min-width: 220px;">Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${rowsHtml}
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="text-end small text-muted">${n[3] !== 'none' ? n[3] : 'No notes recorded'}</div>
                         </div>
-                    `).join('');
+                    `;
                 } else {
-                    notesHtml = '<div class="text-muted small fst-italic">No call attempts or notes logged yet.</div>';
+                    notesHtml = '<div class="p-3 bg-light rounded border text-muted small text-center"><i class="fas fa-info-circle me-1 text-secondary"></i> No call attempts or notes logged yet.</div>';
                 }
 
                 let callId = rowData['_call_id'] || '';
@@ -1006,7 +1083,10 @@
                                     <div>${expandsHtml}</div>
                                 </div>
                                 <div class="col-md-8">
-                                    <h6 class="fw-bold mb-2 text-dark"><i class="fas fa-history me-1 text-primary"></i> Call History & Notes</h6>
+                                    <h6 class="fw-bold mb-2 text-dark d-flex align-items-center">
+                                        <i class="fas fa-history me-1.5 text-primary"></i> Call History & Notes
+                                        ${notesList.length ? `<span class="badge bg-secondary-subtle text-secondary border rounded-pill ms-2" style="font-size: 0.72rem; padding: 0.25em 0.6em;">${notesList.length}</span>` : ''}
+                                    </h6>
                                     <div>${notesHtml}</div>
                                 </div>
                             </div>
@@ -1016,7 +1096,10 @@
                     return `
                         <div class="call-drawer-content px-4 py-3">
                             ${drawerHeaderHtml}
-                            <h6 class="fw-bold mb-2 text-dark"><i class="fas fa-history me-1 text-primary"></i> Participant Call History & Notes</h6>
+                            <h6 class="fw-bold mb-2 text-dark d-flex align-items-center">
+                                <i class="fas fa-history me-1.5 text-primary"></i> Participant Call History & Notes
+                                ${notesList.length ? `<span class="badge bg-secondary-subtle text-secondary border rounded-pill ms-2" style="font-size: 0.72rem; padding: 0.25em 0.6em;">${notesList.length}</span>` : ''}
+                            </h6>
                             <div>${notesHtml}</div>
                         </div>
                     `;
