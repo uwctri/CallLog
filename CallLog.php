@@ -433,10 +433,9 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
     public function cronTemporalLifecycle($cronInfo): string
     {
         $projects = $this->getProjectsWithModuleEnabled();
-        $totalChanged = 0;
 
         foreach ($projects as $projectId) {
-            $totalChanged += $this->getGeneratorService()->evaluateTemporalLifecyclesForProject((int)$projectId);
+            $this->getGeneratorService()->evaluateTemporalLifecyclesForProject((int)$projectId);
         }
 
         return "Temporal lifecycle cron completed successfully. Processed updates for " . count($projects) . " projects.";
@@ -445,24 +444,12 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
     public function cronDailySync($cronInfo): string
     {
         $projects = $this->getProjectsWithModuleEnabled();
-        $totalGenerated = 0;
 
         foreach ($projects as $projectId) {
-            $totalGenerated += $this->getGeneratorService()->evaluateAndGenerateForProject((int)$projectId, 'cron_daily');
+            $this->getGeneratorService()->evaluateAndGenerateForProject((int)$projectId, 'cron_daily');
         }
 
         return "Daily sync cron completed successfully. Processed calls for " . count($projects) . " projects.";
-    }
-
-    // Backward-compatibility aliases for REDCap scheduled cron registry
-    public function cronGenerateAllCalls($cronInfo): string
-    {
-        return $this->cronDailySync($cronInfo);
-    }
-
-    public function cronNewEntry($cronInfo): string
-    {
-        return $this->cronTemporalLifecycle($cronInfo);
     }
 
     private function initGlobal(int $projectId): void
@@ -501,13 +488,6 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
 
         echo "<script>Object.assign({$this->getJavascriptModuleObjectName()}, {$data});</script>";
     }
-
-    public function parseTimeTo24(?string $time): string
-    {
-        return $this->getDateMathService()->parseTimeTo24($time);
-    }
-
-
 
     /**
      * Synchronizes metadata with all logged call instances for the record.

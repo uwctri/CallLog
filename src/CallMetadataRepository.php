@@ -41,22 +41,6 @@ class CallMetadataRepository
         return $decoded;
     }
 
-    /**
-     * @return array<string, CallItemDTO>
-     */
-    public function getMetadataDTOs(int $projectId, string $record): array
-    {
-        $raw = $this->getMetadata($projectId, $record);
-        $dtos = [];
-        foreach ($raw as $key => $item) {
-            if (is_array($item)) {
-                $item['id'] = $item['id'] ?? (string)$key;
-                $dtos[$key] = new CallItemDTO($item);
-            }
-        }
-        return $dtos;
-    }
-
     public function saveMetadata(int $projectId, string $record, array $data): bool
     {
         $metaEvent = $this->getEventOfInstrument($projectId, $this->instrumentMeta);
@@ -88,18 +72,6 @@ class CallMetadataRepository
 
         $response = REDCap::saveData($projectId, 'array', $saveData);
         return empty($response['errors']);
-    }
-
-    /**
-     * @param array<string, CallItemDTO> $dtos
-     */
-    public function saveMetadataDTOs(int $projectId, string $record, array $dtos): bool
-    {
-        $data = [];
-        foreach ($dtos as $key => $dto) {
-            $data[$key] = $dto instanceof CallItemDTO ? $dto->toArray() : $dto;
-        }
-        return $this->saveMetadata($projectId, $record, $data);
     }
 
     public function deleteLastCallInstance(int $projectId, string $record): bool
