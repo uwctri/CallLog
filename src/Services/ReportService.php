@@ -375,6 +375,21 @@ class ReportService
             error_log("[CallLog ReportService] Query error in cron diagnostics: " . $e->getMessage());
         }
 
+        $dailySyncLastRun = $this->module->getProjectSetting('daily_sync_last_run', $projectId);
+        if (is_array($dailySyncLastRun)) {
+            $dailySyncLastRun = reset($dailySyncLastRun);
+        }
+        if (is_string($dailySyncLastRun) && $dailySyncLastRun !== '') {
+            $timestamp = strtotime($dailySyncLastRun);
+            $diagnostics['dailySync']['lastRun'] = $dailySyncLastRun;
+            $diagnostics['dailySync']['lastRunFormatted'] = $timestamp
+                ? date('M j, Y g:i A', $timestamp)
+                : 'Unknown';
+            $diagnostics['dailySync']['status'] = $timestamp && (time() - $timestamp) / 3600 <= 30
+                ? 'healthy'
+                : 'warning';
+        }
+
         return $diagnostics;
     }
 }

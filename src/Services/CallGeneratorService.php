@@ -47,7 +47,6 @@ class CallGeneratorService
         }
         foreach ($config['reminder'] ?? [] as $cc) {
             if (!empty($cc['field'])) $neededFields[] = $cc['field'];
-            if (!empty($cc['removeVar'])) $neededFields[] = $cc['removeVar'];
         }
         foreach ($config['mcv'] ?? [] as $cc) {
             if (!empty($cc['apptDate'])) $neededFields[] = $cc['apptDate'];
@@ -56,7 +55,6 @@ class CallGeneratorService
         foreach ($config['nts'] ?? [] as $cc) {
             if (!empty($cc['apptDate'])) $neededFields[] = $cc['apptDate'];
             if (!empty($cc['indicator'])) $neededFields[] = $cc['indicator'];
-            if (!empty($cc['skip'])) $neededFields[] = $cc['skip'];
         }
         foreach ($config['visit'] ?? [] as $cc) {
             if (!empty($cc['indicator'])) $neededFields[] = $cc['indicator'];
@@ -350,22 +348,7 @@ class CallGeneratorService
         $customNames = $rawSettings['custom_holidays_name'] ?? null;
 
         foreach ($config as $callConfig) {
-            $data = $prefetchedData ?? (REDCap::getData($projectId, 'array', $record, [$callConfig['field'], $callConfig['removeVar']])[$record] ?? []);
-            $removeFlag = $data[$callConfig['removeEvent']][$callConfig['removeVar']] ?? false;
-
-            if (!empty($metadata[$callConfig['id']]) && empty($metadata[$callConfig['id']]['instances']) && $removeFlag) {
-                unset($metadata[$callConfig['id']]);
-                $changeOccurred = true;
-                $pendingLogs[] = [
-                    'type' => 'removed',
-                    'call_id' => $callConfig['id'],
-                    'call_name' => $callConfig['name'],
-                    'reason' => 'Reminder removal flag set'
-                ];
-                continue;
-            }
-
-            if ($removeFlag) continue;
+            $data = $prefetchedData ?? (REDCap::getData($projectId, 'array', $record, [$callConfig['field']])[$record] ?? []);
 
             $fieldVal = $data[$callConfig['event']][$callConfig['field']] ?? '';
 
@@ -556,7 +539,7 @@ class CallGeneratorService
         );
 
         foreach ($config as $callConfig) {
-            $data = $prefetchedData ?? (REDCap::getData($projectId, 'array', $record, [$callConfig['apptDate'], $callConfig['indicator'], $callConfig['skip']])[$record] ?? []);
+            $data = $prefetchedData ?? (REDCap::getData($projectId, 'array', $record, [$callConfig['apptDate'], $callConfig['indicator']])[$record] ?? []);
             $searchKey = array_search($callConfig['event'], $orderedEvents, true);
             $prevEvent = $searchKey !== false && isset($orderedEvents[$searchKey - 1]) ? $orderedEvents[$searchKey - 1] : null;
 

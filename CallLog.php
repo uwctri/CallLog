@@ -394,8 +394,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
 
         $this->passArgument('autoCaptureTimestamps', $cfgService->isSettingEnabled($project_id, 'auto_capture_timestamps', true));
         $this->passArgument('requireCallOutcome', $cfgService->isSettingEnabled($project_id, 'require_call_outcome', true));
-        $this->passArgument('showPhoneBanner', $showPhoneBanner);
-        $this->passArgument('phoneBannerData', array_values($phoneBannerData));
+        $this->passArgument('phoneBannerData', $showPhoneBanner ? array_values($phoneBannerData) : null);
         $this->passArgument('enableCallTimer', $cfgService->isSettingEnabled($project_id, 'enable_call_timer', false));
 
         if ($instrument === $this->instrumentCall) {
@@ -470,7 +469,9 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         $projects = $this->getProjectsWithModuleEnabled();
 
         foreach ($projects as $projectId) {
-            $this->getGeneratorService()->evaluateAndGenerateForProject((int)$projectId, 'cron_daily');
+            $projectId = (int)$projectId;
+            $this->getGeneratorService()->evaluateAndGenerateForProject($projectId, 'cron_daily');
+            $this->setProjectSetting('daily_sync_last_run', date('Y-m-d H:i:s'), $projectId);
         }
 
         return "Daily sync cron completed successfully. Processed calls for " . count($projects) . " projects.";

@@ -37,6 +37,7 @@ class ConfigService
             'datetime_format' => ['m/d/Y g:i A'],
             'trigger_save' => [],
             'same_day_mcv_nts' => ['0'],
+            'daily_sync_last_run' => [''],
             'enabled_holidays' => [
                 'new_years_day', 'mlk_day', 'memorial_day', 'juneteenth',
                 'independence_day', 'labor_day', 'veterans_day', 'thanksgiving',
@@ -59,9 +60,6 @@ class ConfigService
             'reminder_variable' => [],
             'reminder_days' => [],
             'reminder_include_events' => [],
-            'reminder_remove_event' => [],
-            'reminder_remove_var' => [],
-            'followup_event' => [],
             'followup_date' => [],
             'followup_include_events' => [],
             'followup_days' => [],
@@ -75,9 +73,6 @@ class ConfigService
             'nts_indicator' => [],
             'nts_date' => [],
             'nts_include_events' => [],
-            'nts_skip' => [],
-            'nts_window_start_cron' => [],
-            'nts_window_days_before' => [],
             'adhoc_reason' => [],
             'visit_indicator' => [],
             'visit_include_events' => [],
@@ -116,6 +111,50 @@ class ConfigService
                 $val = $defaultVal;
             }
             $clean[$key] = $val;
+        }
+
+        $legacyFollowupEvents = $this->module->getProjectSetting('followup_event', $projectId);
+        if (is_array($legacyFollowupEvents) && !empty($legacyFollowupEvents)) {
+            global $Proj;
+            if (!isset($Proj) || (int)$Proj->project_id !== $projectId) {
+                $Proj = new Project($projectId);
+            }
+
+            foreach ($clean['call_template'] as $index => $template) {
+                if ($template !== 'followup') {
+                    continue;
+                }
+
+                $configuredEvents = $clean['followup_include_events'][$index] ?? [];
+                if (!is_array($configuredEvents)) {
+                    $configuredEvents = [$configuredEvents];
+                }
+                if (array_filter($configuredEvents, static fn($event) => is_scalar($event) && trim((string)$event) !== '')) {
+                    continue;
+                }
+
+                $legacyEvent = $legacyFollowupEvents[$index] ?? '';
+                while (is_array($legacyEvent)) {
+                    $legacyEvent = reset($legacyEvent);
+                }
+                $legacyEvent = trim((string)$legacyEvent);
+                if ($legacyEvent === '') {
+                    continue;
+                }
+
+                $legacyEventId = ctype_digit($legacyEvent) ? (int)$legacyEvent : null;
+                if ($legacyEventId === null) {
+                    foreach ($Proj->eventInfo ?? [] as $eventId => $info) {
+                        if (($info['unique_event_name'] ?? '') === $legacyEvent) {
+                            $legacyEventId = (int)$eventId;
+                            break;
+                        }
+                    }
+                }
+                if ($legacyEventId && isset($Proj->eventInfo[$legacyEventId])) {
+                    $clean['followup_include_events'][$index] = (string)$legacyEventId;
+                }
+            }
         }
 
         $phoneBannerConfigured = $clean['phone_banner_settings_configured'];
@@ -179,6 +218,15 @@ class ConfigService
                 $this->module->setProjectSetting($key, $val, $projectId);
             }
         }
+
+        if (array_key_exists('followup_include_events', $newSettings)) {
+            $this->module->setProjectSetting('followup_event', [], $projectId);
+        }
+        $this->module->setProjectSetting('reminder_remove_event', [], $projectId);
+        $this->module->setProjectSetting('reminder_remove_var', [], $projectId);
+        $this->module->setProjectSetting('nts_skip', [], $projectId);
+        $this->module->setProjectSetting('nts_window_start_cron', [], $projectId);
+        $this->module->setProjectSetting('nts_window_days_before', [], $projectId);
 
         return true;
     }
@@ -407,41 +455,34 @@ class ConfigService
                         "event" => $eventId,
                         "field" => $field,
                         "days" => (int)($settings["reminder_days"][$i][0] ?? $settings["reminder_days"][$i] ?? 0),
-                        "removeEvent" => $settings["reminder_remove_event"][$i][0] ?? $settings["reminder_remove_event"][$i] ?? '',
-                        "removeVar" => $settings["reminder_remove_var"][$i][0] ?? $settings["reminder_remove_var"][$i] ?? ''
                     ], $commonConfig);
                     $arr['id'] .= '|' . $eventName;
                     $arr['name'] .= ' - ' . ($eventNameMap[$eventName] ?? $eventName);
                     $reminderConfig[] = $arr;
                 }
             } elseif ($template === "followup") {
-                $event = $settings["followup_event"][$i][0] ?? $settings["followup_event"][$i] ?? '';
                 $field = $settings["followup_date"][$i][0] ?? $settings["followup_date"][$i] ?? '';
                 $days = (int)($settings["followup_days"][$i][0] ?? $settings["followup_days"][$i] ?? 0);
                 $length = (int)($settings["followup_length"][$i][0] ?? $settings["followup_length"][$i] ?? 0);
                 $end = $settings["followup_end"][$i][0] ?? $settings["followup_end"][$i] ?? '';
-                if (!empty($field) && !empty($event)) {
-                    $followupConfig[] = array_merge([
-                        "event" => $event,
-                        "field" => $field,
-                        "days" => $days,
-                        "length" => $length,
-                        "end" => $end
-                    ], $commonConfig);
-                } elseif (!empty($field)) {
+                if (!empty($field)) {
                     $rawEvents = $settings["followup_include_events"][$i][0] ?? $settings["followup_include_events"][$i] ?? '';
                     $includeEvents = array_map('trim', explode(',', $rawEvents));
                     foreach ($includeEvents as $eventName) {
                         if (empty($eventName)) continue;
+                        $eventId = ctype_digit($eventName)
+                            ? (int)$eventName
+                            : REDCap::getEventIdFromUniqueEvent($eventName);
+                        $uniqueEventName = $Proj->eventInfo[$eventId]['unique_event_name'] ?? $eventName;
                         $arr = array_merge([
-                            "event" => REDCap::getEventIdFromUniqueEvent($eventName),
+                            "event" => $eventId,
                             "field" => $field,
                             "days" => $days,
                             "length" => $length,
                             "end" => $end
                         ], $commonConfig);
-                        $arr['id'] .= '|' . $eventName;
-                        $arr['name'] .= ' - ' . ($eventNameMap[$eventName] ?? $eventName);
+                        $arr['id'] .= '|' . $uniqueEventName;
+                        $arr['name'] .= ' - ' . ($eventNameMap[$uniqueEventName] ?? $uniqueEventName);
                         $followupConfig[] = $arr;
                     }
                 }
@@ -465,9 +506,6 @@ class ConfigService
             } elseif ($template === "nts") {
                 $indicator = $settings["nts_indicator"][$i][0] ?? $settings["nts_indicator"][$i] ?? '';
                 $dateField = $settings["nts_date"][$i][0] ?? $settings["nts_date"][$i] ?? '';
-                $skipField = $settings["nts_skip"][$i][0] ?? $settings["nts_skip"][$i] ?? '';
-                $window = $settings["nts_window_start_cron"][$i][0] ?? $settings["nts_window_start_cron"][$i] ?? '';
-                $windowDays = $settings["nts_window_days_before"][$i][0] ?? $settings["nts_window_days_before"][$i] ?? 0;
                 if (empty($indicator) || empty($dateField)) continue;
                 $rawEvents = $settings["nts_include_events"][$i][0] ?? $settings["nts_include_events"][$i] ?? '';
                 $includeEvents = array_map('trim', explode(',', $rawEvents));
@@ -476,10 +514,7 @@ class ConfigService
                     $arr = array_merge([
                         "event" => REDCap::getEventIdFromUniqueEvent($eventName),
                         "indicator" => $indicator,
-                        "apptDate" => $dateField,
-                        "skip" => $skipField,
-                        "window" => $window,
-                        "windowDaysBefore" => intval($windowDays)
+                        "apptDate" => $dateField
                     ], $commonConfig);
                     $arr['id'] .= '|' . $eventName;
                     $arr['name'] .= ' - ' . ($eventNameMap[$eventName] ?? $eventName);
@@ -535,7 +570,11 @@ class ConfigService
             } elseif ($template === "visit") {
                 $config[$callId] = $settings["visit_auto_remove"][$i][0] ?? $settings["visit_auto_remove"][$i] ?? null;
             } elseif ($template === "followup") {
-                $config[$callId] = $settings["followup_auto_remove"][$i][0] ?? $settings["followup_auto_remove"][$i] ?? null;
+                $value = $settings["followup_auto_remove"][$i][0] ?? $settings["followup_auto_remove"][$i] ?? null;
+                if (is_array($value)) {
+                    $value = reset($value);
+                }
+                $config[$callId] = in_array($value, ['1', 1, true, 'true'], true);
             }
         }
         return $config;

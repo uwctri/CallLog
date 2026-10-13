@@ -348,7 +348,7 @@
                 ? $("#questiontable tr[id]").first()
                 : $(".formtbody tr[id]").first();
             
-            if (module.showPhoneBanner !== false && module.phoneBannerData && module.phoneBannerData.length > 0 && module.renderers && module.renderers.renderStickyPhoneBanner && !$(".call-phone-banner").length) {
+            if (module.renderers && module.renderers.renderStickyPhoneBanner && !$(".call-phone-banner").length) {
                 const bannerHtml = module.renderers.renderStickyPhoneBanner(module.participantName, module.recordId, module.phoneBannerData);
                 $targetRow.before(`<tr id="call_banner_wrapper-tr"><td colspan="2" class="p-0 border-0">${bannerHtml}</td></tr>`);
             }

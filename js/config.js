@@ -290,15 +290,20 @@
                 const remEvts = r.reminder_include_events || [];
                 const folDate = r.followup_date || [];
                 const folDays = r.followup_days || [];
+                const folLength = r.followup_length || [];
+                const folEnd = r.followup_end || [];
+                const folAutoRemove = r.followup_auto_remove || [];
                 const folEvts = r.followup_include_events || [];
                 const mcvInd = r.mcv_indicator || [];
                 const mcvDate = r.mcv_date || [];
+                const mcvAutoRemove = r.mcv_auto_remove || [];
                 const mcvEvts = r.mcv_include_events || [];
                 const ntsInd = r.nts_indicator || [];
                 const ntsDate = r.nts_date || [];
                 const ntsEvts = r.nts_include_events || [];
                 const adhocRea = r.adhoc_reason || [];
                 const visInd = r.visit_indicator || [];
+                const visAutoRemove = r.visit_auto_remove || [];
                 const visEvts = r.visit_include_events || [];
 
                 const scripts = r.call_script || [];
@@ -339,15 +344,20 @@
                         reminderEvents: rEvts,
                         followupDate: getVal(folDate, i, ''),
                         followupDays: getVal(folDays, i, ''),
+                        followupLength: getVal(folLength, i, ''),
+                        followupEnd: getVal(folEnd, i, ''),
+                        followupAutoRemove: ['1', 1, true, 'true'].includes(getVal(folAutoRemove, i, false)),
                         followupEvents: fEvts,
                         mcvIndicator: getVal(mcvInd, i, ''),
                         mcvDate: getVal(mcvDate, i, ''),
+                        mcvAutoRemove: getVal(mcvAutoRemove, i, ''),
                         mcvEvents: mEvts,
                         ntsIndicator: getVal(ntsInd, i, ''),
                         ntsDate: getVal(ntsDate, i, ''),
                         ntsEvents: nEvts,
                         adhocReason: getVal(adhocRea, i, ''),
                         visitIndicator: getVal(visInd, i, ''),
+                        visitAutoRemove: getVal(visAutoRemove, i, ''),
                         visitEvents: vEvts
                     };
                 });
@@ -544,15 +554,20 @@
                     reminderEvents: [...defaultEvts],
                     followupDate: '',
                     followupDays: '',
+                    followupLength: '',
+                    followupEnd: '',
+                    followupAutoRemove: false,
                     followupEvents: [...defaultEvts],
                     mcvIndicator: '',
                     mcvDate: '',
+                    mcvAutoRemove: '',
                     mcvEvents: [...defaultEvts],
                     ntsIndicator: '',
                     ntsDate: '',
                     ntsEvents: [...defaultEvts],
                     adhocReason: '',
                     visitIndicator: '',
+                    visitAutoRemove: '',
                     visitEvents: [...defaultEvts]
                 };
                 this.callTypes.push(newCallType);
@@ -1044,15 +1059,20 @@
                     reminder_include_events: this.callTypes.map(c => (c.reminderEvents || []).join(', ')),
                     followup_date: this.callTypes.map(c => c.followupDate),
                     followup_days: this.callTypes.map(c => c.followupDays),
+                    followup_length: this.callTypes.map(c => c.followupLength),
+                    followup_end: this.callTypes.map(c => c.followupEnd),
+                    followup_auto_remove: this.callTypes.map(c => c.followupAutoRemove ? '1' : '0'),
                     followup_include_events: this.callTypes.map(c => (c.followupEvents || []).join(', ')),
                     mcv_indicator: this.callTypes.map(c => c.mcvIndicator),
                     mcv_date: this.callTypes.map(c => c.mcvDate),
+                    mcv_auto_remove: this.callTypes.map(c => c.mcvAutoRemove),
                     mcv_include_events: this.callTypes.map(c => (c.mcvEvents || []).join(', ')),
                     nts_indicator: this.callTypes.map(c => c.ntsIndicator),
                     nts_date: this.callTypes.map(c => c.ntsDate),
                     nts_include_events: this.callTypes.map(c => (c.ntsEvents || []).join(', ')),
                     adhoc_reason: this.callTypes.map(c => c.adhocReason),
                     visit_indicator: this.callTypes.map(c => c.visitIndicator),
+                    visit_auto_remove: this.callTypes.map(c => c.visitAutoRemove),
                     visit_include_events: this.callTypes.map(c => (c.visitEvents || []).join(', ')),
                     tab_name: this.callTabs.map(t => cleanStr(t.name)),
                     tab_calls_included: this.callTabs.map(t => (t.callsIncluded || []).join(', ')),

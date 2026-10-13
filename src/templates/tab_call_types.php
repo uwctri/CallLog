@@ -228,6 +228,24 @@
                                     </template>
                                 </div>
                             </div>
+                            <div class="row g-3 align-items-start mb-2">
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-dark mb-1">Window Length (Days)</label>
+                                    <input type="number" min="0" class="form-control form-control-sm" x-model="callType.followupLength" placeholder="Optional">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-dark mb-1">End Date Field</label>
+                                    <?= renderSearchableFieldSelect('callType', 'followupEnd', '-- Optional End Date Field --', true) ?>
+                                    <small class="text-muted">When populated, this date takes precedence over the calculated window end.</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-dark mb-1 d-block">Auto-Remove</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" x-model="callType.followupAutoRemove" :id="'followup_auto_remove_' + callType._uid">
+                                        <label class="form-check-label small" :for="'followup_auto_remove_' + callType._uid">Expire calls after the window closes</label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- MCV -->
@@ -280,6 +298,13 @@
                                             </div>
                                         </div>
                                     </template>
+                                </div>
+                            </div>
+                            <div class="row g-3 align-items-start mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-dark mb-1">Auto-Remove Date Field</label>
+                                    <?= renderSearchableFieldSelect('callType', 'mcvAutoRemove', '-- Optional Date Field --', true) ?>
+                                    <small class="text-muted">The call expires after this date passes.</small>
                                 </div>
                             </div>
                         </div>
@@ -401,6 +426,13 @@
                                             </div>
                                         </div>
                                     </template>
+                                </div>
+                            </div>
+                            <div class="row g-3 align-items-start mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-dark mb-1">Auto-Remove Date Field</label>
+                                    <?= renderSearchableFieldSelect('callType', 'visitAutoRemove', '-- Optional Date Field --', true) ?>
+                                    <small class="text-muted">The call expires after this date passes.</small>
                                 </div>
                             </div>
                         </div>

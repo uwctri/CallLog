@@ -1058,6 +1058,27 @@ input:checked + .slider:before {
 #call_banner_wrapper-tr > td {
     border-left: 0 !important;
     border-right: 0 !important;
+    position: relative;
+}
+
+#call_banner_wrapper-tr > td::before,
+#call_banner_wrapper-tr > td::after {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #fff;
+    pointer-events: none;
+}
+
+#call_banner_wrapper-tr > td::before {
+    left: -2px;
+}
+
+#call_banner_wrapper-tr > td::after {
+    right: -2px;
 }
 
 .call-phone-banner {

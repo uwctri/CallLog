@@ -380,7 +380,7 @@
                         </a>
                     </span>`;
                 }).join(' ');
-            } else {
+            } else if (Array.isArray(phoneNumbers)) {
                 numbersHtml = `<span class="text-muted small fst-italic">No phone numbers on file</span>`;
             }
 
