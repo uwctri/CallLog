@@ -310,22 +310,26 @@
         },
         renderCallHistoryRow: function (name, callId, status) {
             const displayName = name || callId;
+            const escapeHtml = (value) => String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
             const currentStatus = ['incomplete', 'complete', 'expired'].includes(status) ? status : 'incomplete';
-            return `<div class="call-metadata-item" data-call="${callId}">
+            return `<div class="call-metadata-item" data-call="${escapeHtml(callId)}">
                 <div class="call-metadata-main">
                     <div class="call-metadata-header">
-                        <span class="call-name-label">${displayName}</span>
+                        <span class="call-name-label">${escapeHtml(displayName)}</span>
+                        <span class="call-id-tag"><i class="fas fa-hashtag me-1"></i>${escapeHtml(callId)}</span>
                     </div>
                     <div class="call-metadata-meta">
-                        <select class="form-select form-select-sm callMetadataStatusSelect call-metadata-status is-${currentStatus}" data-call="${callId}">
+                        <select class="form-select form-select-sm callMetadataStatusSelect call-metadata-status is-${currentStatus}" data-call="${escapeHtml(callId)}">
                             <option value="incomplete" ${currentStatus === 'incomplete' ? 'selected' : ''}>Incomplete</option>
                             <option value="complete" ${currentStatus === 'complete' ? 'selected' : ''}>Complete</option>
                             <option value="expired" ${currentStatus === 'expired' ? 'selected' : ''}>Expired</option>
                         </select>
                     </div>
-                </div>
-                <div class="call-metadata-sub">
-                    <span class="call-id-tag"><i class="fas fa-hashtag me-1"></i>${callId}</span>
                 </div>
             </div>`;
         },

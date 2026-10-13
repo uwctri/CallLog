@@ -138,17 +138,19 @@
     };
 
     const getCallName = (callID, callData) => {
-        if (callData && callData.name && callData.name !== 'Unknown' && String(callData.name).trim() !== '') {
-            return String(callData.name).trim();
-        }
+        const getDisplayValue = (value) => {
+            if (Array.isArray(value)) {
+                value = value.find(item => typeof item === 'string' || typeof item === 'number');
+            }
+            return (typeof value === 'string' || typeof value === 'number') ? String(value).trim() : '';
+        };
+        const storedName = getDisplayValue(callData && callData.name);
+        if (storedName && storedName !== 'Unknown') return storedName;
+
         const cleanId = String(callID || '');
         const baseId = cleanId.split('|')[0].split('||')[0];
-        if (module.callNames && module.callNames[baseId]) {
-            return module.callNames[baseId];
-        }
-        if (module.callNames && module.callNames[cleanId]) {
-            return module.callNames[cleanId];
-        }
+        const configuredName = getDisplayValue(module.callNames && (module.callNames[baseId] || module.callNames[cleanId]));
+        if (configuredName) return configuredName;
         if (callData && callData.template) {
             const templateNames = {
                 'new': 'New Entry',
@@ -361,7 +363,7 @@
         $.each(module.metadata || {}, function (callID, callData) {
             const isCurrentCall = (callID === currentCallId || (paramCallId && callID === paramCallId));
             if (!isCurrentCall) {
-                if (callData.status === 'complete' || (callID[0] === "_") || (callID === "") ||
+                if (callData.status === 'complete' || callData.complete === true || (callID[0] === "_") || (callID === "") ||
                     (callData.start && (callData.start > today)) ||
                     (callData.autoRemove && callData.end && (callData.end < today))) {
                     return;
@@ -625,7 +627,7 @@
         // If any logged call has outcome == 1, ensure marked complete in metadata
         $.each(module.data || {}, function (_, d) {
             if (d && d.call_id && module.metadata && module.metadata[d.call_id]) {
-                if (String(d.call_outcome) === '1') {
+                if (String(d.call_outcome) === '1' && !module.metadata[d.call_id].statusOverride) {
                     module.metadata[d.call_id].status = 'complete';
                 }
             }

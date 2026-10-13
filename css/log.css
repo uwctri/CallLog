@@ -676,6 +676,7 @@ table.callHistoryTable td {
 .call-metadata-header {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.6rem;
     min-width: 0;
     flex: 1 1 auto;
@@ -690,6 +691,7 @@ table.callHistoryTable td {
 }
 
 .call-name-label {
+    min-width: 0;
     font-size: 0.92rem;
     font-weight: 600;
     color: #1e293b;
@@ -702,13 +704,6 @@ table.callHistoryTable td {
     align-items: center;
 }
 
-.call-metadata-sub {
-    display: flex;
-    align-items: center;
-    padding-left: 1.75rem;
-    width: 100%;
-}
-
 .call-id-tag {
     font-size: 0.73rem;
     font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -717,7 +712,7 @@ table.callHistoryTable td {
     padding: 0.15rem 0.45rem;
     border-radius: 4px;
     border: 1px solid #cbd5e1;
-    word-break: break-all;
+    overflow-wrap: anywhere;
 }
 
 .call-metadata-status {

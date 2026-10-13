@@ -80,7 +80,10 @@
             $(".callMetadataStatusSelect").each(function () {
                 const callId = $(this).data('call');
                 if (metadataToSave && metadataToSave[callId]) {
-                    metadataToSave[callId].status = $(this).val() || 'incomplete';
+                    const status = $(this).val() || 'incomplete';
+                    metadataToSave[callId].status = status;
+                    metadataToSave[callId].statusOverride = true;
+                    metadataToSave[callId].complete = status === 'complete';
                 }
             });
 

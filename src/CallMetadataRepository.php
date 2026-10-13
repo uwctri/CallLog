@@ -34,7 +34,11 @@ class CallMetadataRepository
             if (!is_array($item)) continue;
             if (empty($item['id'])) $item['id'] = (string)$k;
             if (!isset($item['instances']) || !is_array($item['instances'])) $item['instances'] = [];
-            if (empty($item['status'])) $item['status'] = 'incomplete';
+            if (empty($item['statusOverride']) && !empty($item['complete'])) {
+                $item['status'] = 'complete';
+            } elseif (empty($item['status'])) {
+                $item['status'] = 'incomplete';
+            }
         }
         unset($item);
 
@@ -58,7 +62,11 @@ class CallMetadataRepository
             if (!is_array($item)) continue;
             if (empty($item['id'])) $item['id'] = (string)$k;
             if (!isset($item['instances']) || !is_array($item['instances'])) $item['instances'] = [];
-            if (empty($item['status'])) $item['status'] = 'incomplete';
+            if (empty($item['statusOverride']) && !empty($item['complete'])) {
+                $item['status'] = 'complete';
+            } elseif (empty($item['status'])) {
+                $item['status'] = 'incomplete';
+            }
         }
         unset($item);
 
@@ -169,7 +177,7 @@ class CallMetadataRepository
                     if (is_array($decoded)) {
                         foreach ($decoded as $call) {
                             $stats['totalCalls']++;
-                            if (($call['status'] ?? '') === 'complete') {
+                            if (($call['status'] ?? '') === 'complete' || !empty($call['complete'])) {
                                 $stats['completedCalls']++;
                             }
                             if (!empty($call['completedBy'])) {

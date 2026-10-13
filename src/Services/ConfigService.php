@@ -775,9 +775,12 @@ class ConfigService
                 ];
                 $script = $settings["call_script"][$i] ?? '';
                 if (is_array($script)) $script = reset($script);
+                $callName = $settings["call_name"][$i] ?? 'Adhoc Call';
+                if (is_array($callName)) $callName = reset($callName);
+                $callName = is_scalar($callName) ? trim((string)$callName) : '';
                 $config[$callId] = [
                     "id" => $callId,
-                    "name" => !empty($settings["call_name"][$i]) ? $settings["call_name"][$i] : 'Adhoc Call',
+                    "name" => $callName !== '' ? $callName : 'Adhoc Call',
                     "reasons" => $parsedReasons,
                     "script" => (string)$script,
                     "hideAfterAttempt" => !empty($settings["hide_after_attempt"][$i]) ? (int)$settings["hide_after_attempt"][$i] : 9999

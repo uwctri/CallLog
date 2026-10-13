@@ -265,11 +265,21 @@
                 record: rec,
                 metadata: typeof metadata === 'string' ? metadata : JSON.stringify(metadata)
             };
-            return module.ajax("metadataSave", payload).then(() => {
+            return module.ajax("metadataSave", payload).then((response) => {
+                if (response && response.saved === false) {
+                    throw new Error(response.error || 'The server did not save the call metadata.');
+                }
                 if (!reload) return;
                 window.onbeforeunload = () => {};
                 window.location.reload();
-            }).catch(err => console.error(err));
+                return response;
+            }).catch(err => {
+                console.error('Failed to save call metadata:', err);
+                if (module.swal && typeof module.swal.error === 'function') {
+                    module.swal.error('Unable to Save Settings', err.message || 'Call metadata could not be saved. Please try again.');
+                }
+                return false;
+            });
         }
     };
 
@@ -336,6 +346,8 @@
                 merged.html = iconHtml;
             }
         }
+        delete merged.customIcon;
+        delete merged.customIconClass;
 
         return merged;
     }

@@ -119,6 +119,7 @@ class ApiService
 
                         if ($matchesCallType && $matchesReason) {
                             $callData['complete'] = true;
+                            $callData['status'] = 'complete';
                             $callData['completedBy'] = "REDCap API";
                             $modified = true;
                             $resolvedCount++;
@@ -271,6 +272,12 @@ class ApiService
                     $savedData = json_decode($payload['metadata'], true);
                     if (is_array($savedData)) {
                         $result['saved'] = $this->metadataRepo->saveMetadata($projectId, $record, $savedData);
+                        if (!$result['saved']) {
+                            $result['error'] = 'Could not save call metadata for this record.';
+                        }
+                    } else {
+                        $result['saved'] = false;
+                        $result['error'] = 'Call metadata must be a valid JSON object.';
                     }
                 }
                 break;
@@ -546,6 +553,13 @@ class ApiService
 
         $key = $targetConfig['id'] . '||' . $reported;
         $reasonText = $targetConfig['reasons'][$reasonId] ?? $reasonId;
+        if (is_array($reasonText)) {
+            $reasonText = reset($reasonText);
+        }
+        if (!is_scalar($reasonText)) {
+            $reasonText = $reasonId;
+        }
+        $reasonText = (string)$reasonText;
 
         $metadata[$key] = [
             "id" => $targetConfig['id'],

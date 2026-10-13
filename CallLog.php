@@ -179,6 +179,20 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         }
         if (!empty($hidingCss)) echo "<style id='callLogVisibilityHider'>" . implode("\n", $hidingCss) . "</style>";
 
+        echo "<style id='callLogInstrumentIcon'>
+.rc-form-menu-item[data-form=\"" . $this->instrumentCall . "\"] > a.rc-form-menu-link:first-child img.rc-form-menu-icon { display: none !important; }
+.rc-form-menu-item[data-form=\"" . $this->instrumentCall . "\"] > a.rc-form-menu-link:first-child::after {
+    content: \"\\f095\";
+    display: inline-block;
+    width: 16px;
+    color: #64748b;
+    font-family: \"Font Awesome 5 Free\";
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 16px;
+    text-align: center;
+}</style>";
+
         $isRelevantPage = $this->isPage('ExternalModules/')
             || $this->isPage('DataEntry/record_home.php')
             || $this->isPage('DataEntry/index.php')
@@ -595,7 +609,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 }
             }
 
-            if ($isComplete && $item['status'] !== 'complete') {
+            if (empty($item['statusOverride']) && (!empty($item['complete']) || $isComplete) && $item['status'] !== 'complete') {
                 $item['status'] = 'complete';
                 $changed = true;
             }
