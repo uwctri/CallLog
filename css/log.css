@@ -1055,6 +1055,11 @@ input:checked + .slider:before {
 }
 
 /* Sticky Participant Phone Banner */
+#call_banner_wrapper-tr > td {
+    border-left: 0 !important;
+    border-right: 0 !important;
+}
+
 .call-phone-banner {
     border-radius: 6px;
     border: 1px solid #e2e8f0;

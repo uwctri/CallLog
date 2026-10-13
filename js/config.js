@@ -73,7 +73,9 @@
             showMetadataInstrument: false,
             autoCaptureTimestamps: true,
             requireCallOutcome: true,
-            showPhoneBanner: true,
+            showPhoneBanner: false,
+            phoneBannerFields: [],
+            phoneBannerFieldToAdd: '',
             enableCallTimer: false,
             resettingInstrument: false,
             datetimeFormat: 'm/d/Y g:i A',
@@ -134,10 +136,27 @@
                 return (this.meta.fields || []).filter(field => field.isDate);
             },
 
+            get availablePhoneBannerFields() {
+                const selected = new Set(this.phoneBannerFields.map(String));
+                return (this.meta.phoneBannerFields || []).filter(field => !selected.has(String(field.id)));
+            },
+
             getFieldLabel(id) {
                 if (!id) return '';
                 const f = (this.meta.fields || []).find(field => field.id === id);
                 return f ? (f.label || `${f.id} (${f.name || f.id})`) : id;
+            },
+
+            addPhoneBannerField() {
+                const fieldId = this.phoneBannerFieldToAdd;
+                if (!fieldId || this.phoneBannerFields.includes(fieldId)) return;
+                if (!this.availablePhoneBannerFields.some(field => field.id === fieldId)) return;
+                this.phoneBannerFields.push(fieldId);
+                this.phoneBannerFieldToAdd = '';
+            },
+
+            removePhoneBannerField(fieldId) {
+                this.phoneBannerFields = this.phoneBannerFields.filter(id => id !== fieldId);
             },
 
             getInstrumentLabel(id) {
@@ -242,8 +261,12 @@
                     ? true
                     : Boolean(r.require_call_outcome && (r.require_call_outcome[0] === '1' || r.require_call_outcome === '1' || r.require_call_outcome === true));
                 this.showPhoneBanner = (r.show_phone_banner === undefined || r.show_phone_banner === null)
-                    ? true
+                    ? false
                     : Boolean(r.show_phone_banner && (r.show_phone_banner[0] === '1' || r.show_phone_banner === '1' || r.show_phone_banner === true));
+                this.phoneBannerFields = (r.phone_banner_fields === undefined || r.phone_banner_fields === null)
+                    ? (this.meta.phoneBannerFields || []).map(field => field.id)
+                    : toArray(r.phone_banner_fields).filter(fieldId => fieldId !== '__none__');
+                this.phoneBannerFieldToAdd = '';
                 this.enableCallTimer = Boolean(r.enable_call_timer && (r.enable_call_timer[0] === '1' || r.enable_call_timer === '1' || r.enable_call_timer === true));
                 this.datetimeFormat = Array.isArray(r.datetime_format)
                     ? (r.datetime_format[0] || 'm/d/Y g:i A')
@@ -995,6 +1018,8 @@
                     auto_capture_timestamps: [this.autoCaptureTimestamps ? '1' : '0'],
                     require_call_outcome: [this.requireCallOutcome ? '1' : '0'],
                     show_phone_banner: [this.showPhoneBanner ? '1' : '0'],
+                    phone_banner_settings_configured: ['1'],
+                    phone_banner_fields: this.phoneBannerFields.length ? this.phoneBannerFields : ['__none__'],
                     enable_call_timer: [this.enableCallTimer ? '1' : '0'],
                     datetime_format: [cleanStr(this.datetimeFormat, 'm/d/Y g:i A')],
                     display_name_field: [cleanStr(this.displayNameField, '')],
@@ -1037,6 +1062,7 @@
                     tab_field_name: this.callTabs.map(t => (t.fields || []).map(f => cleanStr(f.name))),
                     tab_field_default: this.callTabs.map(t => (t.fields || []).map(f => cleanStr(f.default))),
                     tab_field_link: this.callTabs.map(t => (t.fields || []).map(f => f.link)),
+                    tab_field_link_instrument: this.callTabs.map(t => (t.fields || []).map(f => f.linkedInstrument || '')),
                     ...(() => {
                         const validExpands = (this.expandsFields || []).filter(e => e && e.field && String(e.field).trim());
                         return {

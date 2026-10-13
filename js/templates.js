@@ -359,13 +359,20 @@
             </div>`;
         },
         renderStickyPhoneBanner: function (participantName, recordId, phoneNumbers) {
+            const escapeHtml = (value) => String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
             const numbers = Array.isArray(phoneNumbers) ? phoneNumbers : [];
             let numbersHtml = '';
             if (numbers.length > 0) {
                 numbersHtml = numbers.map(n => {
-                    const label = n.label || 'Phone';
-                    const num = n.number || '';
-                    const cleanTel = num.replace(/[^\d+]/g, '');
+                    const label = escapeHtml(n.label || 'Phone');
+                    const rawNumber = String(n.number || '');
+                    const num = escapeHtml(rawNumber);
+                    const cleanTel = rawNumber.replace(/[^\d+]/g, '');
                     return `<span class="call-phone-badge d-inline-flex align-items-center px-2 py-1 bg-white border rounded small">
                         <strong class="text-secondary me-1.5">${label}:</strong>
                         <a href="tel:${cleanTel}" class="text-primary fw-semibold text-decoration-none d-inline-flex align-items-center">
@@ -384,8 +391,8 @@
                             <i class="fas fa-user small"></i>
                         </span>
                         <div>
-                            <span class="fw-bold text-dark">${participantName || 'Participant'}</span>
-                            ${recordId ? `<span class="badge bg-light text-secondary border ms-1.5">#${recordId}</span>` : ''}
+                                <span class="fw-bold text-dark">${escapeHtml(participantName || 'Participant')}</span>
+                                ${recordId ? `<span class="badge bg-light text-secondary border ms-1.5">#${escapeHtml(recordId)}</span>` : ''}
                         </div>
                     </div>
                     <div class="d-flex flex-wrap align-items-center gap-2">

@@ -81,6 +81,42 @@
                 </div>
             </div>
 
+            <div class="border-top pt-3 mb-3">
+                <div class="form-check form-switch mb-1">
+                    <input class="form-check-input me-2 cursor-pointer" type="checkbox" id="cfg_show_phone_banner" x-model="showPhoneBanner">
+                    <label class="form-check-label fw-bold text-dark cursor-pointer" for="cfg_show_phone_banner">
+                        Show Participant Phone in Banner
+                    </label>
+                </div>
+                <div class="setting-blurb text-muted small ps-4 mb-2" style="line-height: 1.5;">
+                    Displays selected participant contact fields at the top of the Call Log. Suggested fields are detected from phone-related field names, labels, or phone validation; only text fields are suggested.
+                </div>
+                <div class="ps-4" x-show="showPhoneBanner">
+                    <div class="d-flex flex-wrap gap-2 mb-2" x-show="phoneBannerFields.length">
+                        <template x-for="fieldId in phoneBannerFields" :key="fieldId">
+                            <span class="badge bg-light text-dark border d-inline-flex align-items-center gap-2 py-2 px-2">
+                                <span x-text="getFieldLabel(fieldId)"></span>
+                                <button type="button" class="btn-close" style="font-size: 0.55rem;" :aria-label="`Remove ${getFieldLabel(fieldId)}`" @click="removePhoneBannerField(fieldId)"></button>
+                            </span>
+                        </template>
+                    </div>
+                    <div class="text-muted small mb-2" x-show="phoneBannerFields.length === 0">
+                        No fields selected. Add a suggested field below to show it in the banner.
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <select class="form-select form-select-sm" style="max-width: 420px;" x-model="phoneBannerFieldToAdd">
+                            <option value="">Add a suggested phone field...</option>
+                            <template x-for="field in availablePhoneBannerFields" :key="field.id">
+                                <option :value="field.id" x-text="field.label"></option>
+                            </template>
+                        </select>
+                        <button type="button" class="btn btn-sm btn-outline-primary" @click="addPhoneBannerField()" :disabled="!phoneBannerFieldToAdd">
+                            <i class="fas fa-plus me-1"></i> Add Field
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Native Fields Reference Table & Reset Action -->
             <div class="border-top pt-3">
                 <div class="d-flex flex-wrap justify-content-between align-items-end mb-2 gap-2">

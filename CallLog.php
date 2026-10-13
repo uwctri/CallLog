@@ -348,29 +348,39 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         }
 
         $cfgService = $this->getConfigService();
-        $showPhoneBanner = $cfgService->isSettingEnabled($project_id, 'show_phone_banner', true);
+        $showPhoneBanner = $cfgService->isSettingEnabled($project_id, 'show_phone_banner', false);
         $phoneBannerData = [];
         if ($showPhoneBanner && !empty($record)) {
             try {
                 $projObj = new Project($project_id);
-                $phoneFields = [];
-                foreach ($projObj->metadata as $fName => $fAttr) {
-                    if (strpos($fName, 'phone') !== false || strpos($fName, 'cell') !== false || strpos($fName, 'mobile') !== false) {
-                        $phoneFields[] = $fName;
-                    }
-                }
+                $suggestedPhoneFields = $cfgService->getSuggestedPhoneBannerFieldIds($project_id);
+                $configuredPhoneFields = $rawSettings['phone_banner_fields'] ?? null;
+                $phoneFields = is_array($configuredPhoneFields) ? $configuredPhoneFields : $suggestedPhoneFields;
+                $phoneFields = array_values(array_filter(
+                    array_map('strval', $phoneFields),
+                    static fn($field) => in_array($field, $suggestedPhoneFields, true)
+                ));
                 if (!empty($phoneFields)) {
                     $phoneRec = REDCap::getData($project_id, 'array', $record, $phoneFields);
                     if (is_array($phoneRec[$record] ?? null)) {
                         foreach ($phoneRec[$record] as $evData) {
                             if (is_array($evData)) {
                                 foreach ($phoneFields as $pf) {
-                                    $numVal = trim((string)($evData[$pf] ?? ''));
+                                    $rawValue = $evData[$pf] ?? '';
+                                    if (is_array($rawValue)) {
+                                        $values = array_filter(array_map(
+                                            static fn($value) => is_scalar($value) ? trim((string)$value) : '',
+                                            $rawValue
+                                        ));
+                                        $numVal = implode(', ', $values);
+                                    } else {
+                                        $numVal = is_scalar($rawValue) ? trim((string)$rawValue) : '';
+                                    }
                                     if (!empty($numVal) && !isset($phoneBannerData[$pf])) {
                                         $label = $projObj->metadata[$pf]['element_label'] ?? $pf;
                                         $phoneBannerData[$pf] = [
                                             'field' => $pf,
-                                            'label' => strip_tags($label),
+                                            'label' => trim(strip_tags(html_entity_decode((string)$label, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
                                             'number' => $numVal
                                         ];
                                     }

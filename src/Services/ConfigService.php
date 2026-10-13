@@ -30,7 +30,9 @@ class ConfigService
             'show_metadata_instrument' => ['0'],
             'auto_capture_timestamps' => ['1'],
             'require_call_outcome' => ['1'],
-            'show_phone_banner' => ['1'],
+            'show_phone_banner' => ['0'],
+            'phone_banner_settings_configured' => ['0'],
+            'phone_banner_fields' => null,
             'enable_call_timer' => ['0'],
             'datetime_format' => ['m/d/Y g:i A'],
             'trigger_save' => [],
@@ -108,13 +110,50 @@ class ConfigService
 
         foreach ($defaults as $key => $defaultVal) {
             $val = $this->module->getProjectSetting($key, $projectId);
-            if ($val === null || $val === '' || (is_array($val) && empty($val))) {
+            if ($val === null
+                || ($key !== 'phone_banner_fields' && ($val === '' || (is_array($val) && empty($val))))
+            ) {
                 $val = $defaultVal;
             }
             $clean[$key] = $val;
         }
 
+        $phoneBannerConfigured = $clean['phone_banner_settings_configured'];
+        if (is_array($phoneBannerConfigured)) {
+            $phoneBannerConfigured = reset($phoneBannerConfigured);
+        }
+        if (!in_array($phoneBannerConfigured, ['1', 1, true, 'true'], true)) {
+            $clean['show_phone_banner'] = ['0'];
+        }
+
         return $clean;
+    }
+
+    public function getSuggestedPhoneBannerFieldIds(int $projectId): array
+    {
+        global $Proj;
+        if (!isset($Proj) || (int)$Proj->project_id !== $projectId) {
+            $Proj = new Project($projectId);
+        }
+
+        $suggested = [];
+        foreach ($Proj->metadata ?? [] as $fieldName => $fieldInfo) {
+            if (strtolower($fieldInfo['element_type'] ?? '') !== 'text') {
+                continue;
+            }
+
+            $label = trim(strip_tags(html_entity_decode(
+                (string)($fieldInfo['element_label'] ?? ''),
+                ENT_QUOTES | ENT_HTML5,
+                'UTF-8'
+            )));
+            $validation = strtolower((string)($fieldInfo['element_validation_type'] ?? ''));
+            if (preg_match('/phone|cell|mobile|telephone/i', "{$fieldName} {$label} {$validation}")) {
+                $suggested[] = (string)$fieldName;
+            }
+        }
+
+        return $suggested;
     }
 
     public function isSettingEnabled(int $projectId, string $key, bool $default = false): bool
@@ -281,6 +320,12 @@ class ConfigService
             }
         }
 
+        $phoneBannerFieldIds = $this->getSuggestedPhoneBannerFieldIds($projectId);
+        $phoneBannerFields = array_values(array_filter(
+            $fields,
+            fn($field) => in_array($field['id'], $phoneBannerFieldIds, true)
+        ));
+
         $metadataRepo = new CallMetadataRepository();
         $callStats = $metadataRepo->getCallLogStats($projectId);
 
@@ -292,6 +337,7 @@ class ConfigService
             'events' => $events,
             'instruments' => $instruments,
             'fields' => $fields,
+            'phoneBannerFields' => $phoneBannerFields,
             'dateFields' => $dateFields,
             'totalCalls' => $callStats['totalCalls'] ?? 0,
             'completedCalls' => $callStats['completedCalls'] ?? 0,
