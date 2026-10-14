@@ -27,6 +27,7 @@ class CallQueryService
         $includeExpired = !empty($options['includeExpired']);
         global $Proj;
         if (!isset($Proj) || $Proj->project_id != $projectId) $Proj = new Project($projectId);
+        $t_proj = microtime(true);
 
         $callEvent = $this->metadataRepo->getEventOfInstrument($projectId, "call_log");
         $metaEvent = $this->metadataRepo->getEventOfInstrument($projectId, "call_log_metadata");
@@ -37,6 +38,7 @@ class CallQueryService
         $tabs = $this->configService->getTabConfig($projectId);
         $call2TabMap = $tabs['call2TabMap'] ?? $tabs['call2tabMap'] ?? [];
         $adhocConfig = $this->configService->getAdhocTemplateConfig($projectId);
+        $t_configs = microtime(true);
         $recordIdField = !empty($Proj->table_pk) ? $Proj->table_pk : 'record_id';
         $rawEventNames = $Proj->getUniqueEventNames();
         $eventNameToId = is_array($rawEventNames) ? array_flip($rawEventNames) : [];
@@ -344,6 +346,7 @@ class CallQueryService
         $stagedRows = [];
         $recordTabs = [];
         $pendingMetadataSaves = [];
+        $discardReasons = [];
 
         foreach ($dataLoad as $record => $recordData) {
             $rawMeta = $preloadedMetadata[(string)$record] ?? ($recordData[$metaEvent]["call_metadata"] ?? '');
@@ -437,6 +440,7 @@ class CallQueryService
                 }
 
                 if ((substr($baseCallID, 0, 1) === '_') || empty($targetTabs)) {
+                    $discardReasons['unmapped_tab'] = ($discardReasons['unmapped_tab'] ?? 0) + 1;
                     continue;
                 }
 
@@ -468,6 +472,7 @@ class CallQueryService
                 }
 
                 if (empty($targetTabs)) {
+                    $discardReasons['tab_filter_mismatch'] = ($discardReasons['tab_filter_mismatch'] ?? 0) + 1;
                     continue;
                 }
 
@@ -498,6 +503,7 @@ class CallQueryService
                 }
 
                 if (!$includeCompleted && $isCompleted) {
+                    $discardReasons['completed'] = ($discardReasons['completed'] ?? 0) + 1;
                     continue;
                 }
                 $templateVal = $call['template'] ?? ($callIdToTemplate[$baseCallID] ?? (strpos($callID, '||') !== false ? 'adhoc' : 'new'));
@@ -506,14 +512,17 @@ class CallQueryService
                 }
 
                 if (!$isCompleted && in_array($templateVal, [CallTemplateType::REMINDER->value, CallTemplateType::FOLLOWUP->value], true) && !empty($call['start']) && ($call['start'] > $today)) {
+                    $discardReasons['future_start'] = ($discardReasons['future_start'] ?? 0) + 1;
                     continue;
                 }
 
                 if (!$isCompleted && $templateVal === CallTemplateType::MCV->value && (explode(' ', $call['appt'] ?? '')[0] === $today) && !$dayOf) {
+                    $discardReasons['same_day_mcv'] = ($discardReasons['same_day_mcv'] ?? 0) + 1;
                     continue;
                 }
 
                 if (!$isCompleted && $templateVal === CallTemplateType::NTS->value && (($call['created'] ?? '') === $today) && !$dayOf) {
+                    $discardReasons['same_day_nts'] = ($discardReasons['same_day_nts'] ?? 0) + 1;
                     continue;
                 }
 
@@ -542,6 +551,7 @@ class CallQueryService
                 }
 
                 if (!$includeExpired && $isExpired) {
+                    $discardReasons['expired_status_or_window'] = ($discardReasons['expired_status_or_window'] ?? 0) + 1;
                     continue;
                 }
 
@@ -639,6 +649,7 @@ class CallQueryService
                     }
 
                     if (!$includeExpired && $isExpired) {
+                        $discardReasons['expired_by_autoremove'] = ($discardReasons['expired_by_autoremove'] ?? 0) + 1;
                         continue;
                     }
 
@@ -663,6 +674,7 @@ class CallQueryService
                         }
                     }
                     if ($isWithdrawn) {
+                        $discardReasons['withdrawn'] = ($discardReasons['withdrawn'] ?? 0) + 1;
                         continue;
                     }
                 }
@@ -849,6 +861,11 @@ class CallQueryService
             "showCallback" => $alwaysShowCallbackCol,
             "timings" => [
                 "setup_ms" => round(($t_setup - $t0) * 1000, 1),
+                "setup_breakdown" => [
+                    "proj_init_ms" => round(($t_proj - $t0) * 1000, 1),
+                    "config_services_ms" => round(($t_configs - $t_proj) * 1000, 1),
+                    "settings_and_fields_ms" => round(($t_setup - $t_configs) * 1000, 1)
+                ],
                 "sql_meta_ms" => round(($t_sql_meta - $t_setup) * 1000, 1),
                 "prefilter_ms" => round(($t_prefilter - $t_sql_meta) * 1000, 1),
                 "tab_logic_ms" => round(($t_tab_logic - $t_prefilter) * 1000, 1),
@@ -859,7 +876,8 @@ class CallQueryService
                 "candidate_records" => count($candidateRecords),
                 "output_rows" => count($stagedRows),
                 "fields_count" => count($fields),
-                "tabs_with_filter_logic" => count($tabFilterLogicMap)
+                "tabs_with_filter_logic" => count($tabFilterLogicMap),
+                "discard_reasons" => $discardReasons
             ]
         ];
     }
