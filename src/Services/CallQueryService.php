@@ -22,6 +22,7 @@ class CallQueryService
 
     public function getCallListData(int $projectId, array $options = []): array
     {
+        $t0 = microtime(true);
         $includeCompleted = !empty($options['includeCompleted']);
         $includeExpired = !empty($options['includeExpired']);
         global $Proj;
@@ -135,10 +136,17 @@ class CallQueryService
             $recordsWithCalls[] = $recId;
         }
 
+        $t_sql_meta = microtime(true);
         if (empty($recordsWithCalls)) {
             return [
                 "data" => $packagedCallData,
-                "showCallback" => false
+                "showCallback" => false,
+                "timings" => [
+                    "sql_meta_ms" => round(($t_sql_meta - $t0) * 1000, 1),
+                    "total_query_service_ms" => round(($t_sql_meta - $t0) * 1000, 1),
+                    "records_with_calls" => 0,
+                    "candidate_records" => 0
+                ]
             ];
         }
 
@@ -220,10 +228,18 @@ class CallQueryService
             }
         }
 
+        $t_prefilter = microtime(true);
         if (empty($candidateRecords)) {
             return [
                 "data" => $packagedCallData,
-                "showCallback" => false
+                "showCallback" => false,
+                "timings" => [
+                    "sql_meta_ms" => round(($t_sql_meta - $t0) * 1000, 1),
+                    "prefilter_ms" => round(($t_prefilter - $t_sql_meta) * 1000, 1),
+                    "total_query_service_ms" => round(($t_prefilter - $t0) * 1000, 1),
+                    "records_with_calls" => count($recordsWithCalls),
+                    "candidate_records" => 0
+                ]
             ];
         }
 
@@ -248,16 +264,27 @@ class CallQueryService
                 }
             }
         }
+        $t_tab_logic = microtime(true);
 
         $userId = defined('USERID') ? USERID : null;
         $userRights = $userId ? REDCap::getUserRights($userId) : [];
         $groupId = $userRights[$userId]['group_id'] ?? null;
 
         $dataLoad = REDCap::getData($projectId, 'array', $candidateRecords, $fields, null, $groupId);
+        $t_redcap_getdata = microtime(true);
         if (empty($dataLoad)) {
             return [
                 "data" => $packagedCallData,
-                "showCallback" => false
+                "showCallback" => false,
+                "timings" => [
+                    "sql_meta_ms" => round(($t_sql_meta - $t0) * 1000, 1),
+                    "prefilter_ms" => round(($t_prefilter - $t_sql_meta) * 1000, 1),
+                    "tab_logic_ms" => round(($t_tab_logic - $t_prefilter) * 1000, 1),
+                    "getdata_ms" => round(($t_redcap_getdata - $t_tab_logic) * 1000, 1),
+                    "total_query_service_ms" => round(($t_redcap_getdata - $t0) * 1000, 1),
+                    "records_with_calls" => count($recordsWithCalls),
+                    "candidate_records" => count($candidateRecords)
+                ]
             ];
         }
 
@@ -762,9 +789,23 @@ class CallQueryService
         }
 
 
+        $t_loop = microtime(true);
+
         return [
             "data" => $packagedCallData,
-            "showCallback" => $alwaysShowCallbackCol
+            "showCallback" => $alwaysShowCallbackCol,
+            "timings" => [
+                "sql_meta_ms" => round(($t_sql_meta - $t0) * 1000, 1),
+                "prefilter_ms" => round(($t_prefilter - $t_sql_meta) * 1000, 1),
+                "tab_logic_ms" => round(($t_tab_logic - $t_prefilter) * 1000, 1),
+                "getdata_ms" => round(($t_redcap_getdata - $t_tab_logic) * 1000, 1),
+                "loop_ms" => round(($t_loop - $t_redcap_getdata) * 1000, 1),
+                "total_query_service_ms" => round(($t_loop - $t0) * 1000, 1),
+                "records_with_calls" => count($recordsWithCalls),
+                "candidate_records" => count($candidateRecords),
+                "fields_count" => count($fields),
+                "tabs_with_filter_logic" => count($tabFilterLogicMap)
+            ]
         ];
     }
 

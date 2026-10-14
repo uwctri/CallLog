@@ -202,6 +202,7 @@ class ApiService
                     }
                 }
 
+                $t_ajax_start = microtime(true);
                 $callListRes = $queryService->getCallListData($projectId, [
                     'includeCompleted' => $includeCompleted,
                     'includeExpired' => $includeExpired
@@ -209,7 +210,13 @@ class ApiService
                 $result['changed'] = true;
                 $result['showCallback'] = $callListRes['showCallback'] ?? false;
                 $callListData = $callListRes['data'] ?? [];
+                $t_version_start = microtime(true);
                 $result['serverVersion'] = $queryService->getCallDataVersion($projectId, $includeCompleted, $includeExpired);
+                $t_version_end = microtime(true);
+                $timings = $callListRes['timings'] ?? [];
+                $timings['version_ms'] = round(($t_version_end - $t_version_start) * 1000, 1);
+                $timings['total_ajax_ms'] = round(($t_version_end - $t_ajax_start) * 1000, 1);
+                $result['timings'] = $timings;
                 break;
 
             case "deployInstruments":

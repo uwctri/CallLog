@@ -265,6 +265,7 @@ $activeTabId = (!empty($savedTab) && in_array($savedTab, $validTabIds, true))
                 <div class="d-flex align-items-center gap-2">
                     <i class="far fa-clock text-secondary last-pull-icon"></i>
                     <span>Most recent data pull: <strong class="text-dark last-pull-time" x-text="lastDataPullText || 'Loading...'"></strong></span>
+                    <span x-show="loadDurationText" class="badge bg-light text-secondary border ms-2" x-text="loadDurationText" :title="loadDurationDetail" style="font-weight: 500; cursor: help;"></span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <button type="button" @click="refreshTableData(true)" class="btn btn-sm btn-link text-decoration-none text-secondary p-0 d-inline-flex align-items-center gap-1" :disabled="isRefreshing" title="Refresh call data now">

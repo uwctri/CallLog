@@ -140,6 +140,8 @@
             serverVersion: null,
             lastDataPullTime: null,
             lastDataPullText: '',
+            loadDurationText: '',
+            loadDurationDetail: '',
             isRefreshing: false,
             persistTimeout: null,
             unlockedTabs: {},
@@ -2324,6 +2326,15 @@
                     this.lastDataPullText = formatDateTime(this.lastDataPullTime, true);
 
                     if (!response) return;
+
+                    if (response.timings) {
+                        const t = response.timings;
+                        console.log("⏱️ [Call Log] Load Timings:", t);
+                        if (t.total_ajax_ms !== undefined) {
+                            this.loadDurationText = `${(t.total_ajax_ms / 1000).toFixed(2)}s`;
+                            this.loadDurationDetail = `Total AJAX: ${t.total_ajax_ms}ms | REDCap getData: ${t.getdata_ms || 0}ms | Tab Logic: ${t.tab_logic_ms || 0}ms | Prefilter: ${t.prefilter_ms || 0}ms | Row Loop: ${t.loop_ms || 0}ms | Version check: ${t.version_ms || 0}ms | Active/Total Records: ${t.candidate_records || 0}/${t.records_with_calls || 0}`;
+                        }
+                    }
 
                     if (incCompleted) {
                         this.hasLoadedCompleted = true;
