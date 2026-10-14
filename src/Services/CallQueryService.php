@@ -405,15 +405,9 @@ class CallQueryService
                     ? (!empty($cbTime) ? trim("{$cbDate} {$cbTime}") : $cbDate)
                     : ($call['start'] ?? $call['appt'] ?? $call['load'] ?? $call['created'] ?? '');
 
-                $nowDateTime = date('Y-m-d H:i');
                 $isCbFuture = false;
                 if ($cbReq === '1' && !empty($cbDate)) {
-                    if (!empty($cbTime)) {
-                        $cleanTime = (strlen($cbTime) > 5) ? substr($cbTime, 0, 5) : $cbTime;
-                        $isCbFuture = ("{$cbDate} {$cleanTime}" > $nowDateTime);
-                    } else {
-                        $isCbFuture = ($cbDate > $today);
-                    }
+                    $isCbFuture = ($cbDate > $today);
                 }
 
                 if ($isCompleted) {
@@ -533,7 +527,7 @@ class CallQueryService
                     }
                 }
 
-                $instanceData['_atMaxAttempts'] = ($call['hideAfterAttempt'] ?? 9999) <= $attempts;
+                $instanceData['_atMaxAttempts'] = !$instanceData['_callbackToday'] && (($call['hideAfterAttempt'] ?? 9999) <= $attempts);
                 $instanceData['call_attempt'] = count($instances);
 
                 $instanceData['_nextInstance'] = 1;
@@ -578,7 +572,7 @@ class CallQueryService
                     $instanceData['_adhocContactOn'] = $contactOn;
                     $contactTs = !empty($contactOn) ? strtotime($contactOn) : false;
                     if ($contactTs !== false) {
-                        $instanceData['_futureAdhoc'] = (date('Y-m-d H:i', $contactTs) > $nowDateTime);
+                        $instanceData['_futureAdhoc'] = (date('Y-m-d', $contactTs) > $today);
                     } else {
                         $startTs = !empty($call['start']) ? strtotime($call['start']) : false;
                         $instanceData['_futureAdhoc'] = ($startTs !== false) ? (date('Y-m-d', $startTs) > $today) : false;
