@@ -580,8 +580,14 @@ class ConfigService
         return $config;
     }
 
+    private array $tabConfigCache = [];
+
     public function getTabConfig(int $projectId): array
     {
+        if (isset($this->tabConfigCache[$projectId])) {
+            return $this->tabConfigCache[$projectId];
+        }
+
         global $Proj;
         if (!isset($Proj) || $Proj->project_id != $projectId) {
             $Proj = new Project($projectId);
@@ -595,7 +601,7 @@ class ConfigService
         $orderMapping = $settings["tab_order"];
         $recordIdField = !empty($Proj->table_pk) ? $Proj->table_pk : 'record_id';
         $recordIdLabel = $this->getFieldLabel($recordIdField);
-        $dd = REDCap::getDataDictionary($projectId, 'array');
+        $dd = [];
 
         $expands = [];
         $rawExpFields = $settings["tab_expands_field"] ?? [];
@@ -621,7 +627,7 @@ class ConfigService
                 $default = $defaultList[$i] ?? "";
                 $expands[] = [
                     "field" => $field,
-                    "map" => $this->getDictionaryValuesFor($field, $dd),
+                    "map" => $this->getDictionaryValuesFor($field, $dd, $projectId),
                     "displayName" => trim(rtrim($name, ':? ')),
                     "validation" => $validation,
                     "isDate" => strpos($validation, 'date') !== false,
@@ -806,7 +812,7 @@ class ConfigService
 
                     $tabFields[] = [
                         "field" => $field,
-                        "map" => $this->getDictionaryValuesFor($field, $dd),
+                        "map" => $this->getDictionaryValuesFor($field, $dd, $projectId),
                         "displayName" => trim($name),
                         "validation" => $validation,
                         "isDate" => strpos($validation, 'date') !== false,
@@ -831,7 +837,7 @@ class ConfigService
         $displayNameField = $settings['display_name_field'] ?? '';
         if (is_array($displayNameField)) $displayNameField = reset($displayNameField);
 
-        return [
+        $result = [
             "allFields" => array_values(array_unique($allFields)),
             "displayNameField" => (string)$displayNameField,
             "call2TabMap" => $call2TabMap,
@@ -839,6 +845,8 @@ class ConfigService
             "tabNameMap" => $tabNameMap,
             "config" => array_values($tabConfig)
         ];
+        $this->tabConfigCache[$projectId] = $result;
+        return $result;
     }
 
     public function getAdhocTemplateConfig(int $projectId): array
@@ -907,7 +915,7 @@ class ConfigService
         return $Proj->metadata[$fieldName]["element_label"] ?? $fieldName;
     }
 
-    private function getDictionaryValuesFor(string $fieldName, array $dd): array
+    private function getDictionaryValuesFor(string $fieldName, array $dd = [], int $projectId = 0): array
     {
         global $Proj;
         if (isset($Proj->metadata[$fieldName])) {
@@ -938,6 +946,10 @@ class ConfigService
                     return $this->explodeCodedValueText($enumStr);
                 }
             }
+        }
+
+        if (empty($dd) && $projectId > 0) {
+            $dd = REDCap::getDataDictionary($projectId, 'array') ?: [];
         }
 
         $fieldInfo = $dd[$fieldName] ?? null;

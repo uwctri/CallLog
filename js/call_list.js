@@ -143,6 +143,8 @@
             isRefreshing: false,
             persistTimeout: null,
             unlockedTabs: {},
+            tabPopulated: {},
+            tabEverPopulated: {},
 
             isTabUnlocked(tab_id) {
                 return Boolean(this.unlockedTabs && this.unlockedTabs[tab_id]);
@@ -151,6 +153,8 @@
             init() {
                 this.hasLoadedCompleted = false;
                 this.hasLoadedExpired = false;
+                this.tabPopulated = {};
+                this.tabEverPopulated = {};
                 const tabs = (module.tabs && module.tabs.config) ? module.tabs.config : [];
                 let initialUnlocked = {};
                 tabs.forEach(t => {
@@ -207,8 +211,11 @@
 
                 this.$watch('selectedCallers', () => {
                     $('.callTable').each((_, el) => {
+                        let tab_id = $(el).closest('.tab-pane').prop('id');
                         if ($.fn.DataTable.isDataTable(el)) {
-                            $(el).DataTable().draw(false);
+                            if (tab_id === this.activeTab || this.tabPopulated[tab_id]) {
+                                $(el).DataTable().draw(false);
+                            }
                         }
                     });
                     this.debouncePersist();
@@ -216,8 +223,11 @@
 
                 this.$watch('callerFilterMode', () => {
                     $('.callTable').each((_, el) => {
+                        let tab_id = $(el).closest('.tab-pane').prop('id');
                         if ($.fn.DataTable.isDataTable(el)) {
-                            $(el).DataTable().draw(false);
+                            if (tab_id === this.activeTab || this.tabPopulated[tab_id]) {
+                                $(el).DataTable().draw(false);
+                            }
                         }
                     });
                     this.debouncePersist();
@@ -241,10 +251,13 @@
                     if (needsServerFetch) {
                         this.refreshTableData(true);
                     } else {
-                        this.updateStatusBadgeColVisibility();
+                        this.updateStatusBadgeColVisibility(this.activeTab);
                         $('.callTable').each((_, el) => {
+                            let tab_id = $(el).closest('.tab-pane').prop('id');
                             if ($.fn.DataTable.isDataTable(el)) {
-                                $(el).DataTable().draw(false);
+                                if (tab_id === this.activeTab || this.tabPopulated[tab_id]) {
+                                    $(el).DataTable().draw(false);
+                                }
                             }
                         });
                         this.debouncePersist();
@@ -252,24 +265,38 @@
                 }, { deep: true });
             },
 
-            updateStatusBadgeColVisibility() {
+            updateStatusBadgeColVisibility(targetTabId = null) {
                 const filterActive = Boolean(this.showTypes && (this.showTypes.hidden || this.showTypes.expired || this.showTypes.completed));
-                $('.callTable').each((_, el) => {
-                    if ($.fn.DataTable.isDataTable(el)) {
-                        const dt = $(el).DataTable();
-                        let hasCallbacks = false;
-                        try {
-                            const data = dt.rows().data().toArray();
-                            hasCallbacks = data.some(r => !isRowCompleted(r) && Boolean(r['_callbackRequestor'] || (r['call_requested_callback'] && (r['call_requested_callback'][1] === '1' || r['call_requested_callback'] === '1'))));
-                        } catch (e) {}
+                const checkTable = (el) => {
+                    if (!$.fn.DataTable.isDataTable(el)) return;
+                    const dt = $(el).DataTable();
+                    let hasCallbacks = false;
+                    try {
+                        const data = dt.rows().data().toArray();
+                        hasCallbacks = data.some(r => !isRowCompleted(r) && Boolean(r['_callbackRequestor'] || (r['call_requested_callback'] && (r['call_requested_callback'][1] === '1' || r['call_requested_callback'] === '1'))));
+                    } catch (e) {}
 
-                        const shouldShow = Boolean(filterActive || hasCallbacks);
-                        const col = dt.column('_status_badge:name');
-                        if (col && col.length && col.visible() !== shouldShow) {
-                            col.visible(shouldShow, false);
-                        }
+                    const shouldShow = Boolean(filterActive || hasCallbacks);
+                    const col = dt.column('_status_badge:name');
+                    if (col && col.length && col.visible() !== shouldShow) {
+                        col.visible(shouldShow, false);
                     }
-                });
+                };
+
+                if (targetTabId) {
+                    let $pane = $(`#${targetTabId}`);
+                    if ($pane.length) {
+                        let $table = $pane.find('.callTable');
+                        if ($table.length) checkTable($table[0]);
+                    }
+                } else {
+                    $('.callTable').each((_, el) => {
+                        let tab_id = $(el).closest('.tab-pane').prop('id');
+                        if (tab_id === this.activeTab || this.tabPopulated[tab_id]) {
+                            checkTable(el);
+                        }
+                    });
+                }
             },
 
             selectTab(tabId) {
@@ -281,10 +308,13 @@
                         let $table = $pane.find('.callTable');
                         if ($table.length && $.fn.DataTable.isDataTable($table[0])) {
                             let dt = $table.DataTable();
+                            if (!this.tabPopulated[tabId]) {
+                                this.populateTabTable(tabId);
+                            }
+                            this.updateStatusBadgeColVisibility(tabId);
                             dt.columns.adjust().draw(false);
                         }
                     }
-                    this.updateStatusBadgeColVisibility();
                 });
             },
 
@@ -315,12 +345,14 @@
                         if (searchVal === undefined || searchVal === null) {
                             searchVal = dt.search() || '';
                         }
-                        state.tabs[tab_id] = {
-                            page: dt.page(),
-                            len: dt.page.len(),
-                            order: dt.order(),
-                            search: searchVal
-                        };
+                        if (tab_id === this.activeTab || this.tabPopulated[tab_id]) {
+                            state.tabs[tab_id] = {
+                                page: dt.page(),
+                                len: dt.page.len(),
+                                order: dt.order(),
+                                search: searchVal
+                            };
+                        }
                     }
                 });
 
@@ -1170,6 +1202,7 @@
 
                     let dt = $table.DataTable();
                     let tab_id = $table.closest('.tab-pane').prop('id');
+                    if (tab_id !== self.activeTab && !self.tabPopulated[tab_id]) return;
                     let tableNeedsDraw = false;
 
                     dt.rows().every(function() {
@@ -1655,6 +1688,7 @@
                 if (typeof page === 'number' && page >= 0) newDt.page(page);
                 newDt.draw(false);
                 newDt.columns.adjust();
+                this.tabPopulated[tab_id] = true;
             },
 
             toggleLockColumns(tab_id) {
@@ -2343,85 +2377,105 @@
 
                     this.availableCallers = Array.from(callers).sort();
 
-                    let isInitialLoad = !this.dataLoaded;
+                    this.dataLoaded = true;
 
-                    $('.callTable').each((index, el) => {
-                        let tab_id = $(el).closest('.tab-pane').prop('id');
-                        let dt = $(el).DataTable();
-                        let rows = this.displayedData[tab_id] || [];
-
-                        let currentPage = dt.page();
-                        let openRowKeys = new Set();
-                        if (!isInitialLoad) {
-                            dt.rows().every(function() {
-                                if (this.child.isShown()) {
-                                    let d = this.data();
-                                    if (d) {
-                                        let k = (d['_record_id'] || '') + '___' + (d['_call_id'] || '');
-                                        openRowKeys.add(k);
-                                    }
-                                }
-                            });
-                        }
-
-                        dt.clear();
-                        dt.rows.add(rows);
-
-                        if (isInitialLoad) {
-                            let savedState = getDashboardCookie() || {};
-                            let tabState = (savedState.tabs && savedState.tabs[tab_id]) ? savedState.tabs[tab_id] : null;
-                            if (tabState && typeof tabState.page === 'number' && tabState.page > 0) {
-                                let pageLen = dt.page.len();
-                                if (pageLen > 0) {
-                                    let maxPages = Math.ceil(rows.length / pageLen);
-                                    if (tabState.page < maxPages) {
-                                        dt.page(tabState.page);
-                                    }
-                                }
-                            }
-                        } else {
-                            let pageLen = dt.page.len();
-                            if (pageLen > 0) {
-                                let maxPages = Math.ceil(rows.length / pageLen);
-                                if (currentPage >= maxPages && maxPages > 0) {
-                                    currentPage = maxPages - 1;
-                                }
-                                dt.page(currentPage);
-                            }
-                        }
-
-                        dt.draw(false);
-
-                        if (openRowKeys.size > 0) {
-                            dt.rows().every(function() {
-                                let d = this.data();
-                                if (d) {
-                                    let k = (d['_record_id'] || '') + '___' + (d['_call_id'] || '');
-                                    if (openRowKeys.has(k)) {
-                                        let childHtml = self.buildChildRowHtml(d, tab_id);
-                                        this.child(childHtml, 'dataTableChild').show();
-                                        $(this.node()).addClass('shown');
-                                    }
-                                }
-                            });
+                    // Mark all inactive tabs as unpopulated so they render on-demand upon tab switch
+                    Object.keys(this.displayedData).forEach(tabId => {
+                        if (tabId !== this.activeTab) {
+                            this.tabPopulated[tabId] = false;
                         }
                     });
 
-                    this.dataLoaded = true;
+                    // Populate and draw ONLY the active tab table
+                    this.populateTabTable(this.activeTab);
 
                     this.$nextTick(() => {
-                        this.updateStatusBadgeColVisibility();
-                        $('.callTable').each((index, el) => {
-                            if ($.fn.DataTable.isDataTable(el)) {
-                                $(el).DataTable().columns.adjust();
+                        this.updateStatusBadgeColVisibility(this.activeTab);
+                        let $pane = $(`#${this.activeTab}`);
+                        if ($pane.length) {
+                            let $table = $pane.find('.callTable');
+                            if ($table.length && $.fn.DataTable.isDataTable($table[0])) {
+                                $table.DataTable().columns.adjust();
                             }
-                        });
+                        }
                     });
                 }).catch((err) => {
                     console.error("Error fetching call list data:", err);
                     this.isRefreshing = false;
                     this.dataLoaded = true;
                 });
+            },
+
+            populateTabTable(tab_id) {
+                if (!this.dataLoaded) return;
+                let $pane = $(`#${tab_id}`);
+                if (!$pane.length) return;
+                let $table = $pane.find('.callTable');
+                if (!$table.length || !$.fn.DataTable.isDataTable($table[0])) return;
+
+                let dt = $table.DataTable();
+                let rows = (this.displayedData && this.displayedData[tab_id]) ? this.displayedData[tab_id] : [];
+                let isInitialForTab = !this.tabEverPopulated[tab_id];
+                this.tabEverPopulated[tab_id] = true;
+
+                let currentPage = dt.page();
+                let openRowKeys = new Set();
+                if (!isInitialForTab) {
+                    dt.rows().every(function() {
+                        if (this.child.isShown()) {
+                            let d = this.data();
+                            if (d) {
+                                let k = (d['_record_id'] || '') + '___' + (d['_call_id'] || '');
+                                openRowKeys.add(k);
+                            }
+                        }
+                    });
+                }
+
+                dt.clear();
+                dt.rows.add(rows);
+
+                if (isInitialForTab) {
+                    let savedState = getDashboardCookie() || {};
+                    let tabState = (savedState.tabs && savedState.tabs[tab_id]) ? savedState.tabs[tab_id] : null;
+                    if (tabState && typeof tabState.page === 'number' && tabState.page > 0) {
+                        let pageLen = dt.page.len();
+                        if (pageLen > 0) {
+                            let maxPages = Math.ceil(rows.length / pageLen);
+                            if (tabState.page < maxPages) {
+                                dt.page(tabState.page);
+                            }
+                        }
+                    }
+                } else {
+                    let pageLen = dt.page.len();
+                    if (pageLen > 0) {
+                        let maxPages = Math.ceil(rows.length / pageLen);
+                        if (currentPage >= maxPages && maxPages > 0) {
+                            currentPage = maxPages - 1;
+                        }
+                        dt.page(currentPage);
+                    }
+                }
+
+                dt.draw(false);
+
+                if (openRowKeys.size > 0) {
+                    const self = this;
+                    dt.rows().every(function() {
+                        let d = this.data();
+                        if (d) {
+                            let k = (d['_record_id'] || '') + '___' + (d['_call_id'] || '');
+                            if (openRowKeys.has(k)) {
+                                let childHtml = self.buildChildRowHtml(d, tab_id);
+                                this.child(childHtml, 'dataTableChild').show();
+                                $(this.node()).addClass('shown');
+                            }
+                        }
+                    });
+                }
+
+                this.tabPopulated[tab_id] = true;
             }
         }));
     }

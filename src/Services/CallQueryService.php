@@ -124,11 +124,42 @@ class CallQueryService
         $fields = array_values(array_filter($fields, fn($f) => is_string($f) && !empty($f)));
 
         $table = REDCap::getDataTable($projectId);
-        $sql = "SELECT DISTINCT record FROM {$table} WHERE project_id = ? AND field_name = 'call_metadata' AND value IS NOT NULL AND value != ''";
+        $sql = "SELECT record, value FROM {$table} WHERE project_id = ? AND field_name = 'call_metadata' AND value IS NOT NULL AND value != ''";
         $qRes = $this->module->query($sql, [$projectId]);
         $recordsWithCalls = [];
+        $preloadedMetadata = [];
+
         while ($row = $qRes->fetch_assoc()) {
-            $recordsWithCalls[] = $row['record'];
+            $recId = (string)$row['record'];
+            $rawVal = (string)$row['value'];
+            $preloadedMetadata[$recId] = $rawVal;
+
+            if ($includeCompleted) {
+                $recordsWithCalls[] = $recId;
+                continue;
+            }
+
+            // Fast pre-filter: check if the record has at least one potentially active call
+            $meta = json_decode($rawVal, true);
+            if (!is_array($meta) || empty($meta)) {
+                continue;
+            }
+
+            $hasActiveCall = false;
+            foreach ($meta as $cId => $cData) {
+                if (!is_array($cData) || (substr((string)$cId, 0, 1) === '_')) {
+                    continue;
+                }
+                $isDone = (($cData['status'] ?? '') === 'complete' || !empty($cData['complete']));
+                if (!$isDone) {
+                    $hasActiveCall = true;
+                    break;
+                }
+            }
+
+            if ($hasActiveCall) {
+                $recordsWithCalls[] = $recId;
+            }
         }
 
         if (empty($recordsWithCalls)) {
@@ -154,7 +185,7 @@ class CallQueryService
         $recordTabs = [];
 
         foreach ($dataLoad as $record => $recordData) {
-            $rawMeta = $recordData[$metaEvent]["call_metadata"] ?? '';
+            $rawMeta = $preloadedMetadata[(string)$record] ?? ($recordData[$metaEvent]["call_metadata"] ?? '');
             if (empty($rawMeta)) continue;
 
             $meta = json_decode($rawMeta, true);
@@ -235,31 +266,6 @@ class CallQueryService
                 }
 
                 if ((substr($baseCallID, 0, 1) === '_') || empty($targetTabs)) {
-                    continue;
-                }
-
-                if (!empty($tabFilterLogicMap)) {
-                    $filteredTargetTabs = [];
-                    foreach ($targetTabs as $tTab) {
-                        if (isset($tabFilterLogicMap[$tTab])) {
-                            $fLogic = $tabFilterLogicMap[$tTab];
-                            if (!isset($tabFilterCache[$tTab][(string)$record])) {
-                                try {
-                                    $tabFilterCache[$tTab][(string)$record] = (REDCap::evaluateLogic($fLogic, $projectId, (string)$record) === true);
-                                } catch (\Throwable $e) {
-                                    $tabFilterCache[$tTab][(string)$record] = false;
-                                }
-                            }
-                            if (!$tabFilterCache[$tTab][(string)$record]) {
-                                continue;
-                            }
-                        }
-                        $filteredTargetTabs[] = $tTab;
-                    }
-                    $targetTabs = $filteredTargetTabs;
-                }
-
-                if (empty($targetTabs)) {
                     continue;
                 }
 
@@ -457,6 +463,35 @@ class CallQueryService
                     if ($isWithdrawn) {
                         continue;
                     }
+                }
+
+                if (!empty($tabFilterLogicMap)) {
+                    $filteredTargetTabs = [];
+                    foreach ($targetTabs as $tTab) {
+                        if (isset($tabFilterLogicMap[$tTab])) {
+                            $fLogic = $tabFilterLogicMap[$tTab];
+                            if (!isset($tabFilterCache[$tTab][(string)$record])) {
+                                try {
+                                    $tabFilterCache[$tTab][(string)$record] = (REDCap::evaluateLogic($fLogic, $projectId, (string)$record, null, null, null, $dataLoad) === true);
+                                } catch (\Throwable $e) {
+                                    try {
+                                        $tabFilterCache[$tTab][(string)$record] = (REDCap::evaluateLogic($fLogic, $projectId, (string)$record) === true);
+                                    } catch (\Throwable $e2) {
+                                        $tabFilterCache[$tTab][(string)$record] = false;
+                                    }
+                                }
+                            }
+                            if (!$tabFilterCache[$tTab][(string)$record]) {
+                                continue;
+                            }
+                        }
+                        $filteredTargetTabs[] = $tTab;
+                    }
+                    $targetTabs = $filteredTargetTabs;
+                }
+
+                if (empty($targetTabs)) {
+                    continue;
                 }
 
                 $alwaysShowCallbackCol = $alwaysShowCallbackCol || (!$isCompleted && $cbReq === '1' && $cbDate <= $today);
