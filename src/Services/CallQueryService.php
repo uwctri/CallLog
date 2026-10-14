@@ -96,7 +96,6 @@ class CallQueryService
         $fields = array_merge(
             [
                 $recordIdField,
-                "call_metadata",
                 'call_outcome',
                 'call_open_date',
                 'call_left_message',
@@ -254,51 +253,7 @@ class CallQueryService
         $userRights = $userId ? REDCap::getUserRights($userId) : [];
         $groupId = $userRights[$userId]['group_id'] ?? null;
 
-        $eventsFilter = null;
-        if ($Proj->longitudinal) {
-            $relevantEvents = [];
-            if (!empty($metaEvent) && is_numeric($metaEvent)) {
-                $relevantEvents[(int)$metaEvent] = true;
-            }
-            if (!empty($callEvent) && is_numeric($callEvent)) {
-                $relevantEvents[(int)$callEvent] = true;
-            }
-            foreach ($candidateRecords as $recId) {
-                $rawMeta = $preloadedMetadata[$recId] ?? '';
-                if (!empty($rawMeta)) {
-                    $meta = json_decode($rawMeta, true);
-                    if (is_array($meta)) {
-                        foreach ($meta as $c) {
-                            if (!empty($c['event_id']) && is_numeric($c['event_id'])) {
-                                $relevantEvents[(int)$c['event_id']] = true;
-                            }
-                        }
-                    }
-                }
-            }
-            foreach ($withdrawRules as $wRule) {
-                if (!empty($wRule['event']) && is_numeric($wRule['event'])) {
-                    $relevantEvents[(int)$wRule['event']] = true;
-                }
-            }
-            if (isset($Proj->eventsForms) && is_array($Proj->eventsForms)) {
-                foreach ($fields as $fName) {
-                    $form = $Proj->metadata[$fName]['form_name'] ?? null;
-                    if ($form) {
-                        foreach ($Proj->eventsForms as $eid => $forms) {
-                            if (in_array($form, $forms, true)) {
-                                $relevantEvents[(int)$eid] = true;
-                            }
-                        }
-                    }
-                }
-            }
-            if (!empty($relevantEvents)) {
-                $eventsFilter = array_keys($relevantEvents);
-            }
-        }
-
-        $dataLoad = REDCap::getData($projectId, 'array', $candidateRecords, $fields, $eventsFilter, $groupId);
+        $dataLoad = REDCap::getData($projectId, 'array', $candidateRecords, $fields, null, $groupId);
         if (empty($dataLoad)) {
             return [
                 "data" => $packagedCallData,
@@ -355,6 +310,16 @@ class CallQueryService
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            $baseEventsData = [];
+            foreach ($recordData as $eId => $eData) {
+                if ($eId === 'repeat_instances' || !is_array($eData)) continue;
+                foreach ($eData as $fK => $fV) {
+                    if ($fV !== '' && $fV !== null && !isset($baseEventsData[$fK])) {
+                        $baseEventsData[$fK] = $fV;
                     }
                 }
             }
@@ -505,11 +470,11 @@ class CallQueryService
                 $instanceData = $recordData['repeat_instances'][$callEvent]["call_log"][$lastInstance] ?? [];
                 $instanceEventData = $recordData[$call['event_id'] ?? ''] ?? [];
 
-                $allEventsData = [];
-                foreach ($recordData as $eId => $eData) {
-                    if ($eId === 'repeat_instances' || !is_array($eData)) continue;
-                    foreach ($eData as $fK => $fV) {
-                        if ($fV !== '' && $fV !== null && (!isset($allEventsData[$fK]) || $eId == ($call['event_id'] ?? ''))) {
+                $allEventsData = $baseEventsData;
+                $callEid = (string)($call['event_id'] ?? '');
+                if ($callEid !== '' && !empty($recordData[$callEid]) && is_array($recordData[$callEid])) {
+                    foreach ($recordData[$callEid] as $fK => $fV) {
+                        if ($fV !== '' && $fV !== null) {
                             $allEventsData[$fK] = $fV;
                         }
                     }
