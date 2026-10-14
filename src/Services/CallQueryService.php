@@ -133,33 +133,7 @@ class CallQueryService
             $recId = (string)$row['record'];
             $rawVal = (string)$row['value'];
             $preloadedMetadata[$recId] = $rawVal;
-
-            if ($includeCompleted) {
-                $recordsWithCalls[] = $recId;
-                continue;
-            }
-
-            // Fast pre-filter: check if the record has at least one potentially active call
-            $meta = json_decode($rawVal, true);
-            if (!is_array($meta) || empty($meta)) {
-                continue;
-            }
-
-            $hasActiveCall = false;
-            foreach ($meta as $cId => $cData) {
-                if (!is_array($cData) || (substr((string)$cId, 0, 1) === '_')) {
-                    continue;
-                }
-                $isDone = (($cData['status'] ?? '') === 'complete' || !empty($cData['complete']));
-                if (!$isDone) {
-                    $hasActiveCall = true;
-                    break;
-                }
-            }
-
-            if ($hasActiveCall) {
-                $recordsWithCalls[] = $recId;
-            }
+            $recordsWithCalls[] = $recId;
         }
 
         if (empty($recordsWithCalls)) {
@@ -266,6 +240,31 @@ class CallQueryService
                 }
 
                 if ((substr($baseCallID, 0, 1) === '_') || empty($targetTabs)) {
+                    continue;
+                }
+
+                if (!empty($tabFilterLogicMap)) {
+                    $filteredTargetTabs = [];
+                    foreach ($targetTabs as $tTab) {
+                        if (isset($tabFilterLogicMap[$tTab])) {
+                            $fLogic = $tabFilterLogicMap[$tTab];
+                            if (!isset($tabFilterCache[$tTab][(string)$record])) {
+                                try {
+                                    $tabFilterCache[$tTab][(string)$record] = (REDCap::evaluateLogic($fLogic, $projectId, (string)$record) === true);
+                                } catch (\Throwable $e) {
+                                    $tabFilterCache[$tTab][(string)$record] = false;
+                                }
+                            }
+                            if (!$tabFilterCache[$tTab][(string)$record]) {
+                                continue;
+                            }
+                        }
+                        $filteredTargetTabs[] = $tTab;
+                    }
+                    $targetTabs = $filteredTargetTabs;
+                }
+
+                if (empty($targetTabs)) {
                     continue;
                 }
 
@@ -465,34 +464,7 @@ class CallQueryService
                     }
                 }
 
-                if (!empty($tabFilterLogicMap)) {
-                    $filteredTargetTabs = [];
-                    foreach ($targetTabs as $tTab) {
-                        if (isset($tabFilterLogicMap[$tTab])) {
-                            $fLogic = $tabFilterLogicMap[$tTab];
-                            if (!isset($tabFilterCache[$tTab][(string)$record])) {
-                                try {
-                                    $tabFilterCache[$tTab][(string)$record] = (REDCap::evaluateLogic($fLogic, $projectId, (string)$record, null, null, null, $dataLoad) === true);
-                                } catch (\Throwable $e) {
-                                    try {
-                                        $tabFilterCache[$tTab][(string)$record] = (REDCap::evaluateLogic($fLogic, $projectId, (string)$record) === true);
-                                    } catch (\Throwable $e2) {
-                                        $tabFilterCache[$tTab][(string)$record] = false;
-                                    }
-                                }
-                            }
-                            if (!$tabFilterCache[$tTab][(string)$record]) {
-                                continue;
-                            }
-                        }
-                        $filteredTargetTabs[] = $tTab;
-                    }
-                    $targetTabs = $filteredTargetTabs;
-                }
 
-                if (empty($targetTabs)) {
-                    continue;
-                }
 
                 $alwaysShowCallbackCol = $alwaysShowCallbackCol || (!$isCompleted && $cbReq === '1' && $cbDate <= $today);
 
