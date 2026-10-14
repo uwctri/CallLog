@@ -174,6 +174,14 @@ class CallMetadataRepository
             $Proj = new Project($projectId);
         }
 
+        if (isset($Proj->eventsForms) && is_array($Proj->eventsForms)) {
+            foreach ($Proj->eventsForms as $eventId => $forms) {
+                if (in_array($instrument, $forms, true) && isset($Proj->eventInfo[$eventId])) {
+                    return $this->eventOfInstrumentCache[$cacheKey] = (int)$eventId;
+                }
+            }
+        }
+
         $events = [];
         $validEvents = array_keys($Proj->eventInfo ?? []);
         $sql = "SELECT event_id FROM redcap_events_forms WHERE form_name = ?";

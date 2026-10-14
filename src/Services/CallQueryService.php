@@ -35,7 +35,7 @@ class CallQueryService
         $withdrawVars = array_filter(array_column($withdrawRules, 'var'));
         $autoRemoveConfig = $this->configService->getAutoRemoveConfig($projectId);
         $dayOf = $this->module->getProjectSetting('same_day_mcv_nts', $projectId);
-        $tabs = $this->configService->getTabConfig($projectId);
+        $tabs = $this->configService->getTabConfig($projectId, true);
         $call2TabMap = $tabs['call2TabMap'] ?? $tabs['call2tabMap'] ?? [];
         $adhocConfig = $this->configService->getAdhocTemplateConfig($projectId);
         $t_configs = microtime(true);
@@ -155,6 +155,32 @@ class CallQueryService
             ];
         }
 
+        $withdrawnRecordSet = [];
+        if (!empty($withdrawRules)) {
+            $whereParts = [];
+            $wParams = [$projectId];
+            foreach ($withdrawRules as $rule) {
+                $wVar = $rule['var'] ?? '';
+                $wEvent = $rule['event'] ?? '';
+                if (empty($wVar)) continue;
+                if (!empty($wEvent) && is_numeric($wEvent)) {
+                    $whereParts[] = "(event_id = ? AND field_name = ?)";
+                    $wParams[] = (int)$wEvent;
+                    $wParams[] = $wVar;
+                } else {
+                    $whereParts[] = "(field_name = ?)";
+                    $wParams[] = $wVar;
+                }
+            }
+            if (!empty($whereParts)) {
+                $wSql = "SELECT DISTINCT record FROM {$table} WHERE project_id = ? AND (" . implode(' OR ', $whereParts) . ") AND value IS NOT NULL AND value != '' AND value != '0'";
+                $wRes = $this->module->query($wSql, $wParams);
+                while ($wRow = $wRes->fetch_assoc()) {
+                    $withdrawnRecordSet[(string)$wRow['record']] = true;
+                }
+            }
+        }
+
         $candidateRecords = $recordsWithCalls;
         if (!$includeCompleted || !$includeExpired) {
             $candidateRecords = [];
@@ -170,11 +196,32 @@ class CallQueryService
                     continue;
                 }
 
+                if (isset($withdrawnRecordSet[$recId])) {
+                    $hasCallbackToday = false;
+                    foreach ($meta as $c) {
+                        if (!is_array($c)) continue;
+                        $cbReq = (!empty($c['requestedCallback']) && $c['requestedCallback'] === '1') || !empty($c['call_requested_callback']);
+                        $cbDate = $c['callbackDate'] ?? '';
+                        if (!empty($cbDate) && strpos($cbDate, '/') !== false) {
+                            $cbTs = strtotime($cbDate);
+                            if ($cbTs !== false) {
+                                $cbDate = date('Y-m-d', $cbTs);
+                            }
+                        }
+                        if ($cbReq && (empty($cbDate) || $cbDate <= $today)) {
+                            $hasCallbackToday = true;
+                            break;
+                        }
+                    }
+                    if (!$hasCallbackToday) {
+                        continue;
+                    }
+                }
+
                 $hasActiveCall = false;
                 foreach ($meta as $callID => $c) {
-                    if (!is_array($c)) {
-                        $hasActiveCall = true;
-                        break;
+                    if (!is_array($c) || substr((string)$callID, 0, 1) === '_') {
+                        continue;
                     }
 
                     // Callback requested calls always take precedence and are active

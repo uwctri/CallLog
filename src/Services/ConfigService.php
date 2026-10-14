@@ -582,10 +582,11 @@ class ConfigService
 
     private array $tabConfigCache = [];
 
-    public function getTabConfig(int $projectId): array
+    public function getTabConfig(int $projectId, bool $skipFieldMetadata = false): array
     {
-        if (isset($this->tabConfigCache[$projectId])) {
-            return $this->tabConfigCache[$projectId];
+        $cacheKey = "{$projectId}_" . ($skipFieldMetadata ? '1' : '0');
+        if (isset($this->tabConfigCache[$cacheKey])) {
+            return $this->tabConfigCache[$cacheKey];
         }
 
         global $Proj;
@@ -622,22 +623,24 @@ class ConfigService
         if (!empty($expandsFieldList)) {
             foreach ($expandsFieldList as $i => $field) {
                 if (empty($field)) continue;
-                $name = $namesList[$i] ?? trim($this->getFieldLabel($field), ":?");
-                $validation = $Proj->metadata[$field]["element_validation_type"] ?? "";
-                $default = $defaultList[$i] ?? "";
-                $expands[] = [
-                    "field" => $field,
-                    "map" => $this->getDictionaryValuesFor($field, $dd, $projectId),
-                    "displayName" => trim(rtrim($name, ':? ')),
-                    "validation" => $validation,
-                    "isDate" => strpos($validation, 'date') !== false,
-                    "hasTime" => strpos($validation, 'datetime') !== false,
-                    "isFormStatus" => isset($Proj) && $Proj->isFormStatus($field),
-                    "fieldType" => $Proj->metadata[$field]["element_type"] ?? 'text',
-                    "default" => $default,
-                    "expanded" => true
-                ];
                 $allFields[] = $field;
+                if (!$skipFieldMetadata) {
+                    $name = $namesList[$i] ?? trim($this->getFieldLabel($field), ":?");
+                    $validation = $Proj->metadata[$field]["element_validation_type"] ?? "";
+                    $default = $defaultList[$i] ?? "";
+                    $expands[] = [
+                        "field" => $field,
+                        "map" => $this->getDictionaryValuesFor($field, $dd, $projectId),
+                        "displayName" => trim(rtrim($name, ':? ')),
+                        "validation" => $validation,
+                        "isDate" => strpos($validation, 'date') !== false,
+                        "hasTime" => strpos($validation, 'datetime') !== false,
+                        "isFormStatus" => isset($Proj) && $Proj->isFormStatus($field),
+                        "fieldType" => $Proj->metadata[$field]["element_type"] ?? 'text',
+                        "default" => $default,
+                        "expanded" => true
+                    ];
+                }
             }
         }
 
@@ -799,32 +802,34 @@ class ConfigService
             if (!empty($tabFieldsList)) {
                 foreach ($tabFieldsList as $j => $field) {
                     if (empty($field)) continue;
-                    $namesList = $settings["tab_field_name"][$i] ?? [];
-                    $defaultList = $settings["tab_field_default"][$i] ?? [];
-                    $linkList = $settings["tab_field_link"][$i] ?? [];
-                    $instList = $settings["tab_field_link_instrument"][$i] ?? [];
-
-                    $name = $namesList[$j] ?? trim($this->getFieldLabel($field), ":?");
-                    $validation = $Proj->metadata[$field]["element_validation_type"] ?? "";
-                    $default = $defaultList[$j] ?? "";
-                    $link = $linkList[$j] ?? "none";
-                    $linkedInst = $instList[$j] ?? "";
-
-                    $tabFields[] = [
-                        "field" => $field,
-                        "map" => $this->getDictionaryValuesFor($field, $dd, $projectId),
-                        "displayName" => trim($name),
-                        "validation" => $validation,
-                        "isDate" => strpos($validation, 'date') !== false,
-                        "hasTime" => strpos($validation, 'datetime') !== false,
-                        "isFormStatus" => isset($Proj) && $Proj->isFormStatus($field),
-                        "fieldType" => $Proj->metadata[$field]["element_type"] ?? 'text',
-                        "default" => $default,
-                        "link" => $link,
-                        "linkedInstrument" => $linkedInst,
-                        "expanded" => false
-                    ];
                     $allFields[] = $field;
+                    if (!$skipFieldMetadata) {
+                        $namesList = $settings["tab_field_name"][$i] ?? [];
+                        $defaultList = $settings["tab_field_default"][$i] ?? [];
+                        $linkList = $settings["tab_field_link"][$i] ?? [];
+                        $instList = $settings["tab_field_link_instrument"][$i] ?? [];
+
+                        $name = $namesList[$j] ?? trim($this->getFieldLabel($field), ":?");
+                        $validation = $Proj->metadata[$field]["element_validation_type"] ?? "";
+                        $default = $defaultList[$j] ?? "";
+                        $link = $linkList[$j] ?? "none";
+                        $linkedInst = $instList[$j] ?? "";
+
+                        $tabFields[] = [
+                            "field" => $field,
+                            "map" => $this->getDictionaryValuesFor($field, $dd, $projectId),
+                            "displayName" => trim($name),
+                            "validation" => $validation,
+                            "isDate" => strpos($validation, 'date') !== false,
+                            "hasTime" => strpos($validation, 'datetime') !== false,
+                            "isFormStatus" => isset($Proj) && $Proj->isFormStatus($field),
+                            "fieldType" => $Proj->metadata[$field]["element_type"] ?? 'text',
+                            "default" => $default,
+                            "link" => $link,
+                            "linkedInstrument" => $linkedInst,
+                            "expanded" => false
+                        ];
+                    }
                 }
             }
 
@@ -845,7 +850,7 @@ class ConfigService
             "tabNameMap" => $tabNameMap,
             "config" => array_values($tabConfig)
         ];
-        $this->tabConfigCache[$projectId] = $result;
+        $this->tabConfigCache[$cacheKey] = $result;
         return $result;
     }
 
