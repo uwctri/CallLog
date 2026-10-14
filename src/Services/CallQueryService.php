@@ -123,6 +123,7 @@ class CallQueryService
 
         $fields = array_values(array_filter($fields, fn($f) => is_string($f) && !empty($f)));
 
+        $t_setup = microtime(true);
         $table = REDCap::getDataTable($projectId);
         $sql = "SELECT record, value FROM {$table} WHERE project_id = ? AND field_name = 'call_metadata' AND value IS NOT NULL AND value != ''";
         $qRes = $this->module->query($sql, [$projectId]);
@@ -142,10 +143,12 @@ class CallQueryService
                 "data" => $packagedCallData,
                 "showCallback" => false,
                 "timings" => [
-                    "sql_meta_ms" => round(($t_sql_meta - $t0) * 1000, 1),
+                    "setup_ms" => round(($t_setup - $t0) * 1000, 1),
+                    "sql_meta_ms" => round(($t_sql_meta - $t_setup) * 1000, 1),
                     "total_query_service_ms" => round(($t_sql_meta - $t0) * 1000, 1),
                     "records_with_calls" => 0,
-                    "candidate_records" => 0
+                    "candidate_records" => 0,
+                    "output_rows" => 0
                 ]
             ];
         }
@@ -217,7 +220,53 @@ class CallQueryService
                         continue;
                     }
 
-                    // Call is neither complete nor expired
+                    // Check if call ID starts with internal '_' prefix
+                    if (substr($baseCId, 0, 1) === '_') {
+                        continue;
+                    }
+
+                    // Check if call maps to any tab
+                    $cTabs = $call2TabMap[$baseCId] ?? [];
+                    if (!is_array($cTabs)) {
+                        $cTabs = !empty($cTabs) ? [$cTabs] : [];
+                    }
+                    if (empty($cTabs)) {
+                        if ($baseCId === 'call_new' && !empty($call2TabMap['call_1'])) {
+                            $cTabs = is_array($call2TabMap['call_1']) ? $call2TabMap['call_1'] : [$call2TabMap['call_1']];
+                        } elseif ($baseCId === 'call_1' && !empty($call2TabMap['call_new'])) {
+                            $cTabs = is_array($call2TabMap['call_new']) ? $call2TabMap['call_new'] : [$call2TabMap['call_new']];
+                        }
+                    }
+                    if (empty($cTabs) && ($template === 'adhoc' || strpos((string)$callID, '||') !== false)) {
+                        if (!empty($call2TabMap['adhoc'])) {
+                            $cTabs = is_array($call2TabMap['adhoc']) ? $call2TabMap['adhoc'] : [$call2TabMap['adhoc']];
+                        }
+                        if (empty($cTabs)) {
+                            foreach ($tabs['config'] as $tConfig) {
+                                if (!empty($tConfig['showAdhocDates']) || $tConfig['tab_id'] === 'adhoc' || $tConfig['tab_id'] === $baseCId || stripos($tConfig['tab_name'] ?? '', 'adhoc') !== false) {
+                                    $cTabs[] = $tConfig['tab_id'];
+                                }
+                            }
+                        }
+                    }
+                    if (empty($cTabs)) {
+                        continue;
+                    }
+
+                    // Skip reminder and followup calls whose start date is in the future
+                    if (in_array($template, [CallTemplateType::REMINDER->value, CallTemplateType::FOLLOWUP->value], true) && !empty($c['start']) && ($c['start'] > $today)) {
+                        continue;
+                    }
+
+                    // Skip MCV / NTS if scheduled today and same_day_mcv_nts setting is disabled
+                    if ($template === CallTemplateType::MCV->value && (explode(' ', $c['appt'] ?? '')[0] === $today) && !$dayOf) {
+                        continue;
+                    }
+                    if ($template === CallTemplateType::NTS->value && (($c['created'] ?? '') === $today) && !$dayOf) {
+                        continue;
+                    }
+
+                    // Call is neither complete, expired, future, unmapped, nor same-day excluded
                     $hasActiveCall = true;
                     break;
                 }
@@ -234,11 +283,13 @@ class CallQueryService
                 "data" => $packagedCallData,
                 "showCallback" => false,
                 "timings" => [
-                    "sql_meta_ms" => round(($t_sql_meta - $t0) * 1000, 1),
+                    "setup_ms" => round(($t_setup - $t0) * 1000, 1),
+                    "sql_meta_ms" => round(($t_sql_meta - $t_setup) * 1000, 1),
                     "prefilter_ms" => round(($t_prefilter - $t_sql_meta) * 1000, 1),
                     "total_query_service_ms" => round(($t_prefilter - $t0) * 1000, 1),
                     "records_with_calls" => count($recordsWithCalls),
-                    "candidate_records" => 0
+                    "candidate_records" => 0,
+                    "output_rows" => 0
                 ]
             ];
         }
@@ -277,13 +328,15 @@ class CallQueryService
                 "data" => $packagedCallData,
                 "showCallback" => false,
                 "timings" => [
-                    "sql_meta_ms" => round(($t_sql_meta - $t0) * 1000, 1),
+                    "setup_ms" => round(($t_setup - $t0) * 1000, 1),
+                    "sql_meta_ms" => round(($t_sql_meta - $t_setup) * 1000, 1),
                     "prefilter_ms" => round(($t_prefilter - $t_sql_meta) * 1000, 1),
                     "tab_logic_ms" => round(($t_tab_logic - $t_prefilter) * 1000, 1),
                     "getdata_ms" => round(($t_redcap_getdata - $t_tab_logic) * 1000, 1),
                     "total_query_service_ms" => round(($t_redcap_getdata - $t0) * 1000, 1),
                     "records_with_calls" => count($recordsWithCalls),
-                    "candidate_records" => count($candidateRecords)
+                    "candidate_records" => count($candidateRecords),
+                    "output_rows" => 0
                 ]
             ];
         }
@@ -795,7 +848,8 @@ class CallQueryService
             "data" => $packagedCallData,
             "showCallback" => $alwaysShowCallbackCol,
             "timings" => [
-                "sql_meta_ms" => round(($t_sql_meta - $t0) * 1000, 1),
+                "setup_ms" => round(($t_setup - $t0) * 1000, 1),
+                "sql_meta_ms" => round(($t_sql_meta - $t_setup) * 1000, 1),
                 "prefilter_ms" => round(($t_prefilter - $t_sql_meta) * 1000, 1),
                 "tab_logic_ms" => round(($t_tab_logic - $t_prefilter) * 1000, 1),
                 "getdata_ms" => round(($t_redcap_getdata - $t_tab_logic) * 1000, 1),
@@ -803,6 +857,7 @@ class CallQueryService
                 "total_query_service_ms" => round(($t_loop - $t0) * 1000, 1),
                 "records_with_calls" => count($recordsWithCalls),
                 "candidate_records" => count($candidateRecords),
+                "output_rows" => count($stagedRows),
                 "fields_count" => count($fields),
                 "tabs_with_filter_logic" => count($tabFilterLogicMap)
             ]
