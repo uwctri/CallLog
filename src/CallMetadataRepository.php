@@ -82,6 +82,42 @@ class CallMetadataRepository
         return empty($response['errors']);
     }
 
+    public function saveMetadataBatch(int $projectId, array $recordsData): bool
+    {
+        if (empty($recordsData)) return true;
+
+        $metaEvent = $this->getEventOfInstrument($projectId, $this->instrumentMeta);
+        if (!$metaEvent) return false;
+
+        $saveData = [];
+        foreach ($recordsData as $record => $data) {
+            if (!is_array($data)) continue;
+            foreach ($data as $k => &$item) {
+                if (!is_array($item)) continue;
+                if (empty($item['id'])) $item['id'] = (string)$k;
+                if (!isset($item['instances']) || !is_array($item['instances'])) $item['instances'] = [];
+                if (empty($item['statusOverride']) && !empty($item['complete'])) {
+                    $item['status'] = 'complete';
+                } elseif (empty($item['status'])) {
+                    $item['status'] = 'incomplete';
+                }
+            }
+            unset($item);
+
+            $saveData[(string)$record] = [
+                $metaEvent => [
+                    $this->metadataField => json_encode($data)
+                ]
+            ];
+            $this->existingRecordCache["{$projectId}_{$record}"] = true;
+        }
+
+        if (empty($saveData)) return true;
+
+        $response = REDCap::saveData($projectId, 'array', $saveData);
+        return empty($response['errors']);
+    }
+
     public function deleteLastCallInstance(int $projectId, string $record): bool
     {
         $callEvent = $this->getEventOfInstrument($projectId, $this->instrumentCall);

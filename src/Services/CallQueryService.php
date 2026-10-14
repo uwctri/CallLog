@@ -143,11 +143,78 @@ class CallQueryService
             ];
         }
 
+        $candidateRecords = $recordsWithCalls;
+        if (!$includeCompleted) {
+            $candidateRecords = [];
+            foreach ($recordsWithCalls as $recId) {
+                $rawMeta = $preloadedMetadata[$recId] ?? '';
+                if (empty($rawMeta)) {
+                    continue;
+                }
+                $meta = json_decode($rawMeta, true);
+                if (!is_array($meta)) {
+                    // In case raw JSON cannot be parsed, safely keep record for standard processing
+                    $candidateRecords[] = $recId;
+                    continue;
+                }
+
+                $hasActiveCall = false;
+                foreach ($meta as $c) {
+                    if (!is_array($c)) {
+                        $hasActiveCall = true;
+                        break;
+                    }
+                    $status = $c['status'] ?? '';
+                    if ($status !== 'complete') {
+                        $hasActiveCall = true;
+                        break;
+                    }
+                    if (!empty($c['requestedCallback']) || !empty($c['callbackDate']) || !empty($c['call_requested_callback'])) {
+                        $hasActiveCall = true;
+                        break;
+                    }
+                }
+
+                if ($hasActiveCall) {
+                    $candidateRecords[] = $recId;
+                }
+            }
+        }
+
+        if (empty($candidateRecords)) {
+            return [
+                "data" => $packagedCallData,
+                "showCallback" => false
+            ];
+        }
+
+        // Batch pre-evaluate tab filtering logic using REDCap's core batch evaluator Records::applyFilteringLogic
+        $tabBatchMatches = [];
+        $tabBatchEvaluated = [];
+        if (!empty($tabFilterLogicMap)) {
+            global $Proj;
+            $evalProjectId = (isset($Proj) && $Proj->project_id == $projectId) ? null : $projectId;
+            foreach ($tabFilterLogicMap as $tTab => $fLogic) {
+                try {
+                    $filtered = \Records::applyFilteringLogic($fLogic, $candidateRecords, [], $evalProjectId);
+                    if (is_array($filtered)) {
+                        $tabBatchMatches[$tTab] = [];
+                        foreach (array_keys($filtered) as $matchingRec) {
+                            $tabBatchMatches[$tTab][(string)$matchingRec] = true;
+                        }
+                        $tabBatchEvaluated[$tTab] = true;
+                    }
+                } catch (\Throwable $e) {
+                    // If batch logic evaluation fails, loop will fall back to REDCap::evaluateLogic
+                }
+            }
+        }
+
         $userId = defined('USERID') ? USERID : null;
         $userRights = $userId ? REDCap::getUserRights($userId) : [];
         $groupId = $userRights[$userId]['group_id'] ?? null;
 
-        $dataLoad = REDCap::getData($projectId, 'array', $recordsWithCalls, $fields, null, $groupId);
+        $dataLoad = REDCap::getData($projectId, 'array', $candidateRecords, $fields, null, $groupId);
         if (empty($dataLoad)) {
             return [
                 "data" => $packagedCallData,
@@ -157,6 +224,7 @@ class CallQueryService
 
         $stagedRows = [];
         $recordTabs = [];
+        $pendingMetadataSaves = [];
 
         foreach ($dataLoad as $record => $recordData) {
             $rawMeta = $preloadedMetadata[(string)$record] ?? ($recordData[$metaEvent]["call_metadata"] ?? '');
@@ -248,14 +316,20 @@ class CallQueryService
                     foreach ($targetTabs as $tTab) {
                         if (isset($tabFilterLogicMap[$tTab])) {
                             $fLogic = $tabFilterLogicMap[$tTab];
-                            if (!isset($tabFilterCache[$tTab][(string)$record])) {
-                                try {
-                                    $tabFilterCache[$tTab][(string)$record] = (REDCap::evaluateLogic($fLogic, $projectId, (string)$record) === true);
-                                } catch (\Throwable $e) {
-                                    $tabFilterCache[$tTab][(string)$record] = false;
+                            $isMatch = false;
+                            if (!empty($tabBatchEvaluated[$tTab])) {
+                                $isMatch = !empty($tabBatchMatches[$tTab][(string)$record]);
+                            } else {
+                                if (!isset($tabFilterCache[$tTab][(string)$record])) {
+                                    try {
+                                        $tabFilterCache[$tTab][(string)$record] = (REDCap::evaluateLogic($fLogic, $projectId, (string)$record) === true);
+                                    } catch (\Throwable $e) {
+                                        $tabFilterCache[$tTab][(string)$record] = false;
+                                    }
                                 }
+                                $isMatch = $tabFilterCache[$tTab][(string)$record];
                             }
-                            if (!$tabFilterCache[$tTab][(string)$record]) {
+                            if (!$isMatch) {
                                 continue;
                             }
                         }
@@ -608,8 +682,12 @@ class CallQueryService
                 }
             }
             if ($metaChanged) {
-                $this->metadataRepo->saveMetadata($projectId, (string)$record, $meta);
+                $pendingMetadataSaves[(string)$record] = $meta;
             }
+        }
+
+        if (!empty($pendingMetadataSaves)) {
+            $this->metadataRepo->saveMetadataBatch($projectId, $pendingMetadataSaves);
         }
 
         foreach ($stagedRows as $staged) {
