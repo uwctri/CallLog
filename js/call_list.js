@@ -205,7 +205,14 @@
 
                 this.setupDataTables();
                 this.setupColumnContextMenu();
-                this.refreshTableData();
+
+                if (module.initialCallData && module.initialCallData.data) {
+                    this.lastDataPullTime = new Date();
+                    this.lastDataPullText = formatDateTime(this.lastDataPullTime, true);
+                    this.applyTableData(module.initialCallData);
+                } else {
+                    this.refreshTableData();
+                }
 
                 setInterval(() => this.refreshTableData(), pageRefresh);
 
@@ -2337,72 +2344,78 @@
                         return;
                     }
 
-                    if (response.serverVersion) {
-                        this.serverVersion = response.serverVersion;
-                    }
-
-                    let rawData = response.data !== undefined ? response.data : response;
-                    if (rawData && rawData.data && !Array.isArray(rawData.data)) {
-                        rawData = rawData.data;
-                    }
-                    this.displayedData = rawData || {};
-
-                    let callers = new Set();
-                    Object.values(this.displayedData).forEach(tabRows => {
-                        if (Array.isArray(tabRows)) {
-                            tabRows.forEach(row => {
-                                if (Array.isArray(row['_attemptedUserNames'])) {
-                                    row['_attemptedUserNames'].forEach(n => {
-                                        if (n && n.trim()) callers.add(n.trim());
-                                    });
-                                }
-                                if (Array.isArray(row['_attemptedUsers'])) {
-                                    row['_attemptedUsers'].forEach(u => {
-                                        let name = (typeof module !== 'undefined' && module.userNameMap && module.userNameMap[u]) 
-                                            ? module.userNameMap[u] 
-                                            : u;
-                                        if (name && name.trim()) callers.add(name.trim());
-                                    });
-                                }
-                                let current = row['call_open_user_full_name'] || row['_callStartedBy'] || row['call_open_user'] || '';
-                                if (current && current.trim()) {
-                                    let name = (typeof module !== 'undefined' && module.userNameMap && module.userNameMap[current])
-                                        ? module.userNameMap[current]
-                                        : current;
-                                    callers.add(name.trim());
-                                }
-                            });
-                        }
-                    });
-
-                    this.availableCallers = Array.from(callers).sort();
-
-                    this.dataLoaded = true;
-
-                    // Mark all inactive tabs as unpopulated so they render on-demand upon tab switch
-                    Object.keys(this.displayedData).forEach(tabId => {
-                        if (tabId !== this.activeTab) {
-                            this.tabPopulated[tabId] = false;
-                        }
-                    });
-
-                    // Populate and draw ONLY the active tab table
-                    this.populateTabTable(this.activeTab);
-
-                    this.$nextTick(() => {
-                        this.updateStatusBadgeColVisibility(this.activeTab);
-                        let $pane = $(`#${this.activeTab}`);
-                        if ($pane.length) {
-                            let $table = $pane.find('.callTable');
-                            if ($table.length && $.fn.DataTable.isDataTable($table[0])) {
-                                $table.DataTable().columns.adjust();
-                            }
-                        }
-                    });
+                    this.applyTableData(response);
                 }).catch((err) => {
                     console.error("Error fetching call list data:", err);
                     this.isRefreshing = false;
                     this.dataLoaded = true;
+                });
+            },
+
+            applyTableData(response) {
+                if (!response) return;
+
+                if (response.serverVersion) {
+                    this.serverVersion = response.serverVersion;
+                }
+
+                let rawData = response.data !== undefined ? response.data : response;
+                if (rawData && rawData.data && !Array.isArray(rawData.data)) {
+                    rawData = rawData.data;
+                }
+                this.displayedData = rawData || {};
+
+                let callers = new Set();
+                Object.values(this.displayedData).forEach(tabRows => {
+                    if (Array.isArray(tabRows)) {
+                        tabRows.forEach(row => {
+                            if (Array.isArray(row['_attemptedUserNames'])) {
+                                row['_attemptedUserNames'].forEach(n => {
+                                    if (n && n.trim()) callers.add(n.trim());
+                                });
+                            }
+                            if (Array.isArray(row['_attemptedUsers'])) {
+                                row['_attemptedUsers'].forEach(u => {
+                                    let name = (typeof module !== 'undefined' && module.userNameMap && module.userNameMap[u]) 
+                                        ? module.userNameMap[u] 
+                                        : u;
+                                    if (name && name.trim()) callers.add(name.trim());
+                                });
+                            }
+                            let current = row['call_open_user_full_name'] || row['_callStartedBy'] || row['call_open_user'] || '';
+                            if (current && current.trim()) {
+                                let name = (typeof module !== 'undefined' && module.userNameMap && module.userNameMap[current])
+                                    ? module.userNameMap[current]
+                                    : current;
+                                callers.add(name.trim());
+                            }
+                        });
+                    }
+                });
+
+                this.availableCallers = Array.from(callers).sort();
+
+                this.dataLoaded = true;
+
+                // Mark all inactive tabs as unpopulated so they render on-demand upon tab switch
+                Object.keys(this.displayedData).forEach(tabId => {
+                    if (tabId !== this.activeTab) {
+                        this.tabPopulated[tabId] = false;
+                    }
+                });
+
+                // Populate and draw ONLY the active tab table
+                this.populateTabTable(this.activeTab);
+
+                this.$nextTick(() => {
+                    this.updateStatusBadgeColVisibility(this.activeTab);
+                    let $pane = $(`#${this.activeTab}`);
+                    if ($pane.length) {
+                        let $table = $pane.find('.callTable');
+                        if ($table.length && $.fn.DataTable.isDataTable($table[0])) {
+                            $table.DataTable().columns.adjust();
+                        }
+                    }
                 });
             },
 

@@ -238,6 +238,23 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                     ? json_decode($userSettingsRaw, true)
                     : (is_array($userSettingsRaw) ? $userSettingsRaw : []);
                 $this->passArgument('userSettings', $userSettings ?: (object)[]);
+                $this->passArgument('projectSettings', $this->getConfigService()->getDefaultSettings());
+                $this->passArgument('userNameMap', $this->getUserNameMap((int)$project_id));
+
+                try {
+                    $initialCallRes = $this->getQueryService()->getCallListData((int)$project_id, [
+                        'includeCompleted' => false,
+                        'includeExpired' => false
+                    ]);
+                    $initialVersion = $this->getQueryService()->getCallDataVersion((int)$project_id, false, false);
+                    $this->passArgument('initialCallData', [
+                        'data' => $initialCallRes['data'] ?? [],
+                        'showCallback' => $initialCallRes['showCallback'] ?? false,
+                        'serverVersion' => $initialVersion
+                    ]);
+                } catch (Throwable $e) {
+                    // Fall back to client-side AJAX fetch
+                }
             }
         } elseif ($this->isPage('DataEntry/record_home.php') && !empty($_GET['id'])) {
             $this->includeJs('js/record_home_page.js', 'defer');
