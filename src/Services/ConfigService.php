@@ -92,6 +92,8 @@ class ConfigService
         ];
     }
 
+    private array $rawProjectSettingsCache = [];
+
     /**
      * Retrieves raw project settings and merges them with master defaults.
      *
@@ -100,11 +102,28 @@ class ConfigService
      */
     public function getRawProjectSettings(int $projectId): array
     {
+        if (isset($this->rawProjectSettingsCache[$projectId])) {
+            return $this->rawProjectSettingsCache[$projectId];
+        }
+
         $defaults = $this->getDefaultSettings();
         $clean = [];
 
+        $allSettings = method_exists($this->module, 'getProjectSettings')
+            ? $this->module->getProjectSettings($projectId)
+            : [];
+
         foreach ($defaults as $key => $defaultVal) {
-            $val = $this->module->getProjectSetting($key, $projectId);
+            $val = null;
+            if (is_array($allSettings) && array_key_exists($key, $allSettings)) {
+                $rawEntry = $allSettings[$key];
+                $val = (is_array($rawEntry) && array_key_exists('value', $rawEntry))
+                    ? $rawEntry['value']
+                    : $rawEntry;
+            } else {
+                $val = $this->module->getProjectSetting($key, $projectId);
+            }
+
             if ($val === null
                 || ($key !== 'phone_banner_fields' && ($val === '' || (is_array($val) && empty($val))))
             ) {
@@ -113,7 +132,16 @@ class ConfigService
             $clean[$key] = $val;
         }
 
-        $legacyFollowupEvents = $this->module->getProjectSetting('followup_event', $projectId);
+        $legacyFollowupEvents = null;
+        if (is_array($allSettings) && array_key_exists('followup_event', $allSettings)) {
+            $rawEntry = $allSettings['followup_event'];
+            $legacyFollowupEvents = (is_array($rawEntry) && array_key_exists('value', $rawEntry))
+                ? $rawEntry['value']
+                : $rawEntry;
+        } else {
+            $legacyFollowupEvents = $this->module->getProjectSetting('followup_event', $projectId);
+        }
+
         if (is_array($legacyFollowupEvents) && !empty($legacyFollowupEvents)) {
             global $Proj;
             if (!isset($Proj) || (int)$Proj->project_id !== $projectId) {
@@ -165,6 +193,7 @@ class ConfigService
             $clean['show_phone_banner'] = ['0'];
         }
 
+        $this->rawProjectSettingsCache[$projectId] = $clean;
         return $clean;
     }
 
@@ -227,6 +256,9 @@ class ConfigService
         $this->module->setProjectSetting('nts_skip', [], $projectId);
         $this->module->setProjectSetting('nts_window_start_cron', [], $projectId);
         $this->module->setProjectSetting('nts_window_days_before', [], $projectId);
+
+        unset($this->rawProjectSettingsCache[$projectId]);
+        unset($this->tabConfigCache["{$projectId}_0"], $this->tabConfigCache["{$projectId}_1"]);
 
         return true;
     }
