@@ -144,7 +144,7 @@ class CallQueryService
         }
 
         $candidateRecords = $recordsWithCalls;
-        if (!$includeCompleted) {
+        if (!$includeCompleted || !$includeExpired) {
             $candidateRecords = [];
             foreach ($recordsWithCalls as $recId) {
                 $rawMeta = $preloadedMetadata[$recId] ?? '';
@@ -159,20 +159,60 @@ class CallQueryService
                 }
 
                 $hasActiveCall = false;
-                foreach ($meta as $c) {
+                foreach ($meta as $callID => $c) {
                     if (!is_array($c)) {
                         $hasActiveCall = true;
                         break;
                     }
+
+                    // Callback requested calls always take precedence and are active
+                    if ((!empty($c['requestedCallback']) && $c['requestedCallback'] === '1') || !empty($c['callbackDate']) || !empty($c['call_requested_callback'])) {
+                        $hasActiveCall = true;
+                        break;
+                    }
+
                     $status = $c['status'] ?? '';
-                    if ($status !== 'complete') {
-                        $hasActiveCall = true;
-                        break;
+                    $isComplete = ($status === 'complete' || !empty($c['complete']));
+                    if ($isComplete) {
+                        if ($includeCompleted) {
+                            $hasActiveCall = true;
+                            break;
+                        }
+                        continue;
                     }
-                    if (!empty($c['requestedCallback']) || !empty($c['callbackDate']) || !empty($c['call_requested_callback'])) {
-                        $hasActiveCall = true;
-                        break;
+
+                    $baseCId = explode('|', (string)$callID)[0];
+                    $template = $c['template'] ?? ($callIdToTemplate[$baseCId] ?? (strpos((string)$callID, '||') !== false ? 'adhoc' : 'new'));
+                    $effExpire = array_key_exists($baseCId, $callIdToNewExpire)
+                        ? $callIdToNewExpire[$baseCId]
+                        : ((isset($c['expire']) && $c['expire'] !== '' && $c['expire'] !== null && is_numeric($c['expire'])) ? (int)$c['expire'] : null);
+
+                    $isExpired = false;
+                    if ($status === 'expired') {
+                        if ($template !== CallTemplateType::NEW->value || $effExpire !== null) {
+                            $isExpired = true;
+                        }
+                    } elseif ($template === CallTemplateType::REMINDER->value && !empty($c['end']) && ($c['end'] <= $today)) {
+                        $isExpired = true;
+                    } elseif ($template === CallTemplateType::FOLLOWUP->value && ($autoRemoveConfig[$baseCId] ?? false) && !empty($c['end']) && ($c['end'] < $today)) {
+                        $isExpired = true;
+                    } elseif ($template === CallTemplateType::NEW->value) {
+                        if ($effExpire !== null && !empty($c['load']) && (date('Y-m-d', strtotime("{$c['load']} +{$effExpire} days")) < $today)) {
+                            $isExpired = true;
+                        }
                     }
+
+                    if ($isExpired) {
+                        if ($includeExpired) {
+                            $hasActiveCall = true;
+                            break;
+                        }
+                        continue;
+                    }
+
+                    // Call is neither complete nor expired
+                    $hasActiveCall = true;
+                    break;
                 }
 
                 if ($hasActiveCall) {
@@ -214,7 +254,51 @@ class CallQueryService
         $userRights = $userId ? REDCap::getUserRights($userId) : [];
         $groupId = $userRights[$userId]['group_id'] ?? null;
 
-        $dataLoad = REDCap::getData($projectId, 'array', $candidateRecords, $fields, null, $groupId);
+        $eventsFilter = null;
+        if ($Proj->longitudinal) {
+            $relevantEvents = [];
+            if (!empty($metaEvent) && is_numeric($metaEvent)) {
+                $relevantEvents[(int)$metaEvent] = true;
+            }
+            if (!empty($callEvent) && is_numeric($callEvent)) {
+                $relevantEvents[(int)$callEvent] = true;
+            }
+            foreach ($candidateRecords as $recId) {
+                $rawMeta = $preloadedMetadata[$recId] ?? '';
+                if (!empty($rawMeta)) {
+                    $meta = json_decode($rawMeta, true);
+                    if (is_array($meta)) {
+                        foreach ($meta as $c) {
+                            if (!empty($c['event_id']) && is_numeric($c['event_id'])) {
+                                $relevantEvents[(int)$c['event_id']] = true;
+                            }
+                        }
+                    }
+                }
+            }
+            foreach ($withdrawRules as $wRule) {
+                if (!empty($wRule['event']) && is_numeric($wRule['event'])) {
+                    $relevantEvents[(int)$wRule['event']] = true;
+                }
+            }
+            if (isset($Proj->eventsForms) && is_array($Proj->eventsForms)) {
+                foreach ($fields as $fName) {
+                    $form = $Proj->metadata[$fName]['form_name'] ?? null;
+                    if ($form) {
+                        foreach ($Proj->eventsForms as $eid => $forms) {
+                            if (in_array($form, $forms, true)) {
+                                $relevantEvents[(int)$eid] = true;
+                            }
+                        }
+                    }
+                }
+            }
+            if (!empty($relevantEvents)) {
+                $eventsFilter = array_keys($relevantEvents);
+            }
+        }
+
+        $dataLoad = REDCap::getData($projectId, 'array', $candidateRecords, $fields, $eventsFilter, $groupId);
         if (empty($dataLoad)) {
             return [
                 "data" => $packagedCallData,
@@ -733,9 +817,9 @@ class CallQueryService
             $logTable = 'redcap_log_event';
         }
 
-        $sql = "SELECT MAX(log_event_id) as max_id FROM {$logTable} WHERE project_id = ?";
+        $sql = "SELECT log_event_id FROM {$logTable} WHERE project_id = ? ORDER BY log_event_id DESC LIMIT 1";
         $q = $this->module->query($sql, [$projectId]);
-        $maxId = ($row = $q->fetch_assoc()) ? ($row['max_id'] ?? 0) : 0;
+        $maxId = ($row = $q->fetch_assoc()) ? ($row['log_event_id'] ?? 0) : 0;
         $today = date('Y-m-d');
         $incComp = $includeCompleted ? '1' : '0';
         $incExp = $includeExpired ? '1' : '0';

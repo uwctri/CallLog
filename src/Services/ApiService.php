@@ -192,21 +192,24 @@ class ApiService
                 $clientVersion = $payload['clientVersion'] ?? null;
                 $force = !empty($payload['force']);
 
-                $serverVersion = $queryService->getCallDataVersion($projectId, $includeCompleted, $includeExpired);
-                $result['serverVersion'] = $serverVersion;
-
-                if (!$force && !empty($clientVersion) && $clientVersion === $serverVersion) {
-                    $result['changed'] = false;
-                    $callListData = null;
-                } else {
-                    $callListRes = $queryService->getCallListData($projectId, [
-                        'includeCompleted' => $includeCompleted,
-                        'includeExpired' => $includeExpired
-                    ]);
-                    $result['changed'] = true;
-                    $result['showCallback'] = $callListRes['showCallback'] ?? false;
-                    $callListData = $callListRes['data'] ?? [];
+                if (!$force && !empty($clientVersion)) {
+                    $serverVersion = $queryService->getCallDataVersion($projectId, $includeCompleted, $includeExpired);
+                    if ($clientVersion === $serverVersion) {
+                        $result['serverVersion'] = $serverVersion;
+                        $result['changed'] = false;
+                        $callListData = null;
+                        break;
+                    }
                 }
+
+                $callListRes = $queryService->getCallListData($projectId, [
+                    'includeCompleted' => $includeCompleted,
+                    'includeExpired' => $includeExpired
+                ]);
+                $result['changed'] = true;
+                $result['showCallback'] = $callListRes['showCallback'] ?? false;
+                $callListData = $callListRes['data'] ?? [];
+                $result['serverVersion'] = $queryService->getCallDataVersion($projectId, $includeCompleted, $includeExpired);
                 break;
 
             case "deployInstruments":

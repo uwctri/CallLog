@@ -775,21 +775,27 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         return '';
     }
 
+    private array $userNameMapCache = [];
+
     public function getUserNameMap(int $projectId): array
     {
+        if (isset($this->userNameMapCache[$projectId])) {
+            return $this->userNameMapCache[$projectId];
+        }
+
         $map = [];
         $sql = "
-        SELECT u.username, u.full_name FROM redcap_user_rights ur
-        LEFT JOIN (SELECT
-            lower(trim(i.username)) AS username,
-            trim(concat(i.user_firstname, ' ', i.user_lastname)) AS full_name
-        FROM redcap_user_information i
-        WHERE i.username != '') u ON ur.username = u.username
-        WHERE project_id = ?";
+        SELECT ur.username, trim(concat(i.user_firstname, ' ', i.user_lastname)) AS full_name
+        FROM redcap_user_rights ur
+        LEFT JOIN redcap_user_information i ON ur.username = i.username
+        WHERE ur.project_id = ?";
         $result = $this->query($sql, [$projectId]);
         while ($row = $result->fetch_assoc()) {
-            $map[$row['username']] = $row['full_name'];
+            $uName = $row['username'];
+            $fName = trim((string)($row['full_name'] ?? ''));
+            $map[$uName] = !empty($fName) ? $fName : $uName;
         }
+        $this->userNameMapCache[$projectId] = $map;
         return $map;
     }
 
