@@ -1568,6 +1568,7 @@
 
                 let dt = $(el).DataTable({
                     autoWidth: false,
+                    deferRender: true,
                     colReorder: {
                         enable: isUnlocked,
                         fixedColumnsLeft: 1
