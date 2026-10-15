@@ -181,14 +181,7 @@
                     this.activeTab = firstTabId;
                 }
 
-                if (Array.isArray(savedState.selectedCallers)) {
-                    this.selectedCallers = savedState.selectedCallers;
-                } else if (savedState.callerFilter) {
-                    this.selectedCallers = [savedState.callerFilter];
-                }
-                if (savedState.callerFilterMode && ['attempted', 'never'].includes(savedState.callerFilterMode)) {
-                    this.callerFilterMode = savedState.callerFilterMode;
-                }
+
 
                 if (savedState.showTypes && typeof savedState.showTypes === 'object') {
                     this.showTypes.active = savedState.showTypes.active !== undefined ? Boolean(savedState.showTypes.active) : true;
@@ -327,8 +320,9 @@
             persistState() {
                 let state = getDashboardCookie() || {};
                 state.tab = this.activeTab;
-                state.selectedCallers = Array.isArray(this.selectedCallers) ? [...this.selectedCallers] : [];
-                state.callerFilterMode = this.callerFilterMode;
+                delete state.selectedCallers;
+                delete state.callerFilter;
+                delete state.callerFilterMode;
                 state.showTypes = {
                     active: this.showTypes.active !== undefined ? Boolean(this.showTypes.active) : true,
                     hidden: Boolean(this.showTypes.hidden),
@@ -342,17 +336,10 @@
                     if (!tab_id) return;
                     if ($.fn.DataTable.isDataTable(el)) {
                         let dt = $(el).DataTable();
-                        let $pane = $(el).closest('.tab-pane');
-                        let searchVal = $pane.find('.customSearch').val();
-                        if (searchVal === undefined || searchVal === null) {
-                            searchVal = dt.search() || '';
-                        }
                         if (tab_id === this.activeTab || this.tabPopulated[tab_id]) {
                             state.tabs[tab_id] = {
-                                page: dt.page(),
                                 len: dt.page.len(),
-                                order: dt.order(),
-                                search: searchVal
+                                order: dt.order()
                             };
                         }
                     }
@@ -1606,13 +1593,7 @@
                     $(el).removeClass('columns-unlocked');
                 }
 
-                if (tabState && tabState.search) {
-                    let $pane = $(el).closest('.tab-pane');
-                    $pane.find('.customSearch').val(tabState.search);
-                    self.applyTableSearch(dt, tabState.search);
-                }
-
-                dt.on('order.dt page.dt', () => {
+                dt.on('order.dt length.dt', () => {
                     if (self.dataLoaded) {
                         self.debouncePersist();
                     }
@@ -2447,19 +2428,7 @@
                 dt.clear();
                 dt.rows.add(rows);
 
-                if (isInitialForTab) {
-                    let savedState = getDashboardCookie() || {};
-                    let tabState = (savedState.tabs && savedState.tabs[tab_id]) ? savedState.tabs[tab_id] : null;
-                    if (tabState && typeof tabState.page === 'number' && tabState.page > 0) {
-                        let pageLen = dt.page.len();
-                        if (pageLen > 0) {
-                            let maxPages = Math.ceil(rows.length / pageLen);
-                            if (tabState.page < maxPages) {
-                                dt.page(tabState.page);
-                            }
-                        }
-                    }
-                } else {
+                if (!isInitialForTab) {
                     let pageLen = dt.page.len();
                     if (pageLen > 0) {
                         let maxPages = Math.ceil(rows.length / pageLen);
