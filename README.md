@@ -6,11 +6,34 @@ The Call Log Redcap External Module is resonsible for the generation of calls as
 
 ## Installing
 
-This EM isn't yet available to install via redcap's EM database so you'll need to install to your modules folder (i.e. `redcap/modules/call_log_v1.0.0`) manually.
+You can install the module from the REDCap EM repo or drop it directly in your modules folder (i.e. `redcap/modules/call_log_v1.0.0`) manually.
 
 ## Configuration
 
-Configuration for this module is extensive and complex. Full documentation will exist on offical public release.
+Once the module is enabled on your project, open **Call Log Settings** in the left sidebar to configure the workflow.
+
+### 1. Deploy Required Instruments
+The module relies on two instruments:
+- `call_log`: Repeating instrument used by staff to log attempts, outcomes, notes, and callbacks.
+- `call_log_metadata`: Single-instance instrument that stores call queue state behind the scenes.
+
+Click **Deploy Instruments** on the settings page if they aren't already present in your project, and ensure `call_log` is enabled as a repeating form in Project Setup.
+
+### 2. Define Call Types
+Add the calls your team needs to make under the **Call Types** section:
+- **Call ID & Name**: Internal identifier and display title (e.g. `intake_call`, "Baseline Intake").
+- **Template**: How the call triggers—New Record, Reminder, Follow-up, Appointment/MCV, NTS, or Adhoc.
+- **Timing & Windows**: Set expiration days, expected call duration, and auto-hide/attempt limits.
+
+### 3. Build Dashboard Tabs
+The dashboard requires at least one tab to display calls:
+- **Included Calls**: Assign which Call IDs appear on the tab.
+- **Columns**: Choose the REDCap fields displayed in the table (e.g., name, phone number, study ID) and expandable row details.
+- **Filter Logic** *(Optional)*: REDCap logic (e.g., `[consent] = '1'`) to restrict which records show up on that tab.
+
+### 4. Project Rules & Phone Display
+- **Phone Fields**: Pick the phone variables from your project so contact info surfaces in the header and quick-dial buttons.
+- **Withdrawal Rules**: Map any drop-out or completion fields so inactive participants are automatically removed from active call queues.
 
 ## API
 
