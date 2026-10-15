@@ -10,7 +10,7 @@ You can install the module from the REDCap EM repo or drop it directly in your m
 
 ## Configuration
 
-Once the module is enabled on your project, open **Call Log Settings** in the left sidebar to configure the workflow.
+Once the module is enabled on your project, open **Call Log Settings** in the left sidebar to configure the workflow. Settings for this EM are extensive, don't feel overwhelmed, we've tried to add documentation to the settings page to explain config options.
 
 ### 1. Deploy Required Instruments
 The module relies on two instruments:
@@ -29,7 +29,6 @@ Add the calls your team needs to make under the **Call Types** section:
 The dashboard requires at least one tab to display calls:
 - **Included Calls**: Assign which Call IDs appear on the tab.
 - **Columns**: Choose the REDCap fields displayed in the table (e.g., name, phone number, study ID) and expandable row details.
-- **Filter Logic** *(Optional)*: REDCap logic (e.g., `[consent] = '1'`) to restrict which records show up on that tab.
 
 ### 4. Project Rules & Phone Display
 - **Phone Fields**: Pick the phone variables from your project so contact info surfaces in the header and quick-dial buttons.
