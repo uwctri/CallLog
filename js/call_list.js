@@ -762,17 +762,34 @@
                     data: '_status',
                     className: 'text-center statusBadgeCol',
                     defaultContent: '',
-                    orderable: false,
+                    orderable: true,
                     searchable: true,
                     visible: showBadgeColInitial,
                     render: (val, type, row) => {
                         let isCompleted = isRowCompleted(row);
                         let isExpired = !isCompleted && Boolean(row['_isExpired'] || row['_status'] === 'expired');
                         let isHidden = isRowHidden(row);
+                        let hasCallback = !isCompleted && Boolean(
+                            row['_callbackRequestor'] ||
+                            row['_callbackToday'] ||
+                            row['_callbackNotToday'] ||
+                            (row['call_requested_callback'] && (row['call_requested_callback'][1] === '1' || row['call_requested_callback'] === '1'))
+                        );
+
+                        if (type === 'sort' || type === 'type') {
+                            if (hasCallback) {
+                                let cbDtRaw = (row['_callbackDate'] ? (row['_callbackTime'] ? `${row['_callbackDate']} ${row['_callbackTime']}` : row['_callbackDate']) : (row['call_callback_date'] ? (row['call_callback_time'] ? `${row['call_callback_date']} ${row['call_callback_time']}` : row['call_callback_date']) : ''));
+                                return '0_callback_' + (cbDtRaw || '0000-00-00');
+                            }
+                            if (isHidden) return '2_hidden';
+                            if (isExpired) return '3_expired';
+                            if (isCompleted) return '4_completed';
+                            return '1_active';
+                        }
 
                         if (type === 'filter') {
                             if (isCompleted) return 'Completed';
-                            if (row['_callbackRequestor']) {
+                            if (hasCallback) {
                                 let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : (row['_callbackRequestor'] || ''));
                                 return `Callback ${cbWho}`.trim();
                             }
@@ -785,14 +802,14 @@
                         if (isCompleted) {
                             return `<span class="badge bg-success-subtle text-success border px-2 py-1" title="Call completed"><i class="fas fa-check-circle me-1"></i>Completed</span>`;
                         }
-                        if (row['_callbackRequestor']) {
-                            let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : row['_callbackRequestor']);
+                        if (hasCallback) {
+                            let cbWho = row['_callbackRequestor'] === '1' ? 'Participant' : (row['_callbackRequestor'] === '2' ? 'Staff' : (row['_callbackRequestor'] || ''));
                             let cbDtRaw = (row['_callbackDate'] ? (row['_callbackTime'] ? `${row['_callbackDate']} ${row['_callbackTime']}` : row['_callbackDate']) : (row['call_callback_date'] ? (row['call_callback_time'] ? `${row['call_callback_date']} ${row['call_callback_time']}` : row['call_callback_date']) : ''));
                             let cbDt = cbDtRaw ? formatDateTime(cbDtRaw) : '';
-                            return `<div class="badge bg-danger-subtle text-danger border px-2 py-1 d-inline-flex align-items-center justify-content-center text-start" style="width: 185px; box-sizing: border-box; line-height: 1.25;" title="Callback requested by ${cbWho}${cbDt ? ' for ' + cbDt : ''}">` +
+                            return `<div class="badge bg-danger-subtle text-danger border px-2 py-1 d-inline-flex align-items-center justify-content-center text-start" style="width: 185px; box-sizing: border-box; line-height: 1.25;" title="Callback requested${cbWho ? ' by ' + cbWho : ''}${cbDt ? ' for ' + cbDt : ''}">` +
                                 `<i class="fas fa-bell me-2 fs-6 flex-shrink-0 align-self-center"></i>` +
                                 `<div class="d-flex flex-column justify-content-center text-truncate flex-grow-1" style="line-height: 1.2;">` +
-                                    `<span class="fw-bold text-truncate" style="font-size: 0.8125rem;">Callback - ${cbWho}</span>` +
+                                    `<span class="fw-bold text-truncate" style="font-size: 0.8125rem;">Callback${cbWho ? ' - ' + cbWho : ''}</span>` +
                                     (cbDt ? `<span class="small fw-normal text-muted text-truncate" style="font-size: 0.75rem;">${cbDt}</span>` : '') +
                                 `</div>` +
                             `</div>`;
