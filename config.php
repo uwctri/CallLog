@@ -1,8 +1,27 @@
 <?php
+
+namespace UWMadison\CallLog;
+
+use REDCap;
+
 // Call Log Custom Configuration Interface
 $projectId = isset($_GET['pid']) ? (int)$_GET['pid'] : (defined('PROJECT_ID') ? (int)PROJECT_ID : 0);
 
-if (!function_exists('renderSearchableFieldSelect')) {
+$isSuperUser = defined('SUPER_USER') && SUPER_USER;
+$username = defined('USERID') ? USERID : '';
+$hasDesign = false;
+if ($isSuperUser) {
+    $hasDesign = true;
+} elseif (!empty($username)) {
+    $rights = REDCap::getUserRights($username);
+    $hasDesign = !empty($rights[$username]['design']);
+}
+
+if (!$hasDesign) {
+    exit('<div class="red" style="margin:20px;padding:15px;border:1px solid #ebccd1;background-color:#f2dede;color:#a94442;border-radius:4px;"><strong>Access Denied:</strong> You must have Project Setup and Design rights to access Call Log Settings.</div>');
+}
+
+if (!function_exists(__NAMESPACE__ . '\\renderSearchableFieldSelect')) {
     /**
      * Reusable helper to render a searchable field select dropdown in Alpine.js
      */

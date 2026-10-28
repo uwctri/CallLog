@@ -32,6 +32,15 @@ class ApiService
         return $this->dateMathService ??= new DateMathService();
     }
 
+    private function userHasDesignRights(): bool
+    {
+        if (defined('SUPER_USER') && SUPER_USER) return true;
+        $user = defined('USERID') ? USERID : '';
+        if (empty($user)) return false;
+        $rights = REDCap::getUserRights($user);
+        return !empty($rights[$user]['design']);
+    }
+
     public function parseTimeTo24(?string $time): string
     {
         return $this->getDateMathService()->parseTimeTo24($time);
@@ -220,6 +229,11 @@ class ApiService
                 break;
 
             case "deployInstruments":
+                if (!$this->userHasDesignRights()) {
+                    $success = false;
+                    $result['message'] = 'You do not have permission to deploy instruments on this project.';
+                    break;
+                }
                 $eventId = isset($payload['event_id']) && $payload['event_id'] !== '' ? (int)$payload['event_id'] : null;
                 $deployRes = $this->module->getDeploymentService()->deploy($projectId, dirname(__DIR__, 2) . '/call.csv', $eventId);
                 $success = $deployRes['success'];
@@ -227,6 +241,11 @@ class ApiService
                 break;
 
             case "resetCallLogInstrument":
+                if (!$this->userHasDesignRights()) {
+                    $success = false;
+                    $result['message'] = 'You do not have permission to reset instruments on this project.';
+                    break;
+                }
                 $resetRes = $this->module->getDeploymentService()->resetCallLogInstrument($projectId, dirname(__DIR__, 2) . '/call.csv');
                 $success = $resetRes['success'];
                 $result = $resetRes;
@@ -239,6 +258,11 @@ class ApiService
                 break;
 
             case "enableRepeatable":
+                if (!$this->userHasDesignRights()) {
+                    $success = false;
+                    $result['message'] = 'You do not have permission to modify event repeatability on this project.';
+                    break;
+                }
                 $eventId = isset($payload['event_id']) && $payload['event_id'] !== '' ? (int)$payload['event_id'] : null;
                 $repRes = $this->module->getDeploymentService()->enableRepeatable($projectId, $eventId);
                 $success = $repRes['success'];
@@ -246,6 +270,12 @@ class ApiService
                 break;
 
             case "saveConfig":
+                if (!$this->userHasDesignRights()) {
+                    $success = false;
+                    $result['saved'] = false;
+                    $result['message'] = 'You do not have permission to modify settings for this project.';
+                    break;
+                }
                 if (!empty($payload['settings']) && is_array($payload['settings'])) {
                     $saved = $this->configService->saveProjectSettings($projectId, $payload['settings']);
                     $result['saved'] = $saved;

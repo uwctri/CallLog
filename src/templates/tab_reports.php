@@ -1,4 +1,6 @@
 <?php
+namespace UWMadison\CallLog;
+
 /**
  * Tab 6: Reports & Analytics
  */

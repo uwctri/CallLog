@@ -4,7 +4,6 @@ namespace UWMadison\CallLog\Services;
 
 use REDCap;
 use Throwable;
-use ExternalModules\ExternalModules;
 use UWMadison\CallLog\CallMetadataRepository;
 
 class ReportService
@@ -18,6 +17,11 @@ class ReportService
         $this->module = $module;
         $this->configService = $configService;
         $this->metadataRepo = $metadataRepo;
+    }
+
+    protected function query(string $sql, array $parameters = [])
+    {
+        return $this->module->query($sql, $parameters);
     }
 
     /**
@@ -115,7 +119,7 @@ class ReportService
                     WHERE project_id = ? AND event_id = ? AND field_name IN ({$inClause}) {$dateClause}";
 
             try {
-                $result = ExternalModules::query($sql, $params);
+                $result = $this->query($sql, $params);
                 $instanceRows = [];
                 while ($row = $result->fetch_assoc()) {
                     $rKey = $row['record'] . '::' . $row['inst'];
@@ -145,7 +149,7 @@ class ReportService
         if ($metaEvent) {
             $sqlMeta = "SELECT value FROM {$table} WHERE project_id = ? AND field_name = 'call_metadata' AND event_id = ?";
             try {
-                $metaRes = ExternalModules::query($sqlMeta, [$projectId, $metaEvent]);
+                $metaRes = $this->query($sqlMeta, [$projectId, $metaEvent]);
                 while ($row = $metaRes->fetch_assoc()) {
                     $raw = $row['value'] ?? '';
                     if (empty($raw)) continue;
@@ -231,7 +235,7 @@ class ReportService
         if ($metaEvent) {
             $sql = "SELECT value FROM {$table} WHERE project_id = ? AND field_name = 'call_metadata' AND event_id = ?";
             try {
-                $result = ExternalModules::query($sql, [$projectId, $metaEvent]);
+                $result = $this->query($sql, [$projectId, $metaEvent]);
                 while ($row = $result->fetch_assoc()) {
                     $raw = $row['value'] ?? '';
                     if (empty($raw)) continue;

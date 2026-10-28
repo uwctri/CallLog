@@ -11,8 +11,22 @@ use UWMadison\CallLog\CallMetadataRepository;
 
 class InstrumentDeploymentService
 {
+    private $module;
     private string $instrumentCall = "call_log";
     private string $instrumentMeta = "call_log_metadata";
+
+    public function __construct($module = null)
+    {
+        $this->module = $module;
+    }
+
+    protected function query(string $sql, array $parameters = [])
+    {
+        if ($this->module) {
+            return $this->module->query($sql, $parameters);
+        }
+        return ExternalModules::query($sql, $parameters);
+    }
 
     /**
      * Deploys the call_log and call_log_metadata instruments from CSV template
@@ -122,7 +136,7 @@ class InstrumentDeploymentService
                 WHERE form_name IN ('{$this->instrumentCall}', '{$this->instrumentMeta}') 
                 AND event_id IN ({$inClause})";
 
-        $result = ExternalModules::query($sql, $validEventIds);
+        $result = $this->query($sql, $validEventIds);
         $assignedEvents = [];
         while ($row = $result->fetch_assoc()) {
             $assignedEvents[(int)$row['event_id']][] = $row['form_name'];
@@ -156,15 +170,15 @@ class InstrumentDeploymentService
     {
         // First remove any stale assignments to ensure strict single-event binding
         $sqlDelete = "DELETE FROM redcap_events_forms WHERE form_name IN ('{$this->instrumentCall}', '{$this->instrumentMeta}') AND event_id IN (SELECT event_id FROM redcap_events_metadata WHERE arm_id IN (SELECT arm_id FROM redcap_events_arms WHERE project_id = ?))";
-        ExternalModules::query($sqlDelete, [$projectId]);
+        $this->query($sqlDelete, [$projectId]);
 
         // Insert fresh single-event designation
         $sqlInsert = "INSERT IGNORE INTO redcap_events_forms (event_id, form_name) VALUES (?, '{$this->instrumentCall}'), (?, '{$this->instrumentMeta}')";
-        ExternalModules::query($sqlInsert, [$eventId, $eventId]);
+        $this->query($sqlInsert, [$eventId, $eventId]);
 
         // Also ensure call_log is marked as repeatable on this event
         $sqlRepeat = "INSERT IGNORE INTO redcap_events_repeat (event_id, form_name) VALUES (?, '{$this->instrumentCall}')";
-        ExternalModules::query($sqlRepeat, [$eventId]);
+        $this->query($sqlRepeat, [$eventId]);
     }
 
     /**
@@ -215,7 +229,7 @@ class InstrumentDeploymentService
                     WHERE form_name IN ('{$this->instrumentCall}', '{$this->instrumentMeta}') 
                     AND event_id IN ({$inClause})";
 
-            $result = ExternalModules::query($sql, $validEventIds);
+            $result = $this->query($sql, $validEventIds);
             $assignedEvents = [];
             while ($row = $result->fetch_assoc()) {
                 $eId = (int)$row['event_id'];
@@ -259,7 +273,7 @@ class InstrumentDeploymentService
             if (isset($Proj)) $repeatableValid = (bool)$Proj->isRepeatingFormOrEvent($targetEventId, $this->instrumentCall);
             if (!$repeatableValid) {
                 $sqlRepeat = "SELECT 1 FROM redcap_events_repeat WHERE (form_name = '{$this->instrumentCall}' OR form_name IS NULL OR form_name = '') AND event_id = ? LIMIT 1";
-                $resRepeat = ExternalModules::query($sqlRepeat, [$targetEventId]);
+                $resRepeat = $this->query($sqlRepeat, [$targetEventId]);
                 if ($resRepeat && $resRepeat->fetch_assoc()) $repeatableValid = true;
             }
         }
@@ -267,7 +281,7 @@ class InstrumentDeploymentService
         if (!$repeatableValid && !empty($validEventIds)) {
             $inClause = implode(',', array_fill(0, count($validEventIds), '?'));
             $sqlRepeatAll = "SELECT event_id FROM redcap_events_repeat WHERE (form_name = '{$this->instrumentCall}' OR form_name IS NULL OR form_name = '') AND event_id IN ({$inClause}) LIMIT 1";
-            $resRepeatAll = ExternalModules::query($sqlRepeatAll, $validEventIds);
+            $resRepeatAll = $this->query($sqlRepeatAll, $validEventIds);
             if ($resRepeatAll && ($row = $resRepeatAll->fetch_assoc())) {
                 if ($singleEventValid && $assignedEventId && (int)$row['event_id'] !== $assignedEventId) {
                     $repeatableValid = false;
@@ -311,7 +325,7 @@ class InstrumentDeploymentService
 
         $events = $Proj->eventInfo ?? [];
         if (!$eventId) {
-            $repo = new CallMetadataRepository();
+            $repo = $this->module ? $this->module->getMetadataRepo() : new CallMetadataRepository($this->module);
             $eventId = $repo->getEventOfInstrument($projectId, $this->instrumentCall);
             if (!$eventId && !empty($events)) $eventId = (int)array_key_first($events);
         }
@@ -328,7 +342,7 @@ class InstrumentDeploymentService
             $this->assignToSingleEvent($projectId, $eventId);
         } else {
             $sqlRepeat = "INSERT IGNORE INTO redcap_events_repeat (event_id, form_name) VALUES (?, '{$this->instrumentCall}')";
-            ExternalModules::query($sqlRepeat, [$eventId]);
+            $this->query($sqlRepeat, [$eventId]);
         }
 
         return [

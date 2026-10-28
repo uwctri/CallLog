@@ -9,11 +9,25 @@ use Throwable;
 
 class CallMetadataRepository
 {
+    private $module;
     private string $metadataField = "call_metadata";
     private string $instrumentMeta = "call_log_metadata";
     private string $instrumentCall = "call_log";
     private array $eventOfInstrumentCache = [];
     private array $existingRecordCache = [];
+
+    public function __construct($module = null)
+    {
+        $this->module = $module;
+    }
+
+    protected function query(string $sql, array $parameters = [])
+    {
+        if ($this->module) {
+            return $this->module->query($sql, $parameters);
+        }
+        return ExternalModules::query($sql, $parameters);
+    }
 
     public function getMetadata(int $projectId, string $record): array
     {
@@ -53,7 +67,7 @@ class CallMetadataRepository
         if (empty($this->existingRecordCache["{$projectId}_{$record}"])) {
             $table = REDCap::getDataTable($projectId);
             $sql = "SELECT field_name FROM {$table} WHERE project_id = ? AND record = ? LIMIT 1";
-            $result = ExternalModules::query($sql, [$projectId, $record]);
+            $result = $this->query($sql, [$projectId, $record]);
             if (empty($result->fetch_assoc())) return false;
             $this->existingRecordCache["{$projectId}_{$record}"] = true;
         }
@@ -156,7 +170,7 @@ class CallMetadataRepository
                 $params = array_merge([$projectId, $record], $fields);
             }
 
-            ExternalModules::query($sql, $params);
+            $this->query($sql, $params);
         }
 
         return $this->saveMetadata($projectId, $record, $metadata);
@@ -185,7 +199,7 @@ class CallMetadataRepository
         $events = [];
         $validEvents = array_keys($Proj->eventInfo ?? []);
         $sql = "SELECT event_id FROM redcap_events_forms WHERE form_name = ?";
-        $result = ExternalModules::query($sql, [$instrument]);
+        $result = $this->query($sql, [$instrument]);
         while ($row = $result->fetch_assoc()) {
             $events[] = (int)$row['event_id'];
         }
@@ -212,7 +226,7 @@ class CallMetadataRepository
 
             if ($metaEvent) {
                 $sql = "SELECT value FROM {$table} WHERE project_id = ? AND field_name = ? AND event_id = ?";
-                $result = ExternalModules::query($sql, [$projectId, $this->metadataField, $metaEvent]);
+                $result = $this->query($sql, [$projectId, $this->metadataField, $metaEvent]);
 
                 while ($row = $result->fetch_assoc()) {
                     $val = $row['value'] ?? '';
@@ -238,14 +252,14 @@ class CallMetadataRepository
             if ($callEvent) {
                 // Count distinct logged call attempts (each record + instance)
                 $sqlAttempts = "SELECT COUNT(DISTINCT record, COALESCE(instance, 1)) as cnt FROM {$table} WHERE project_id = ? AND event_id = ? AND field_name IN ('call_open_date', 'call_attempt')";
-                $resAttempts = ExternalModules::query($sqlAttempts, [$projectId, $callEvent]);
+                $resAttempts = $this->query($sqlAttempts, [$projectId, $callEvent]);
                 if ($resAttempts && ($row = $resAttempts->fetch_assoc())) {
                     $stats['totalAttempts'] = (int)($row['cnt'] ?? 0);
                 }
 
                 // Query distinct callers who have opened or logged calls
                 $sqlCallers = "SELECT DISTINCT value FROM {$table} WHERE project_id = ? AND event_id = ? AND field_name = 'call_open_user' AND value IS NOT NULL AND value != ''";
-                $resCallers = ExternalModules::query($sqlCallers, [$projectId, $callEvent]);
+                $resCallers = $this->query($sqlCallers, [$projectId, $callEvent]);
                 $foundUsername = false;
                 if ($resCallers) {
                     while ($row = $resCallers->fetch_assoc()) {
@@ -260,7 +274,7 @@ class CallMetadataRepository
                 // If call_open_user had no entries, fallback to call_open_user_full_name
                 if (!$foundUsername) {
                     $sqlFull = "SELECT DISTINCT value FROM {$table} WHERE project_id = ? AND event_id = ? AND field_name = 'call_open_user_full_name' AND value IS NOT NULL AND value != ''";
-                    $resFull = ExternalModules::query($sqlFull, [$projectId, $callEvent]);
+                    $resFull = $this->query($sqlFull, [$projectId, $callEvent]);
                     if ($resFull) {
                         while ($row = $resFull->fetch_assoc()) {
                             $val = trim((string)($row['value'] ?? ''));

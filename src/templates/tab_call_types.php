@@ -1,4 +1,6 @@
 <?php
+namespace UWMadison\CallLog;
+
 /**
  * Tab 3: Call Types
  */

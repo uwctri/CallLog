@@ -1,4 +1,6 @@
 <?php
+namespace UWMadison\CallLog;
+
 /**
  * Tab 1: Quick Setup & Status
  */

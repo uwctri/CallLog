@@ -43,12 +43,6 @@ class CallLog extends AbstractExternalModule
     private string $metadataField = "call_metadata";
     private int $startedCallGrace = 30;
 
-    public function __construct()
-    {
-        parent::__construct();
-        $this->disableUserBasedSettingPermissions();
-    }
-
     private ?ConfigService $configService = null;
     private ?CallMetadataRepository $metadataRepo = null;
     private ?DateMathService $dateMathService = null;
@@ -70,7 +64,7 @@ class CallLog extends AbstractExternalModule
 
     public function getMetadataRepo(): CallMetadataRepository
     {
-        return $this->metadataRepo ??= new CallMetadataRepository();
+        return $this->metadataRepo ??= new CallMetadataRepository($this);
     }
 
     public function getDateMathService(): DateMathService
@@ -100,7 +94,7 @@ class CallLog extends AbstractExternalModule
 
     public function getDeploymentService(): InstrumentDeploymentService
     {
-        return $this->deploymentService ??= new InstrumentDeploymentService();
+        return $this->deploymentService ??= new InstrumentDeploymentService($this);
     }
 
     public function getApiService(): ApiService
@@ -127,6 +121,17 @@ class CallLog extends AbstractExternalModule
 
     public function redcap_module_link_check_display($project_id, $link)
     {
+        if (($link['url'] ?? '') === 'config.php') {
+            if (defined('SUPER_USER') && SUPER_USER) {
+                return $link;
+            }
+            $username = defined('USERID') ? USERID : '';
+            if (empty($username)) return null;
+            $rights = REDCap::getUserRights($username);
+            if (empty($rights[$username]['design'])) {
+                return null;
+            }
+        }
         return $link;
     }
 
@@ -471,6 +476,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         foreach ($projects as $projectId) {
             $projectId = (int)$projectId;
             $this->getGeneratorService()->evaluateAndGenerateForProject($projectId, 'cron_daily');
+            $this->disableUserBasedSettingPermissions();
             $this->setProjectSetting('daily_sync_last_run', date('Y-m-d H:i:s'), $projectId);
         }
 

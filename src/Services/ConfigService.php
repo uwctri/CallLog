@@ -406,10 +406,10 @@ class ConfigService
             fn($field) => in_array($field['id'], $phoneBannerFieldIds, true)
         ));
 
-        $metadataRepo = new CallMetadataRepository();
+        $metadataRepo = $this->module->getMetadataRepo();
         $callStats = $metadataRepo->getCallLogStats($projectId);
 
-        $deployService = new InstrumentDeploymentService();
+        $deployService = $this->module->getDeploymentService();
         $isDeployed = $deployService->isDeployed($projectId);
         $instrumentEventConfig = $deployService->checkInstrumentConfiguration($projectId);
 
