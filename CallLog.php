@@ -219,7 +219,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             $page = $_GET['page'] ?? 'index';
             if ($page === 'config') {
                 $this->passArgument('rawConfig', $this->getConfigService()->getRawProjectSettings((int)$project_id));
-                $this->passArgument('metaInfo', $this->getConfigService()->getProjectMetadataInfo((int)$project_id));
+                $this->passArgument('metaInfo', $this->escape($this->getConfigService()->getProjectMetadataInfo((int)$project_id)));
                 $this->includeCss('css/config.css');
                 $this->includeCss('css/swal.css');
                 $this->includeJs('js/config.js', true);
@@ -257,7 +257,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         $rawSummary = $this->getConfigService()->getRawProjectSettings($project_id)['call_summary'] ?? [];
         $summary = is_array($rawSummary) ? $rawSummary : (!empty($rawSummary) ? [$rawSummary] : []);
 
-        $this->passArgument('recentCaller', $this->recentCallStarted($project_id, $record));
+        $this->passArgument('recentCaller', $this->escape($this->recentCallStarted($project_id, $record)));
         $this->includeJs('js/data_entry.js', true);
 
         $rawSettings = $this->getConfigService()->getRawProjectSettings($project_id);
@@ -306,7 +306,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             $currentEventName = '';
         }
         $this->passArgument('uniqueEventNames', (object)$uniqueEventNames);
-        $this->passArgument('currentEventName', $currentEventName);
+        $this->passArgument('currentEventName', $this->escape($currentEventName));
         $this->passArgument('currentEventId', $currentEventId);
 
         $displayNameField = $rawSettings['display_name_field'] ?? '';
@@ -323,7 +323,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 }
             }
         }
-        $this->passArgument('participantName', $participantName);
+        $this->passArgument('participantName', $this->escape($participantName));
 
         if (!empty($_GET['call_id'])) {
             $callId = (string)$_GET['call_id'];
@@ -398,7 +398,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
 
         $this->passArgument('autoCaptureTimestamps', $cfgService->isSettingEnabled($project_id, 'auto_capture_timestamps', true));
         $this->passArgument('requireCallOutcome', $cfgService->isSettingEnabled($project_id, 'require_call_outcome', true));
-        $this->passArgument('phoneBannerData', $showPhoneBanner ? array_values($phoneBannerData) : null);
+        $this->passArgument('phoneBannerData', $showPhoneBanner ? $this->escape(array_values($phoneBannerData)) : null);
         $this->passArgument('enableCallTimer', $cfgService->isSettingEnabled($project_id, 'enable_call_timer', false));
 
         if ($instrument === $this->instrumentCall) {
@@ -431,8 +431,8 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 }
             }
             unset($item);
-            $this->passArgument('metadata', $metadata);
-            $this->passArgument('data', $this->getAllCallData($project_id, $record));
+            $this->passArgument('metadata', $this->escape($metadata));
+            $this->passArgument('data', $this->escape($this->getAllCallData($project_id, $record)));
             $this->includeCss('css/log.css');
             $this->includeCss('css/swal.css');
             $this->includeJs('js/call_history.js', true);
@@ -498,7 +498,7 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
             "eventNameMap" => $this->getConfigService()->getEventNameMap($projectId),
             "prefix" => $this->getPrefix(),
             "user" => $username,
-            "userNameMap" => $this->getUserNameMap($projectId),
+            "userNameMap" => $this->escape($this->getUserNameMap($projectId)),
             "format" => $this->getUserDateFormat($username),
             "dateTimeFormat" => $this->getConfigService()->getRawProjectSettings($projectId)['datetime_format'][0] ?? 'm/d/Y g:i A',
             "static" => [
@@ -796,9 +796,10 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
         WHERE ur.project_id = ?";
         $result = $this->query($sql, [$projectId]);
         while ($row = $result->fetch_assoc()) {
-            $uName = $row['username'];
+            $uName = (string)$row['username'];
             $fName = trim((string)($row['full_name'] ?? ''));
-            $map[$uName] = !empty($fName) ? $fName : $uName;
+            $displayName = !empty($fName) ? $fName : $uName;
+            $map[$uName] = $this->escape($displayName);
         }
         $this->userNameMapCache[$projectId] = $map;
         return $map;
