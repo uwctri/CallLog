@@ -222,7 +222,6 @@ div[id*="repeat_instrument_table"][id*="' . $this->instrumentCall . '"] { displa
                 $this->passArgument('metaInfo', $this->getConfigService()->getProjectMetadataInfo((int)$project_id));
                 $this->includeCss('css/config.css');
                 $this->includeCss('css/swal.css');
-                echo "<script type='text/javascript' src='" . APP_PATH_WEBROOT . "Resources/webpack/css/tinymce/tinymce.min.js'></script>\n";
                 $this->includeJs('js/config.js', true);
                 $this->includeJs('js/alpine.min.js', true);
             } else {

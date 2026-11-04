@@ -53,11 +53,6 @@ if (!function_exists(__NAMESPACE__ . '\\renderSearchableFieldSelect')) {
     }
 }
 ?>
-<script type="text/javascript">
-if (typeof tinymce === 'undefined') {
-    document.write('<script type="text/javascript" src="<?= (defined('APP_PATH_WEBROOT') ? APP_PATH_WEBROOT : '/redcap_v17.4.0/') ?>Resources/webpack/css/tinymce/tinymce.min.js"><\/script>');
-}
-</script>
 <div class="container-fluid py-3 px-4 call-config-dashboard m-0" style="max-width: 1300px;" x-data="callLogConfig">
     
     <!-- Top Action Bar -->

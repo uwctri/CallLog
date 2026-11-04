@@ -592,63 +592,42 @@
                 if (!callType || !callType._uid) return;
                 const editorId = 'call_script_' + callType._uid;
 
-                const doInit = () => {
-                    if (typeof window.tinymce === 'undefined') return;
-                    if (window.tinymce.get(editorId)) {
-                        return; // already initialized
-                    }
-                    const el = document.getElementById(editorId);
-                    if (!el) return;
-
-                    const webroot = window.app_path_webroot || '';
-                    window.tinymce.init({
-                        selector: '#' + editorId,
-                        height: 250,
-                        license_key: 'gpl',
-                        branding: false,
-                        statusbar: true,
-                        elementpath: false,
-                        menubar: false,
-                        plugins: 'autolink lists link image searchreplace code fullscreen table directionality hr',
-                        toolbar1: 'fontfamily blocks fontsize bold italic underline strikethrough forecolor backcolor',
-                        toolbar2: 'align bullist numlist outdent indent table pre hr link fullscreen searchreplace removeformat undo redo code',
-                        content_css: webroot + "Resources/webpack/css/bootstrap.min.css," + webroot + "Resources/webpack/css/fontawesome/css/all.min.css," + webroot + "Resources/css/style.css",
-                        relative_urls: false,
-                        convert_urls: false,
-                        extended_valid_elements: 'i[class]',
-                        setup: function(editor) {
-                            const sync = () => {
-                                callType.script = editor.getContent();
-                            };
-                            editor.on('change keyup NodeChange SetContent', sync);
-                            editor.on('blur', () => {
-                                sync();
-                                if (typeof window.tinymce.triggerSave === 'function') {
-                                    window.tinymce.triggerSave();
-                                }
-                            });
-                        }
-                    });
-                };
-
-                if (typeof window.tinymce === 'undefined') {
-                    const webroot = window.app_path_webroot || '';
-                    if (typeof window.loadJS === 'function' && webroot) {
-                        window.loadJS(webroot + "Resources/webpack/css/tinymce/tinymce.min.js");
-                        let tries = 0;
-                        const checkInterval = setInterval(() => {
-                            tries++;
-                            if (typeof window.tinymce !== 'undefined') {
-                                clearInterval(checkInterval);
-                                doInit();
-                            } else if (tries > 50) {
-                                clearInterval(checkInterval);
-                            }
-                        }, 100);
-                    }
-                } else {
-                    doInit();
+                if (typeof window.tinymce === 'undefined') return;
+                if (window.tinymce.get(editorId)) {
+                    return; // already initialized
                 }
+                const el = document.getElementById(editorId);
+                if (!el) return;
+
+                const webroot = window.app_path_webroot || '';
+                window.tinymce.init({
+                    selector: '#' + editorId,
+                    height: 250,
+                    license_key: 'gpl',
+                    branding: false,
+                    statusbar: true,
+                    elementpath: false,
+                    menubar: false,
+                    plugins: 'autolink lists link image searchreplace code fullscreen table directionality hr',
+                    toolbar1: 'fontfamily blocks fontsize bold italic underline strikethrough forecolor backcolor',
+                    toolbar2: 'align bullist numlist outdent indent table pre hr link fullscreen searchreplace removeformat undo redo code',
+                    content_css: webroot + "Resources/webpack/css/bootstrap.min.css," + webroot + "Resources/webpack/css/fontawesome/css/all.min.css," + webroot + "Resources/css/style.css",
+                    relative_urls: false,
+                    convert_urls: false,
+                    extended_valid_elements: 'i[class]',
+                    setup: function(editor) {
+                        const sync = () => {
+                            callType.script = editor.getContent();
+                        };
+                        editor.on('change keyup NodeChange SetContent', sync);
+                        editor.on('blur', () => {
+                            sync();
+                            if (typeof window.tinymce.triggerSave === 'function') {
+                                window.tinymce.triggerSave();
+                            }
+                        });
+                    }
+                });
             },
 
             destroyScriptEditor(callType) {
