@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to release (e.g. v1.0.1)'
+        required: true
 
 permissions:
   contents: write
@@ -15,8 +20,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release if not already present
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag_name || github.ref_name }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" --generate-notes
+          # If a release for this tag already exists (e.g. created manually in GitHub GUI), exit cleanly
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release for $TAG already exists (likely created manually in GUI). Skipping."
+            exit 0
+          fi
+
+          gh release create "$TAG" --generate-notes

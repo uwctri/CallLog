@@ -70,3 +70,10 @@ Action: generate - Trigger the Call Log Cron and generate any new call logs
 |   token           |   User's API token                      |  string      |    Yes          |
 |   action          |   "generate"                            |  string      |    Yes          |
 |   prefix          |   "call_log                             |  string      |    Yes          |
+
+
+## Dependencies
+
+* **Alpine.js** (`js/alpine.min.js`) - Auto-updating via GitHub Actions weekly workflow.
+* **Day.js** (`js/dayjs.min.js`) - Auto-updating via GitHub Actions weekly workflow.
+* **DataTables ColReorder** (`js/dataTables.colReorder.min.js`) - Pinned to v1.7.0. Upstream v2+ requires DataTables 2.0+, which is incompatible with REDCap core's bundled DataTables 1.13.x.
