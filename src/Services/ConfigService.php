@@ -636,6 +636,14 @@ class ConfigService
         $recordIdLabel = $this->getFieldLabel($recordIdField);
         $dd = [];
 
+        $suggestedPhoneFields = $this->getSuggestedPhoneBannerFieldIds($projectId);
+        $configuredPhoneFields = $settings['phone_banner_fields'] ?? null;
+        $projectPhoneFields = is_array($configuredPhoneFields) ? $configuredPhoneFields : $suggestedPhoneFields;
+        $projectPhoneFields = array_values(array_filter(
+            array_map('strval', (array)$projectPhoneFields),
+            static fn($field) => in_array($field, $suggestedPhoneFields, true)
+        ));
+
         $expands = [];
         $rawExpFields = $settings["tab_expands_field"] ?? [];
         $expandsFieldList = (isset($rawExpFields[0]) && is_array($rawExpFields[0]))
@@ -667,6 +675,7 @@ class ConfigService
                         "validation" => $validation,
                         "isDate" => strpos($validation, 'date') !== false,
                         "hasTime" => strpos($validation, 'datetime') !== false,
+                        "isPhone" => ($validation === 'phone') || in_array($field, $projectPhoneFields, true) || (bool)preg_match('/phone|cell|mobile|telephone/i', "{$field} {$name} {$validation}"),
                         "isFormStatus" => isset($Proj) && $Proj->isFormStatus($field),
                         "fieldType" => $Proj->metadata[$field]["element_type"] ?? 'text',
                         "default" => $default,
@@ -854,6 +863,7 @@ class ConfigService
                             "validation" => $validation,
                             "isDate" => strpos($validation, 'date') !== false,
                             "hasTime" => strpos($validation, 'datetime') !== false,
+                            "isPhone" => ($validation === 'phone') || in_array($field, $projectPhoneFields, true) || (bool)preg_match('/phone|cell|mobile|telephone/i', "{$field} {$name} {$validation}"),
                             "isFormStatus" => isset($Proj) && $Proj->isFormStatus($field),
                             "fieldType" => $Proj->metadata[$field]["element_type"] ?? 'text',
                             "default" => $default,
@@ -871,11 +881,18 @@ class ConfigService
 
         ksort($tabConfig);
 
+        foreach ($projectPhoneFields as $pf) {
+            if (!empty($pf) && !in_array($pf, $allFields, true)) {
+                $allFields[] = $pf;
+            }
+        }
+
         $displayNameField = $settings['display_name_field'] ?? '';
         if (is_array($displayNameField)) $displayNameField = reset($displayNameField);
 
         $result = [
             "allFields" => array_values(array_unique($allFields)),
+            "phoneFields" => $projectPhoneFields,
             "displayNameField" => (string)$displayNameField,
             "call2TabMap" => $call2TabMap,
             "call2tabMap" => $call2TabMap,

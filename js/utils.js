@@ -49,6 +49,84 @@
             if (typeof val === 'string') return val.split(',').map(s => s.trim()).filter(Boolean);
             return [String(val).trim()];
         },
+        hasPhoneNumber(val) {
+            if (!val || typeof val !== 'string') return false;
+            let digits = val.replace(/\D/g, '');
+            return (digits.length >= 7 && digits.length <= 15);
+        },
+        formatPhone(val) {
+            if (!val || typeof val !== 'string') return val || '';
+            let digits = val.replace(/\D/g, '');
+            if (digits.length === 11 && digits.startsWith('1')) {
+                digits = digits.substring(1);
+            }
+            if (digits.length === 10) {
+                return `(${digits.substring(0, 3)}) ${digits.substring(3, 6)}-${digits.substring(6)}`;
+            }
+            if (digits.length === 7) {
+                return `${digits.substring(0, 3)}-${digits.substring(3)}`;
+            }
+            return val;
+        },
+        getPhoneSearchTokens(input) {
+            if (!input || typeof input !== 'string') return [];
+            let str = input.trim();
+            if (!str) return [];
+
+            let tokens = new Set();
+            let matches = str.match(/(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}|\b\d{7,11}\b/g) || [];
+            let allDigits = str.replace(/\D/g, '');
+            let digitCandidates = [];
+            if (allDigits.length >= 7 && allDigits.length <= 11) {
+                digitCandidates.push(allDigits);
+            }
+            matches.forEach(m => {
+                let d = m.replace(/\D/g, '');
+                if (d.length >= 7 && d.length <= 11) {
+                    digitCandidates.push(d);
+                }
+            });
+
+            digitCandidates.forEach(digits => {
+                let tenDigits = '';
+                if (digits.length === 11 && digits.startsWith('1')) {
+                    tenDigits = digits.substring(1);
+                    tokens.add(digits);
+                    tokens.add('+' + digits);
+                    tokens.add('+1 ' + '(' + tenDigits.substring(0, 3) + ') ' + tenDigits.substring(3, 6) + '-' + tenDigits.substring(6));
+                    tokens.add('1-' + tenDigits.substring(0, 3) + '-' + tenDigits.substring(3, 6) + '-' + tenDigits.substring(6));
+                    tokens.add('1 ' + tenDigits.substring(0, 3) + ' ' + tenDigits.substring(3, 6) + ' ' + tenDigits.substring(6));
+                } else if (digits.length === 10) {
+                    tenDigits = digits;
+                }
+
+                if (tenDigits) {
+                    let area = tenDigits.substring(0, 3);
+                    let prefix = tenDigits.substring(3, 6);
+                    let line = tenDigits.substring(6);
+
+                    tokens.add(tenDigits);
+                    tokens.add(`(${area}) ${prefix}-${line}`);
+                    tokens.add(`(${area})${prefix}-${line}`);
+                    tokens.add(`(${area}) ${prefix} ${line}`);
+                    tokens.add(`${area}-${prefix}-${line}`);
+                    tokens.add(`${area} ${prefix} ${line}`);
+                    tokens.add(`${area}.${prefix}.${line}`);
+                    tokens.add(`(${area})`);
+                    tokens.add(`${prefix}-${line}`);
+                    tokens.add(`${prefix}${line}`);
+                } else if (digits.length === 7) {
+                    let prefix = digits.substring(0, 3);
+                    let line = digits.substring(3);
+                    tokens.add(digits);
+                    tokens.add(`${prefix}-${line}`);
+                    tokens.add(`${prefix} ${line}`);
+                    tokens.add(`${prefix}.${line}`);
+                }
+            });
+
+            return Array.from(tokens);
+        },
         getVal(arr, i, fallback = '') {
             if (!arr) return fallback;
             const item = arr[i];

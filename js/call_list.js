@@ -486,10 +486,23 @@
                                 val = formatDateTime(val, fieldConfig.hasTime);
                             }
 
+                            if (fieldConfig.isPhone || (val && typeof val === 'string' && module.utils && module.utils.hasPhoneNumber(val))) {
+                                if (type === "display" && (!fieldConfig.link || fieldConfig.link === 'none') && module.utils && module.utils.formatPhone) {
+                                    val = module.utils.formatPhone(val);
+                                }
+                            }
+
                             if (type === "filter") {
                                 let cleanVal = String(val).replace(/<[^>]*>?/gm, '').trim();
                                 let cleanRaw = String(rawVal).replace(/<[^>]*>?/gm, '').trim();
-                                return (cleanRaw && cleanRaw !== cleanVal) ? `${cleanVal} ${cleanRaw}` : cleanVal;
+                                let filterParts = [cleanVal];
+                                if (cleanRaw && cleanRaw !== cleanVal) filterParts.push(cleanRaw);
+
+                                if (module.utils && module.utils.getPhoneSearchTokens && (fieldConfig.isPhone || module.utils.hasPhoneNumber(cleanVal) || module.utils.hasPhoneNumber(cleanRaw))) {
+                                    let phoneTokens = module.utils.getPhoneSearchTokens(cleanVal + ' ' + cleanRaw);
+                                    if (phoneTokens.length) filterParts.push(phoneTokens.join(' '));
+                                }
+                                return filterParts.join(' ');
                             }
 
                             if (type !== "display") return val !== undefined && val !== null ? val : (fieldConfig.default || '');
@@ -833,6 +846,47 @@
                     defaultContent: ''
                 });
 
+                config.push({
+                    name: '_searchableExpands',
+                    title: 'Searchable Details',
+                    data: null,
+                    visible: false,
+                    searchable: true,
+                    bSortable: false,
+                    orderable: false,
+                    className: 'searchableExpandsCol',
+                    defaultContent: '',
+                    render: (_val, type, row) => {
+                        if (type !== 'filter' || !row) return '';
+                        let parts = [];
+                        let expandFields = (defaultTab && defaultTab.fields) ? defaultTab.fields.filter(f => f.expanded) : [];
+                        expandFields.forEach(f => {
+                            let fVal = row[f.field];
+                            if (fVal !== undefined && fVal !== null && fVal !== '') {
+                                let fStr = String(fVal).trim();
+                                parts.push(fStr);
+                                if (module.utils && module.utils.getPhoneSearchTokens && (f.isPhone || module.utils.hasPhoneNumber(fStr))) {
+                                    let pTokens = module.utils.getPhoneSearchTokens(fStr);
+                                    if (pTokens.length) parts.push(pTokens.join(' '));
+                                }
+                            }
+                        });
+                        let projPhoneFields = (module.tabs && module.tabs.phoneFields) ? module.tabs.phoneFields : [];
+                        projPhoneFields.forEach(pf => {
+                            let pVal = row[pf];
+                            if (pVal !== undefined && pVal !== null && pVal !== '') {
+                                let pStr = String(pVal).trim();
+                                parts.push(pStr);
+                                if (module.utils && module.utils.getPhoneSearchTokens) {
+                                    let pTokens = module.utils.getPhoneSearchTokens(pStr);
+                                    if (pTokens.length) parts.push(pTokens.join(' '));
+                                }
+                            }
+                        });
+                        return parts.join(' ');
+                    }
+                });
+
                 // Apply saved user column customization (order & visibility) if enabled
                 if (!ignoreUserSettings) {
                     let tabId = typeof tabIdOrIndex === 'string' ? tabIdOrIndex : (defaultTab.tab_id || '');
@@ -853,7 +907,7 @@
 
                         if (savedHidden.length) {
                             config.forEach(col => {
-                                if (col.name && col.name !== '_badges' && col.name !== '_status_badge' && col.name !== '_callNotes') {
+                                if (col.name && col.name !== '_badges' && col.name !== '_status_badge' && col.name !== '_callNotes' && col.name !== '_searchableExpands') {
                                     if (savedHidden.includes(col.name)) {
                                         col.visible = false;
                                     }
@@ -865,7 +919,8 @@
                             let badgeCol = config.find(c => c.name === '_badges');
                             let statusBadgeCol = config.find(c => c.name === '_status_badge');
                             let notesCol = config.find(c => c.name === '_callNotes');
-                            let reorderableCols = config.filter(c => c.name !== '_badges' && c.name !== '_status_badge' && c.name !== '_callNotes');
+                            let searchableExpandsCol = config.find(c => c.name === '_searchableExpands');
+                            let reorderableCols = config.filter(c => c.name !== '_badges' && c.name !== '_status_badge' && c.name !== '_callNotes' && c.name !== '_searchableExpands');
 
                             let orderedCols = [];
                             savedOrder.forEach(colName => {
@@ -885,6 +940,7 @@
                             config.push(...orderedCols);
                             if (statusBadgeCol) config.push(statusBadgeCol);
                             if (notesCol) config.push(notesCol);
+                            if (searchableExpandsCol) config.push(searchableExpandsCol);
                         }
                     }
                 }
@@ -927,6 +983,11 @@
                         }
                         if (f.isDate || (val && typeof val === 'string' && /^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(val.trim()))) {
                             val = formatDateTime(val, f.hasTime);
+                        }
+                        if (f.isPhone || (val && typeof val === 'string' && module.utils && module.utils.hasPhoneNumber(val))) {
+                            if (module.utils && module.utils.formatPhone) {
+                                val = module.utils.formatPhone(val);
+                            }
                         }
                         let dName = (f.displayName || f.field).replace(/[:\s]+$/, '');
                         return `<div class="mb-1"><span class="fw-semibold text-secondary small">${dName}:</span> <span class="small text-dark">${val || '<span class="text-muted fst-italic">None</span>'}</span></div>`;
@@ -1723,10 +1784,10 @@
 
                 let order = aoColumns
                     .map(c => c.sName)
-                    .filter(name => name && name !== '_badges' && name !== '_status_badge' && name !== '_callNotes');
+                    .filter(name => name && name !== '_badges' && name !== '_status_badge' && name !== '_callNotes' && name !== '_searchableExpands');
 
                 let hidden = aoColumns
-                    .filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_status_badge' && c.sName !== '_callNotes')
+                    .filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_status_badge' && c.sName !== '_callNotes' && c.sName !== '_searchableExpands')
                     .map(c => c.sName);
 
                 let labels = (module.userSettings && module.userSettings.tabs && module.userSettings.tabs[tab_id] && module.userSettings.tabs[tab_id].labels)
@@ -1754,7 +1815,7 @@
             },
 
             hideColumn(tab_id, colName) {
-                if (!colName || colName === '_badges' || colName === '_status_badge' || colName === '_callNotes') return;
+                if (!colName || colName === '_badges' || colName === '_status_badge' || colName === '_callNotes' || colName === '_searchableExpands') return;
                 let $pane = $(`#${tab_id}`);
                 let $table = $pane.find('.callTable');
                 if (!$table.length || !$.fn.DataTable.isDataTable($table[0])) return;
@@ -1768,6 +1829,7 @@
             },
 
             unhideColumn(tab_id, colName) {
+                if (!colName || colName === '_badges' || colName === '_status_badge' || colName === '_callNotes' || colName === '_searchableExpands') return;
                 let $pane = $(`#${tab_id}`);
                 let $table = $pane.find('.callTable');
                 if (!$table.length || !$.fn.DataTable.isDataTable($table[0])) return;
@@ -1787,7 +1849,7 @@
                 let dt = $table.DataTable();
                 let aoColumns = dt.settings()[0].aoColumns;
                 aoColumns.forEach(c => {
-                    if (c.sName && c.sName !== '_status_badge' && c.sName !== '_callNotes') {
+                    if (c.sName && c.sName !== '_status_badge' && c.sName !== '_callNotes' && c.sName !== '_searchableExpands' && c.sName !== '_badges') {
                         dt.column(c.sName + ':name').visible(true);
                     }
                 });
@@ -1971,7 +2033,7 @@
                 // 1. Exact match on sTitle (stripped of HTML tags)
                 for (let i = 0; i < aoColumns.length; i++) {
                     let col = aoColumns[i];
-                    if (col.bSearchable === false || col.sName === '_badges') continue;
+                    if (col.bSearchable === false || col.sName === '_badges' || col.sName === '_searchableExpands') continue;
                     let title = (col.sTitle || '').replace(/<[^>]*>?/gm, '').trim().toLowerCase();
                     if (title && title === cleanCandidate) return i;
                 }
@@ -1979,7 +2041,7 @@
                 // 2. Exact match on sName
                 for (let i = 0; i < aoColumns.length; i++) {
                     let col = aoColumns[i];
-                    if (col.bSearchable === false || col.sName === '_badges') continue;
+                    if (col.bSearchable === false || col.sName === '_badges' || col.sName === '_searchableExpands') continue;
                     let sName = (col.sName || '').trim().toLowerCase();
                     if (sName && (sName === cleanCandidate || sName.replace(/^_+/, '') === cleanCandidate)) return i;
                 }
@@ -1987,7 +2049,7 @@
                 // 3. Exact match on mData
                 for (let i = 0; i < aoColumns.length; i++) {
                     let col = aoColumns[i];
-                    if (col.bSearchable === false || col.sName === '_badges') continue;
+                    if (col.bSearchable === false || col.sName === '_badges' || col.sName === '_searchableExpands') continue;
                     if (typeof col.mData === 'string') {
                         let mData = col.mData.trim().toLowerCase();
                         if (mData && (mData === cleanCandidate || mData.replace(/^_+/, '') === cleanCandidate)) return i;
@@ -1997,7 +2059,7 @@
                 // 4. Match on header DOM text
                 for (let i = 0; i < aoColumns.length; i++) {
                     let col = aoColumns[i];
-                    if (col.bSearchable === false || col.sName === '_badges') continue;
+                    if (col.bSearchable === false || col.sName === '_badges' || col.sName === '_searchableExpands') continue;
                     try {
                         let headerText = $(dt.column(i).header()).text().trim().toLowerCase();
                         if (headerText && headerText === cleanCandidate) return i;
@@ -2007,7 +2069,7 @@
                 // 5. Fuzzy / stripped match (ignoring spaces, underscores, dashes)
                 for (let i = 0; i < aoColumns.length; i++) {
                     let col = aoColumns[i];
-                    if (col.bSearchable === false || col.sName === '_badges') continue;
+                    if (col.bSearchable === false || col.sName === '_badges' || col.sName === '_searchableExpands') continue;
                     let titleStripped = (col.sTitle || '').replace(/<[^>]*>?/gm, '').trim().toLowerCase().replace(/[\s_-]+/g, '');
                     if (titleStripped && titleStripped === strippedCandidate) return i;
 
@@ -2023,6 +2085,20 @@
                         let headerStripped = $(dt.column(i).header()).text().trim().toLowerCase().replace(/[\s_-]+/g, '');
                         if (headerStripped && headerStripped === strippedCandidate) return i;
                     } catch (e) {}
+                }
+
+                // 6. Synonym matching for phone aliases
+                const phoneSynonyms = ['phone', 'telephone', 'cell', 'mobile', 'cellphone'];
+                if (phoneSynonyms.includes(strippedCandidate)) {
+                    for (let i = 0; i < aoColumns.length; i++) {
+                        let col = aoColumns[i];
+                        if (col.bSearchable === false || col.sName === '_badges' || col.sName === '_searchableExpands') continue;
+                        let sName = (col.sName || '').toLowerCase();
+                        let title = (col.sTitle || '').toLowerCase();
+                        if (phoneSynonyms.some(syn => sName.includes(syn) || title.includes(syn))) {
+                            return i;
+                        }
+                    }
                 }
 
                 return -1;
@@ -2051,6 +2127,15 @@
                         targetVal = trimmedQuery.substring(colonIndex + 1).trim();
                         if ((targetVal.startsWith('"') && targetVal.endsWith('"')) || (targetVal.startsWith("'") && targetVal.endsWith("'"))) {
                             targetVal = targetVal.slice(1, -1);
+                        }
+                    } else {
+                        const phoneSynonyms = ['phone', 'telephone', 'cell', 'mobile', 'cellphone', 'altphone', 'alternatephone'];
+                        let strippedCand = candidateCol.toLowerCase().replace(/[\s_-]+/g, '');
+                        if (phoneSynonyms.includes(strippedCand)) {
+                            let potentialVal = trimmedQuery.substring(colonIndex + 1).trim();
+                            if (potentialVal) {
+                                query = potentialVal;
+                            }
                         }
                     }
                 }
@@ -2143,8 +2228,8 @@
 
                     let isUnlocked = Boolean(self.unlockedTabs[tab_id]);
 
-                    let visibleDataCols = aoColumns.filter(c => c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_status_badge' && c.sName !== '_callNotes');
-                    let hiddenCols = aoColumns.filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_status_badge' && c.sName !== '_callNotes');
+                    let visibleDataCols = aoColumns.filter(c => c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_status_badge' && c.sName !== '_callNotes' && c.sName !== '_searchableExpands');
+                    let hiddenCols = aoColumns.filter(c => !c.bVisible && c.sName && c.sName !== '_badges' && c.sName !== '_status_badge' && c.sName !== '_callNotes' && c.sName !== '_searchableExpands');
 
                     let menuHtml = '';
 
